@@ -18,6 +18,7 @@
 
 ## Done
 
+- [x] **Infra + operator setup — Vercel, Google OAuth client, Neon, domains** - project live on health.emmetts.dev, client wired, env complete, app published (ms #v1) (done 2026-07-09) #inf
 - [x] **Phase 0 — Bootstrap repo + task system** - task board, Next.js scaffold, deps, env files, README, docs/PLAN.md (ms #v1) (done 2026-07-09) #p0b
   - [x] Task board scaffolded (board live, hooks installed, repo CLAUDE.md section)
   - [x] Plan copied to docs/PLAN.md
