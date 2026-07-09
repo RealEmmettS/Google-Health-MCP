@@ -48,4 +48,4 @@
 - Never send anything outward (email/posts/etc.) without fresh per-message approval.
 - Cross-platform npm scripts only (Windows dev box).
 - No medical diagnosis language in tool outputs; always include freshness metadata.
-- MCP stack decision (2026-07-09, Emmett + fable): mcp-handler + official MCP SDK on Vercel serverless — deliberately NOT FastMCP (FastMCP wants a long-running process and its own auth; ours is serverless + better-auth-integrated). Revisit only if the project ever leaves serverless.
+- MCP stack decision (2026-07-09, Emmett + fable): mcp-handler + official MCP SDK on Vercel serverless — deliberately NOT FastMCP (FastMCP wants a long-running process and its own auth; ours is serverless + better-auth-integrated). Emmett may want to migrate to RAILWAY in the future (see Backlog #rlw) — that's the moment the FastMCP question reopens. Until then, build nothing Vercel-locked without noting it in #rlw's detail file.
