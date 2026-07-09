@@ -42,9 +42,13 @@ LLM client ──OAuth 2.1 + DCR──> Next.js on Vercel (mcp-handler) ──> 
 
 ### Redirect URIs (Google OAuth client)
 
+Canonical domain: **`health.emmetts.dev`** (custom) · `google-health-mcp-realemmetts.vercel.app` (Vercel-assigned, also serves)
+
 ```
-https://<prod-domain>/api/auth/callback/google
-https://<prod-domain>/api/auth/google-health/callback
+https://health.emmetts.dev/api/auth/callback/google
+https://health.emmetts.dev/api/auth/google-health/callback
+https://google-health-mcp-realemmetts.vercel.app/api/auth/callback/google
+https://google-health-mcp-realemmetts.vercel.app/api/auth/google-health/callback
 http://localhost:3000/api/auth/callback/google
 http://localhost:3000/api/auth/google-health/callback
 ```
@@ -68,8 +72,8 @@ logs; Google tokens are always encrypted at rest; local and prod use different
 
 ## Connecting an MCP client (once deployed)
 
-- **Claude Code:** `claude mcp add --transport http health https://<prod>/api/mcp`
-- **claude.ai:** Settings → Connectors → Add custom connector → `https://<prod>/api/mcp`
+- **Claude Code:** `claude mcp add --transport http health https://health.emmetts.dev/api/mcp`
+- **claude.ai:** Settings → Connectors → Add custom connector → `https://health.emmetts.dev/api/mcp`
 - **ChatGPT:** Add custom connector (registers via dynamic client registration)
 
 Each client walks the OAuth flow; sign in with the allowlisted Google account.

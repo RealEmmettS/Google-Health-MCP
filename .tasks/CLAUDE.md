@@ -8,7 +8,8 @@
 | Field | Value |
 |---|---|
 | Name | Emmett Shaughnessy ("Emmett") |
-| Email | hey@emmetts.dev |
+| Email | hey@emmetts.dev (dev identity) |
+| Google/Fitbit account | **eshaughv@gmail.com** (native alias google@emmetts.dev) — the ALLOWED_GOOGLE_EMAILS + test-user account |
 | Timezone | America/Chicago |
 | Brand | SHAUGHV (personal brand; design skill available as `shaughv-code:shaughv-design`) |
 | Dev box | Windows 11, Node v24, PowerShell primary |
@@ -37,7 +38,8 @@
 | Project | Status | Notes |
 |---|---|---|
 | shaughv-health-mcp (this repo) | v1 in build | Source of truth: `docs/PLAN.md`. Milestone #v1, phases #p0b→#p7d. Webhooks = v1.1 (#w11) |
-| shaughv-health-db | Provisioned | Neon Postgres via Vercel Marketplace, ID `divine-cloud-92550441`; pooled URL at runtime, unpooled for migrations |
+| shaughv-health-db | Provisioned | Neon Postgres via Vercel Marketplace, ID `divine-cloud-92550441`; pooled URL at runtime, unpooled for migrations. NOT yet connected to the Vercel project (no DATABASE_URL in prod env) |
+| Vercel project | Live | `google-health-mcp` (prj_hZe49opI8FWMx8fWnGDbNI34zUzo, team realemmetts). Domains: **health.emmetts.dev** (canonical) + google-health-mcp-realemmetts.vercel.app. Deployment Protection = preview-only (prod must stay open; app brings its own auth) |
 
 ## Preferences
 
