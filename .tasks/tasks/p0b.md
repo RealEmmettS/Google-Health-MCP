@@ -19,15 +19,18 @@ Intended: buildable baseline. Unintended risk: none — greenfield. Watch: cross
 Fresh clone + `npm install` + `npm run dev` serves a page; board live; plan committed.
 
 ## Verification
-- [ ] `npm install` completes clean
-- [ ] `npm run dev` responds 200 on localhost:3000
-- [ ] `npx tsc --noEmit` passes
-- [ ] `git status` clean after commit; `.env.development.local` NOT tracked
-- [ ] Board reachable (`.tasks/.board-server.json` has live port)
-- [ ] `docs/PLAN.md` present in repo
+- [x] `npm install` completes clean
+- [x] `npm run dev` responds 200 on localhost:3000 (healthcheck JSON + home page verified)
+- [x] `npx tsc --noEmit` passes (TypeScript 7)
+- [x] `git status` clean after commit bc586d2; `.env.development.local` NOT tracked (verified untracked-list + commit file list)
+- [x] Board reachable (port 4321, tier=full)
+- [x] `docs/PLAN.md` present in repo
 
 ## Status
-Board scaffolded (TASKS/MILESTONES/config/memory/detail files). Next: board install+ensure, hooks, repo CLAUDE.md, docs/PLAN.md, app scaffold, deps, env files, README, commit.
+DONE. Commit bc586d2 pushed to origin/main. Notes for later phases: Next 16.2.10 / React 19.2 / zod 4.4 / better-auth 1.6.23 + @better-auth/mcp 1.4.17 / drizzle-orm 0.45 / mcp-handler 1.1.0 — verify mcp-handler tool-schema compat with zod 4 in Phase 5. Next dev rewrote tsconfig (jsx react-jsx, .next/dev/types include) — canonical, kept. GOOGLE_CLIENT_ID/SECRET still empty in .env.development.local (needed from Emmett before Phase 2 local sign-in testing).
 
 ## Activity
 - 2026-07-09 00:15 — created from approved plan; moved straight to Active (agent: fable)
+- 2026-07-09 00:25 — board live on :4321 (tier=full); hooks installed; plan committed as docs/PLAN.md (agent: fable)
+- 2026-07-09 00:35 — scaffold + deps installed; typecheck green; dev server smoke test passed (agent: fable)
+- 2026-07-09 00:40 — commit bc586d2 pushed; all verification passed; moved to Done (agent: fable)

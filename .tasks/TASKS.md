@@ -16,12 +16,12 @@
 
 ## Active
 
-- [ ] **Phase 0 — Bootstrap repo + task system** - task board, Next.js scaffold, deps, env files, README, docs/PLAN.md (ms #v1) #p0b
+## Done
+
+- [x] **Phase 0 — Bootstrap repo + task system** - task board, Next.js scaffold, deps, env files, README, docs/PLAN.md (ms #v1) (done 2026-07-09) #p0b
   - [x] Task board scaffolded (board live, hooks installed, repo CLAUDE.md section)
   - [x] Plan copied to docs/PLAN.md
   - [x] Next.js app scaffold + all deps installed
   - [x] .env.example + .env.development.local (gitignored) + README skeleton
   - [x] App boots locally (dev server responds)
-  - [ ] Initial commit pushed to origin/main
-
-## Done
+  - [x] Initial commit pushed to origin/main
