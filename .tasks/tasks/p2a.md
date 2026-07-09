@@ -34,3 +34,4 @@ Code complete; awaiting live sign-in verification. IMPLEMENTATION NOTES for the 
 ## Activity
 - 2026-07-09 00:15 — created from approved plan (agent: fable)
 - 2026-07-09 01:02 — auth config + routes + pages built (pages via sonnet subagent, authorize-resume fix by fable); DCR + authorize redirect verified live on dev; metadata spec-valid (agent: fable)
+- 2026-07-09 01:10 — deployed to prod; metadata serves issuer https://health.emmetts.dev; DCR + authorize→/sign-in verified ON PROD; only the live Google sign-in click test remains (agent: fable)

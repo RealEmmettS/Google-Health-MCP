@@ -20,7 +20,7 @@
   - [x] DCR registration + authorize→/sign-in redirect verified end-to-end locally
   - [x] Landing/dashboard/sign-in pages (subagent) + authorize-resume fix
   - [ ] Live Google sign-in on prod (Emmett's 30-second click test)
-  - [ ] Prod deploy serves metadata with https://health.emmetts.dev issuer
+  - [x] Prod deploy serves metadata with https://health.emmetts.dev issuer (+ DCR & authorize verified on prod)
 
 ## Done
 
