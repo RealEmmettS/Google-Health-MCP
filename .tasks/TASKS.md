@@ -6,12 +6,12 @@
 - [ ] **Custom REST API surface (future, Emmett's call)** - bearer-token (PAT) authenticated standard API over the same health services, alongside the MCP #api
 
 ## To-Do
-- [ ] **Phase 5 — MCP endpoint + read tools + resources** - mcp-handler + withMcpAuth wiring, 9 read tools, 5 resources, freshness metadata, MCP Inspector pass (needs #p4g) (ms #v1) #p5m
 - [ ] **Phase 6 — Write tools + audit logging** - nutrition CRUD, hydration, measurements, optional profile write, mutation audit rows (needs #p5m) (ms #v1) #p6w
-- [ ] **Phase 7 — Deploy + wire clients** - Vercel import + Neon connect (Emmett), env vars, redirect URIs, publish OAuth app, E2E vs Claude Code / claude.ai / ChatGPT (needs #p6w) (ms #v1) (owner emmett+agent) #p7d
+- [ ] **Phase 7 — Deploy + wire clients** - env verified, live OAuth+MCP E2E, prompt battery, negative checks; Emmett adds connectors in each client (needs #p6w) (ms #v1) (owner emmett+agent) #p7d
 - [ ] **use /shaughv-design to make the health.emmetts.dev on-brand and presentable** - centered on screen is preferred, no nav-bar required (needs #p7d) #7le
 
 ## Active
+- [ ] **Phase 5 — MCP endpoint + read tools + resources** - mcp-handler + withMcpAuth wiring, 9 read tools, 5 resources, freshness metadata, live E2E pass (needs #p4g) (ms #v1) #p5m
 
 ## Done
 - [x] **Phase 3 — Google Health consent + token lifecycle** - start/callback routes, encrypted token store, identity mapping, single-flight refresh; live smoke passed (real steps) (needs #p2a) (ms #v1) (done 2026-07-09) #p3c

@@ -254,6 +254,16 @@ export class GoogleHealthClient {
   async getSettings(): Promise<unknown> {
     return this.request<unknown>("/users/me/settings");
   }
+
+  /** Paired devices (live-verified 2026-07-09: type, battery, version). */
+  async listPairedDevices(): Promise<unknown> {
+    return this.request<unknown>("/users/me/pairedDevices");
+  }
+
+  /** Diagnostic-only raw GET (scripts/gh-probe.ts). Not for tool code. */
+  async rawGet(path: string): Promise<unknown> {
+    return this.request<unknown>(path);
+  }
 }
 
 export type { WriteOp };
