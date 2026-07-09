@@ -13,9 +13,9 @@
 
 ## Active
 - [ ] **Phase 3 — Google Health consent + token lifecycle** - start/callback routes, encrypted token store, identity mapping, single-flight refresh (needs #p2a) (ms #v1) #p3c
-- [ ] ****Create a comprehensive and exhaustive README, CLAUDE.md, and AGENTS.md that covers:** #sgb
 
 ## Done
+- [x] **Onboarding docs — README, CLAUDE.md, AGENTS.md** - exhaustive front-door + agent (incl. Codex) instructions: what/why/intent, architecture, setup, security, troubleshooting, decisions, watchouts, and task-board usage; sourced from docs/PLAN.md + board  (done 2026-07-09) #3m3
 - [x] **Phase 4 — Google Health API client** - registry (41 types), client with scope prechecks/401-retry/429-backoff, Luxon time utils, 65 tests (needs #p3c) (ms #v1) (done 2026-07-09) #p4g
 - [x] **Phase 2 — MCP client auth (better-auth OAuth 2.1 + DCR)** - Google sign-in locked to allowlist, well-known metadata routes, landing/dashboard pages   (done 2026-07-09) (needs #p1d) (ms #v1) #p2a
   - [x] better-auth config: Drizzle adapter, Google provider, mcp plugin, DCR on, dual allowlist hooks

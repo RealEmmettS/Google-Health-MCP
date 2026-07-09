@@ -30,3 +30,4 @@ Code complete and DEPLOYED to prod; awaiting Emmett's consent click test (dashbo
 - 2026-07-09 00:15 — created from approved plan (agent: fable)
 - 2026-07-09 01:25 — consent routes + state + token store/service + dashboard status live on dev; unauthenticated/bogus-state paths verified (agent: fable)
 - 2026-07-09 01:33 — deployed to prod (start route 307→sign-in verified); awaiting Emmett consent click + smoke (agent: fable)
+- 2026-07-09 01:45 — CONSENT SUCCEEDED (emmett): connection active, 9 scopes, healthUserId 455803974908071566 + legacy C8QFBG mapped. Local smoke exposed the split-key problem (local vs prod TOKEN_ENCRYPTION_KEY on one shared DB) + the sensitive-env write-only quirk → rotated to one shared key, redeploying; Emmett reconnects once, then smoke re-runs (agent: fable)

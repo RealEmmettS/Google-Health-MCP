@@ -48,4 +48,6 @@
 - Never send anything outward (email/posts/etc.) without fresh per-message approval.
 - Cross-platform npm scripts only (Windows dev box).
 - No medical diagnosis language in tool outputs; always include freshness metadata.
+- Vercel env quirk: this project's env vars are SENSITIVE (write-only — `vercel env pull` returns them EMPTY; default came from the Neon connect dialog). Canonical secret copies live in `.env.development.local` + `.tasks/secure/` (both gitignored); never expect to read a secret back from Vercel.
+- TOKEN_ENCRYPTION_KEY is deliberately SHARED between local and prod (one shared Neon DB = one key — split keys poison each other's token rows). Rotated 2026-07-09; ROTATING IT ORPHANS ALL STORED GOOGLE TOKENS → every user must reconnect.
 - MCP stack decision (2026-07-09, Emmett + fable): mcp-handler + official MCP SDK on Vercel serverless — deliberately NOT FastMCP (FastMCP wants a long-running process and its own auth; ours is serverless + better-auth-integrated). Emmett may want to migrate to RAILWAY in the future (see Backlog #rlw) — that's the moment the FastMCP question reopens. Until then, build nothing Vercel-locked without noting it in #rlw's detail file.
