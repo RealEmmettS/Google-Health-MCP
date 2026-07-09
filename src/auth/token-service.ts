@@ -36,7 +36,18 @@ function isFresh(expiresAt: Date | null): boolean {
   return !!expiresAt && expiresAt.getTime() - Date.now() > REFRESH_EARLY_MS;
 }
 
-export async function getValidAccessToken(appUserId: string): Promise<string> {
+export interface GetTokenOptions {
+  /**
+   * Skip the freshness shortcut and refresh now — used after Google rejects a
+   * token that still looked fresh locally (revocation, clock skew).
+   */
+  forceRefresh?: boolean;
+}
+
+export async function getValidAccessToken(
+  appUserId: string,
+  options: GetTokenOptions = {},
+): Promise<string> {
   const connection = await getConnection(appUserId);
   if (!connection) throw new NotConnectedError();
   if (connection.status !== "active") throw new ReauthRequiredError();
@@ -44,7 +55,7 @@ export async function getValidAccessToken(appUserId: string): Promise<string> {
   const row = await loadTokenRow(connection.id);
   if (!row) throw new ReauthRequiredError();
 
-  if (isFresh(row.accessTokenExpiresAt)) {
+  if (!options.forceRefresh && isFresh(row.accessTokenExpiresAt)) {
     const token = decryptAccessToken(row);
     if (token) return token;
   }

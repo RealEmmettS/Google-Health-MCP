@@ -24,7 +24,9 @@ Full consent completes locally (localhost redirect URI); rows correct; refresh p
 - [ ] Reconnect updates existing connection (no duplicate rows)
 
 ## Status
-Not started. Prereq: #p2a (session gate on start route). Local E2E needs Emmett to add localhost redirect URIs in Google console (can happen in Phase 7 batch; until then, mocked tests carry).
+Code complete and DEPLOYED to prod; awaiting Emmett's consent click test (dashboard → "Connect Google Health" → Google consent with the unverified-app warning → back to dashboard showing CONNECTED). Then run `npx tsx scripts/gh-smoke.ts` to verify: connection row, identity mapping, encrypted-token round trip against the real API, live steps rollup. Implementation notes: single-use hashed DB state (atomic UPDATE consume); refresh single-flight via claimable refresh_in_flight_until column (neon-http can't hold transactions; Google doesn't rotate refresh tokens so takeover-double-refresh is benign); saveTokens preserves the stored refresh token when Google omits one; forceRefresh option added for the client's 401 retry.
 
 ## Activity
 - 2026-07-09 00:15 — created from approved plan (agent: fable)
+- 2026-07-09 01:25 — consent routes + state + token store/service + dashboard status live on dev; unauthenticated/bogus-state paths verified (agent: fable)
+- 2026-07-09 01:33 — deployed to prod (start route 307→sign-in verified); awaiting Emmett consent click + smoke (agent: fable)

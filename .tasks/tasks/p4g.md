@@ -16,14 +16,16 @@ None external (all mocked). Registry mistakes would silently break tools later �
 Full mocked integration suite green; time-range unit tests cover DST boundaries.
 
 ## Verification
-- [ ] Registry entries match the docs table exactly (spot-check body-fat/active-zone-minutes/nutrition-log mappings + ops)
-- [ ] Vitest: list+pagination, reconcile, rollUp (physical), dailyRollUp (civil, no leading zeros in serialized JSON)
-- [ ] Vitest: 401→refresh→retry→success; refresh-fail→reauth_required
-- [ ] Vitest: 429→backoff→rate_limited shape with retryAfterSeconds
-- [ ] Vitest ranges: DST spring/fall dates, midnight-crossing sleep, America/Chicago default, explicit TZ override
+- [x] Registry entries match the docs table exactly (fable spot-checked body-fat/active-zone-minutes/nutrition-log/total-calories after sonnet-subagent transcription; 41 entries, snake==kebab underscored verified programmatically)
+- [x] Vitest: list+pagination (pageSize cap 100, pageToken passthrough), reconcile (dataSourceFamily), rollUp (physical UTC), dailyRollUp (civil, plain numbers — no leading zeros in serialized JSON)
+- [x] Vitest: 401→forced-refresh→retry→success; scope precheck fails BEFORE any network call
+- [x] Vitest: 429→bounded backoff→success, and exhausted-retries→rate_limited with Retry-After honored
+- [x] Vitest ranges: 23h spring-forward day (2026-03-08), 25h fall-back day (2026-11-01), Monday week start, America/Chicago default, explicit TZ override, last-night midnight-crossing window
 
 ## Status
-Not started. Prereq: #p3c (token service).
+DONE (code + mocked verification). Live validation against real Fitbit data happens via `npx tsx scripts/gh-smoke.ts` immediately after Emmett's Phase 3 consent click — it exercises identity + a real steps dailyRollUp end-to-end. Client details: forced-refresh retry on 401 (token-service gained a forceRefresh option), pageSize hard-capped at 100 (payload discipline), scope prechecks from the connection's GRANTED scopes (not the requested set), profile/settings endpoint paths flagged for verification against the live REST reference in Phase 5 before those tools ship.
 
 ## Activity
 - 2026-07-09 00:15 — created from approved plan (agent: fable)
+- 2026-07-09 01:15 — registry transcribed by sonnet subagent (41 types), verified by fable (agent: fable)
+- 2026-07-09 01:33 — client + time utils + errors complete; 65/65 tests green incl. DST + concurrency; moved to Done pending live smoke (agent: fable)
