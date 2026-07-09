@@ -58,6 +58,11 @@ export const auth = betterAuth({
         loginPage: "/sign-in",
         // claude.ai and ChatGPT connectors self-register (RFC 7591).
         allowDynamicClientRegistration: true,
+        // Refresh tokens ROLL on every use (plugin re-issues with a fresh
+        // expiry), so this is the max idle gap before a client must re-auth.
+        // Emmett's intent: connect once, never re-auth — 60 days of idle
+        // tolerance (default was 7). Access tokens stay short (1h default).
+        refreshTokenExpiresIn: 60 * 60 * 24 * 60,
       },
     }),
   ],

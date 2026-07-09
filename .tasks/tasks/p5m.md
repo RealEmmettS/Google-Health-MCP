@@ -27,7 +27,19 @@ MCP Inspector (`npx @modelcontextprotocol/inspector`) completes the OAuth dance 
 - [ ] Vitest: tool schema validation (bad inputs rejected by Zod)
 
 ## Status
-Not started. Prereq: #p4g.
+Not started — but BOTH pre-identified risks are now CLEARED and the endpoint skeleton is already live (2026-07-09, fable, at Emmett's direction before the Opus handoff):
+
+**Risk 1 — OAuth consent step: RESOLVED, no consent page needed.** Source-read of better-auth 1.6.23's mcp plugin (`node_modules/better-auth/dist/plugins/mcp/authorize.mjs`): the plugin's own authorize handler auto-issues the code immediately after login unless the CLIENT sends `prompt=consent`; even then, with no consentPage configured it falls through to issuing the code; and the token endpoint never checks the stored requireConsent flag. Perfect for a private single-user server. Do NOT build a /consent page.
+
+**Risk 2 — zod 4 + mcp-handler: RESOLVED, compatible.** Spike test (`tests/unit/mcp-handler-spike.test.ts`) drives the real `createMcpHandler` with raw JSON-RPC: initialize → tools/list (zod 4 shape converted to proper JSON Schema with the `echo` property) → tools/call (works) → invalid-arg call (rejected). No zod pin needed.
+
+**Already landed (grow, don't rewrite):**
+- `app/api/[transport]/route.ts` — the real endpoint: better-auth `withMcpAuth(auth, ...)` wrapping `createMcpHandler`, Node runtime, maxDuration 60, serverInfo `shaughv-health-mcp`. Verified: unauthenticated POST /api/mcp → 401 + `WWW-Authenticate: Bearer resource_metadata="…/api/auth/.well-known/oauth-protected-resource"`; metadata serves at BOTH that path and the root `/.well-known/*` routes.
+- `src/mcp/register-tools.ts` — the registration seam with a permanent `ping` diagnostic tool (reports authenticated userId). Add the 9 read tools + resources here; handlers THIN over `src/health-services/` (see #api).
+- MCP client refresh tokens now roll with a 60-DAY window (`refreshTokenExpiresIn` in auth.ts oidcConfig; plugin default was 7d; tokens re-issue on every refresh) — matches Emmett's "connect once, never re-auth" intent.
+
+Note: `session` passed by withMcpAuth is the access-token record — `session.userId` is the better-auth user id; resolve the domain user via email lookup (`getOrCreateAppUser`/`getAppUserByEmail` need the EMAIL — fetch the better-auth user row by session.userId first, or add a helper).
 
 ## Activity
 - 2026-07-09 00:15 — created from approved plan (agent: fable)
+- 2026-07-09 01:55 — pre-flight risk checks done at Emmett's direction: consent = none needed (source-verified), zod4/mcp-handler = compatible (spike test); endpoint skeleton + ping tool live, 401/WWW-Authenticate verified; refresh window 60d (agent: fable)

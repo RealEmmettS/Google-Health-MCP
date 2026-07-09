@@ -28,7 +28,7 @@ DONE — live sign-in confirmed by Emmett on prod 2026-07-09. Carry-over for Pha
 - Using better-auth 1.6.23's BUILT-IN `mcp` plugin (better-auth/plugins) — @better-auth/mcp was REMOVED from deps (it targets unreleased better-auth 1.7; migrate when 1.7 ships).
 - Auth endpoints live under /api/auth/mcp/* (authorize, token, register, jwks, userinfo). Issuer = BETTER_AUTH_URL.
 - /sign-in resumes interrupted OAuth flows: if client_id is in its query params it sends the user back to /api/auth/mcp/authorize?<same params> after Google login (verified redirect shape by driving authorize unauthenticated).
-- WATCH ITEM: consent step. mcp() was given no consentPage; whether better-auth auto-consents DCR clients after login is unverified until a real end-to-end token exchange (Emmett click test → Phase 5 MCP Inspector). If the flow 500s or demands consent, add a /consent page wired to the oidc consent API.
+- ~~WATCH ITEM: consent step~~ RESOLVED 2026-07-09: source-read of the mcp plugin's own authorize handler proves it auto-issues the code after login (no consent step exists unless the client sends prompt=consent, and even then it falls through without a consentPage; token endpoint ignores the flag). No /consent page needed. Details in p5m.md.
 - Allowlist = ALLOWED_GOOGLE_EMAILS env (eshaughv@gmail.com + google@emmetts.dev alias). session.create.before does a raw SQL lookup of the user's email (avoids schema import cycle).
 
 ## Activity

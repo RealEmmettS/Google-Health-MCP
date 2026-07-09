@@ -28,7 +28,7 @@
 | Fitbit Air | Emmett's wearable; syncs to Fitbit app → Google Health cloud. Data is never live — only synced |
 | MCP | Model Context Protocol; this repo IS a remote MCP server on Vercel |
 | mcp-handler | Vercel's MCP adapter for Next.js (`createMcpHandler`, `withMcpAuth`) |
-| better-auth / @better-auth/mcp | Makes this app an OAuth 2.1 authorization server with DCR so claude.ai/ChatGPT/Claude Code can connect; login = Google Sign-In, allowlisted |
+| better-auth mcp plugin | Makes this app an OAuth 2.1 authorization server with DCR so claude.ai/ChatGPT/Claude Code can connect; login = Google Sign-In, allowlisted. NO consent page exists or is needed (plugin auto-issues codes post-login — source-verified). MCP refresh tokens roll with a 60-day idle window ("connect once") |
 | DCR | Dynamic Client Registration (RFC 7591) — required by claude.ai + ChatGPT connectors |
 | freshness ledger | `data_freshness` table: latest webhook notification per (user, data type). Dormant until v1.1 — webhooks carry pointers, not values |
 | four auth layers | 1 Vercel login · 2 Neon Auth (disabled) · 3 Google Health consent (encrypted tokens) · 4 MCP client auth (better-auth). Never conflate |
