@@ -14,15 +14,15 @@
 
 ## Active
 
-- [ ] **Phase 2 — MCP client auth (better-auth OAuth 2.1 + DCR)** - Google sign-in locked to allowlist, well-known metadata routes, landing/dashboard pages (needs #p1d) (ms #v1) #p2a
+## Done
+
+- [x] **Phase 2 — MCP client auth (better-auth OAuth 2.1 + DCR)** - Google sign-in locked to allowlist, well-known metadata routes, landing/dashboard pages (needs #p1d) (ms #v1) (done 2026-07-09) #p2a
   - [x] better-auth config: Drizzle adapter, Google provider, mcp plugin, DCR on, dual allowlist hooks
   - [x] Well-known metadata + auth catch-all routes live and spec-valid (verified via curl)
   - [x] DCR registration + authorize→/sign-in redirect verified end-to-end locally
   - [x] Landing/dashboard/sign-in pages (subagent) + authorize-resume fix
-  - [ ] Live Google sign-in on prod (Emmett's 30-second click test)
+  - [x] Live Google sign-in on prod (Emmett's 30-second click test)
   - [x] Prod deploy serves metadata with https://health.emmetts.dev issuer (+ DCR & authorize verified on prod)
-
-## Done
 
 - [x] **Phase 1 — DB schema + security foundation** - Drizzle schema (all tables), migrations to Neon, AES-256-GCM token encryption, redaction helper, audit service (needs #p0b) (ms #v1) (done 2026-07-09) #p1d
 

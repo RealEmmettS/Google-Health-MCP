@@ -48,3 +48,4 @@
 - Never send anything outward (email/posts/etc.) without fresh per-message approval.
 - Cross-platform npm scripts only (Windows dev box).
 - No medical diagnosis language in tool outputs; always include freshness metadata.
+- MCP stack decision (2026-07-09, Emmett + fable): mcp-handler + official MCP SDK on Vercel serverless — deliberately NOT FastMCP (FastMCP wants a long-running process and its own auth; ours is serverless + better-auth-integrated). Revisit only if the project ever leaves serverless.

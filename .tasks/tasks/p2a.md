@@ -17,14 +17,14 @@ Public OAuth endpoints appear (register/authorize/token). DCR is open by design 
 Local: sign-in works for allowlisted account; non-allowlisted rejected; metadata endpoints valid; DCR register→authorize→token flow issues a usable token.
 
 ## Verification
-- [ ] Allowlisted Google sign-in completes; session visible on dashboard (Emmett click test on prod)
+- [x] Allowlisted Google sign-in completes; session visible on dashboard (Emmett confirmed live on prod, 2026-07-09)
 - [x] Non-allowlisted rejection enforced server-side — dual databaseHooks (user.create.before + session.create.before), allowlist unit-tested; fails closed on empty allowlist
 - [x] `GET /.well-known/oauth-authorization-server` + `/oauth-protected-resource` return spec-valid JSON (verified: PKCE S256, client_secret_post + none auth methods, register endpoint, resource=/api/mcp)
 - [x] Manual DCR: POST /api/auth/mcp/register issued a client_id; authorize with it 302s to /sign-in carrying full OAuth params (token exchange completes only after a real login — covered by the click test / Phase 5 Inspector run)
 - [x] Vitest: allowlist unit tests (accept/reject/case-insensitivity/fail-closed)
 
 ## Status
-Code complete; awaiting live sign-in verification. IMPLEMENTATION NOTES for the next agent:
+DONE — live sign-in confirmed by Emmett on prod 2026-07-09. Carry-over for Phase 5: the OAuth CONSENT step for connector clients is still unexercised (the click test was a direct sign-in, not a client authorize flow) — first MCP Inspector run will surface whether a /consent page is needed. IMPLEMENTATION NOTES for the next agent:
 - Using better-auth 1.6.23's BUILT-IN `mcp` plugin (better-auth/plugins) — @better-auth/mcp was REMOVED from deps (it targets unreleased better-auth 1.7; migrate when 1.7 ships).
 - Auth endpoints live under /api/auth/mcp/* (authorize, token, register, jwks, userinfo). Issuer = BETTER_AUTH_URL.
 - /sign-in resumes interrupted OAuth flows: if client_id is in its query params it sends the user back to /api/auth/mcp/authorize?<same params> after Google login (verified redirect shape by driving authorize unauthenticated).
