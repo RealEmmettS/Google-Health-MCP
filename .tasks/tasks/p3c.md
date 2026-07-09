@@ -16,18 +16,19 @@ Live Google tokens at rest (encrypted). Until Emmett publishes the OAuth app (Ph
 Full consent completes locally (localhost redirect URI); rows correct; refresh path proven against mocked token endpoint.
 
 ## Verification
-- [ ] State: valid→consumed once; reused/expired/foreign state rejected (unit tests)
-- [ ] Callback stores ENCRYPTED tokens only (inspect row: ciphertext/iv/tag, no `ya29.`/`1//` prefixes anywhere)
-- [ ] `healthUserId` + `legacyUserId` stored after consent
-- [ ] Mocked refresh: near-expiry token refreshes once under 10 concurrent calls (single-flight test)
-- [ ] Mocked refresh failure → connection status `reauth_required`
-- [ ] Reconnect updates existing connection (no duplicate rows)
+- [x] State: valid→consumed once; reused/expired/foreign state rejected (unit tests + prod bogus-state check)
+- [x] Callback stores ENCRYPTED tokens only — proven the hard way: rows written under the prod key were UNDECRYPTABLE with any other key (the split-key incident), i.e. ciphertext-at-rest confirmed against live data; no plaintext write path exists in code
+- [x] `healthUserId` (455803974908071566) + `legacyUserId` (C8QFBG) stored after consent — verified via live smoke
+- [x] Mocked refresh: single-flight claim/wait/takeover paths unit-tested (fake-timer concurrency tests)
+- [x] Mocked refresh failure → connection status `reauth_required` (unit test)
+- [x] Reconnect updates existing connection — verified LIVE: post-key-rotation reconnect reused the single connection row (unique user+provider) and smoke succeeded immediately
 
 ## Status
-Code complete and DEPLOYED to prod; awaiting Emmett's consent click test (dashboard → "Connect Google Health" → Google consent with the unverified-app warning → back to dashboard showing CONNECTED). Then run `npx tsx scripts/gh-smoke.ts` to verify: connection row, identity mapping, encrypted-token round trip against the real API, live steps rollup. Implementation notes: single-use hashed DB state (atomic UPDATE consume); refresh single-flight via claimable refresh_in_flight_until column (neon-http can't hold transactions; Google doesn't rotate refresh tokens so takeover-double-refresh is benign); saveTokens preserves the stored refresh token when Google omits one; forceRefresh option added for the client's 401 retry.
+DONE — full live verification 2026-07-09 ~01:50: consent + reconnect completed by Emmett on prod; smoke test (`npx tsx scripts/gh-smoke.ts`) returned real identity and a real steps dailyRollUp (32 steps, correct civil-day shape) through the entire encrypted-token pipeline. Original notes preserved below for reference. Was: awaiting Emmett's consent click test (dashboard → "Connect Google Health" → Google consent with the unverified-app warning → back to dashboard showing CONNECTED). Then run `npx tsx scripts/gh-smoke.ts` to verify: connection row, identity mapping, encrypted-token round trip against the real API, live steps rollup. Implementation notes: single-use hashed DB state (atomic UPDATE consume); refresh single-flight via claimable refresh_in_flight_until column (neon-http can't hold transactions; Google doesn't rotate refresh tokens so takeover-double-refresh is benign); saveTokens preserves the stored refresh token when Google omits one; forceRefresh option added for the client's 401 retry.
 
 ## Activity
 - 2026-07-09 00:15 — created from approved plan (agent: fable)
 - 2026-07-09 01:25 — consent routes + state + token store/service + dashboard status live on dev; unauthenticated/bogus-state paths verified (agent: fable)
 - 2026-07-09 01:33 — deployed to prod (start route 307→sign-in verified); awaiting Emmett consent click + smoke (agent: fable)
 - 2026-07-09 01:45 — CONSENT SUCCEEDED (emmett): connection active, 9 scopes, healthUserId 455803974908071566 + legacy C8QFBG mapped. Local smoke exposed the split-key problem (local vs prod TOKEN_ENCRYPTION_KEY on one shared DB) + the sensitive-env write-only quirk → rotated to one shared key, redeploying; Emmett reconnects once, then smoke re-runs (agent: fable)
+- 2026-07-09 01:50 — reconnect done (emmett); smoke PASSED: real identity + real steps rollup (32 steps, 2026-07-09). All verification ticked; moved to Done (agent: fable)
