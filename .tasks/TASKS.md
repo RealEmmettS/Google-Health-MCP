@@ -6,8 +6,6 @@
 
 ## To-Do
 
-- [ ] **Phase 1 — DB schema + security foundation** - Drizzle schema (all tables), migrations to Neon, AES-256-GCM token encryption, redaction helper, audit service (needs #p0b) (ms #v1) #p1d
-- [ ] **Phase 2 — MCP client auth (better-auth OAuth 2.1 + DCR)** - Google sign-in locked to allowlist, well-known metadata routes, landing/dashboard pages (needs #p1d) (ms #v1) #p2a
 - [ ] **Phase 3 — Google Health consent + token lifecycle** - start/callback routes, encrypted token store, identity mapping, single-flight refresh (needs #p2a) (ms #v1) #p3c
 - [ ] **Phase 4 — Google Health API client** - data-type registry, list/reconcile/rollup/dailyRollup/CRUD, error normalization, Luxon time utils, mocked integration tests (needs #p3c) (ms #v1) #p4g
 - [ ] **Phase 5 — MCP endpoint + read tools + resources** - mcp-handler + withMcpAuth wiring, 9 read tools, 5 resources, freshness metadata, MCP Inspector pass (needs #p4g) (ms #v1) #p5m
@@ -16,7 +14,17 @@
 
 ## Active
 
+- [ ] **Phase 2 — MCP client auth (better-auth OAuth 2.1 + DCR)** - Google sign-in locked to allowlist, well-known metadata routes, landing/dashboard pages (needs #p1d) (ms #v1) #p2a
+  - [x] better-auth config: Drizzle adapter, Google provider, mcp plugin, DCR on, dual allowlist hooks
+  - [x] Well-known metadata + auth catch-all routes live and spec-valid (verified via curl)
+  - [x] DCR registration + authorize→/sign-in redirect verified end-to-end locally
+  - [x] Landing/dashboard/sign-in pages (subagent) + authorize-resume fix
+  - [ ] Live Google sign-in on prod (Emmett's 30-second click test)
+  - [ ] Prod deploy serves metadata with https://health.emmetts.dev issuer
+
 ## Done
+
+- [x] **Phase 1 — DB schema + security foundation** - Drizzle schema (all tables), migrations to Neon, AES-256-GCM token encryption, redaction helper, audit service (needs #p0b) (ms #v1) (done 2026-07-09) #p1d
 
 - [x] **Infra + operator setup — Vercel, Google OAuth client, Neon, domains** - project live on health.emmetts.dev, client wired, env complete, app published (ms #v1) (done 2026-07-09) #inf
 - [x] **Phase 0 — Bootstrap repo + task system** - task board, Next.js scaffold, deps, env files, README, docs/PLAN.md (ms #v1) (done 2026-07-09) #p0b

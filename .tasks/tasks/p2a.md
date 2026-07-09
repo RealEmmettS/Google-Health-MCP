@@ -17,14 +17,20 @@ Public OAuth endpoints appear (register/authorize/token). DCR is open by design 
 Local: sign-in works for allowlisted account; non-allowlisted rejected; metadata endpoints valid; DCR register→authorize→token flow issues a usable token.
 
 ## Verification
-- [ ] Allowlisted Google sign-in completes; session visible on dashboard
-- [ ] Non-allowlisted Google account is rejected server-side (test with a second account or unit-test the hook)
-- [ ] `GET /.well-known/oauth-authorization-server` + `/oauth-protected-resource` return spec-valid JSON
-- [ ] Manual DCR: POST /register → authorize (browser) → form-encoded POST /token yields access token
-- [ ] Vitest: allowlist hook unit tests (accept/reject/case-insensitivity)
+- [ ] Allowlisted Google sign-in completes; session visible on dashboard (Emmett click test on prod)
+- [x] Non-allowlisted rejection enforced server-side — dual databaseHooks (user.create.before + session.create.before), allowlist unit-tested; fails closed on empty allowlist
+- [x] `GET /.well-known/oauth-authorization-server` + `/oauth-protected-resource` return spec-valid JSON (verified: PKCE S256, client_secret_post + none auth methods, register endpoint, resource=/api/mcp)
+- [x] Manual DCR: POST /api/auth/mcp/register issued a client_id; authorize with it 302s to /sign-in carrying full OAuth params (token exchange completes only after a real login — covered by the click test / Phase 5 Inspector run)
+- [x] Vitest: allowlist unit tests (accept/reject/case-insensitivity/fail-closed)
 
 ## Status
-Not started. Prereq: #p1d (DB + better-auth tables).
+Code complete; awaiting live sign-in verification. IMPLEMENTATION NOTES for the next agent:
+- Using better-auth 1.6.23's BUILT-IN `mcp` plugin (better-auth/plugins) — @better-auth/mcp was REMOVED from deps (it targets unreleased better-auth 1.7; migrate when 1.7 ships).
+- Auth endpoints live under /api/auth/mcp/* (authorize, token, register, jwks, userinfo). Issuer = BETTER_AUTH_URL.
+- /sign-in resumes interrupted OAuth flows: if client_id is in its query params it sends the user back to /api/auth/mcp/authorize?<same params> after Google login (verified redirect shape by driving authorize unauthenticated).
+- WATCH ITEM: consent step. mcp() was given no consentPage; whether better-auth auto-consents DCR clients after login is unverified until a real end-to-end token exchange (Emmett click test → Phase 5 MCP Inspector). If the flow 500s or demands consent, add a /consent page wired to the oidc consent API.
+- Allowlist = ALLOWED_GOOGLE_EMAILS env (eshaughv@gmail.com + google@emmetts.dev alias). session.create.before does a raw SQL lookup of the user's email (avoids schema import cycle).
 
 ## Activity
 - 2026-07-09 00:15 — created from approved plan (agent: fable)
+- 2026-07-09 01:02 — auth config + routes + pages built (pages via sonnet subagent, authorize-resume fix by fable); DCR + authorize redirect verified live on dev; metadata spec-valid (agent: fable)
