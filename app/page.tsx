@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 import type { CSSProperties } from "react";
+import { getAppUserByEmail } from "@/src/auth/app-user";
 import { auth } from "@/src/auth/auth";
+import { getConnection } from "@/src/auth/token-store";
 import { SignOutButton } from "./components/sign-out-button";
 
 const buttonStyle: CSSProperties = {
@@ -38,9 +40,10 @@ function StatusPill({
   tone,
 }: {
   label: string;
-  tone: "ok" | "warn";
+  tone: "ok" | "warn" | "amber";
 }) {
-  const color = tone === "ok" ? "#7fd8b4" : "#f2b8b5";
+  const color =
+    tone === "ok" ? "#7fd8b4" : tone === "amber" ? "#f2d8a5" : "#f2b8b5";
   return (
     <span
       style={{
@@ -58,8 +61,21 @@ function StatusPill({
   );
 }
 
-export default async function Home() {
+const HEALTH_ERROR_MESSAGES: Record<string, string> = {
+  access_denied: "Google consent was cancelled — nothing was connected.",
+  missing_params: "Google returned an incomplete callback. Try connecting again.",
+  invalid_state: "The connect link expired or was already used. Try again.",
+  state_user_mismatch: "This connect link belongs to a different signed-in user.",
+  connect_failed: "Connecting to Google Health failed. Check server logs and retry.",
+};
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth.api.getSession({ headers: await headers() });
+  const params = await searchParams;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const mcpEndpoint = `${appUrl}/api/mcp`;
@@ -85,6 +101,20 @@ export default async function Home() {
     );
   }
 
+  const appUser = await getAppUserByEmail(session.user.email);
+  const connection = appUser ? await getConnection(appUser.id) : null;
+  const connected = connection?.status === "active";
+  const reauthNeeded = connection?.status === "reauth_required";
+
+  const healthBanner =
+    params.health === "connected"
+      ? "Google Health connected successfully."
+      : null;
+  const healthErrorKey = typeof params.health_error === "string" ? params.health_error : null;
+  const healthError = healthErrorKey
+    ? (HEALTH_ERROR_MESSAGES[healthErrorKey] ?? "Connecting to Google Health failed.")
+    : null;
+
   return (
     <main style={{ maxWidth: 720 }}>
       <h1 style={{ letterSpacing: "0.05em" }}>SHAUGHV HEALTH MCP</h1>
@@ -100,11 +130,33 @@ export default async function Home() {
         <h2 style={{ letterSpacing: "0.05em", fontSize: "1rem" }}>
           Google Health connection
         </h2>
+        {healthBanner ? <p style={{ color: "#7fd8b4" }}>{healthBanner}</p> : null}
+        {healthError ? <p style={{ color: "#f2b8b5" }}>{healthError}</p> : null}
         <p>
-          <StatusPill label="Not connected" tone="warn" />
+          <StatusPill
+            label={connected ? "Connected" : reauthNeeded ? "Reauth needed" : "Not connected"}
+            tone={connected ? "ok" : reauthNeeded ? "amber" : "warn"}
+          />
         </p>
-        <p style={{ opacity: 0.6, fontSize: "0.9rem" }}>
-          The Google Health consent flow arrives in Phase 3.
+        {connected ? (
+          <p style={{ opacity: 0.8, fontSize: "0.9rem" }}>
+            {connection?.scopes.length ?? 0} scopes granted
+            {connection?.connectedAt
+              ? ` · connected ${connection.connectedAt.toISOString().slice(0, 10)}`
+              : ""}
+            {appUser?.googleHealthUserId ? "" : " · identity mapping pending"}
+          </p>
+        ) : (
+          <p style={{ opacity: 0.6, fontSize: "0.9rem" }}>
+            {reauthNeeded
+              ? "Google Health access expired or was revoked — reconnect to continue."
+              : "Connect your Google Health account so MCP tools can read your Fitbit data."}
+          </p>
+        )}
+        <p>
+          <a href="/api/auth/google-health/start" style={buttonStyle}>
+            {connected ? "Reconnect Google Health" : "Connect Google Health"}
+          </a>
         </p>
       </section>
 

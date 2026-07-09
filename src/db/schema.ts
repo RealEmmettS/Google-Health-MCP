@@ -45,8 +45,10 @@ export const oauthConnections = pgTable(
 
 export const oauthTokens = pgTable("oauth_tokens", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // Exactly one token row per connection (enables upserts + the refresh lock).
   connectionId: uuid("connection_id")
     .notNull()
+    .unique()
     .references(() => oauthConnections.id, { onDelete: "cascade" }),
   accessTokenCiphertext: text("access_token_ciphertext"),
   accessTokenIv: text("access_token_iv"),
@@ -58,6 +60,10 @@ export const oauthTokens = pgTable("oauth_tokens", {
   refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
   tokenType: text("token_type"),
   keyVersion: integer("key_version").notNull().default(1),
+  // Best-effort single-flight refresh lock (neon-http has no interactive
+  // transactions): claimant sets now()+30s; a stale/expired lock is claimable.
+  // Google does not rotate refresh tokens, so a rare double-refresh is benign.
+  refreshInFlightUntil: timestamp("refresh_in_flight_until", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

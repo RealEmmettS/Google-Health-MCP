@@ -1,0 +1,2 @@
+ALTER TABLE "oauth_tokens" ADD COLUMN "refresh_in_flight_until" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "oauth_tokens" ADD CONSTRAINT "oauth_tokens_connection_id_unique" UNIQUE("connection_id");
