@@ -6,7 +6,7 @@
 - [ ] **Custom REST API surface (future, Emmett's call)** - bearer-token (PAT) authenticated standard API over the same health services, alongside the MCP (needs #p7d) #api
 
 ## To-Do
-- [ ] **use /shaughv-design to make the health.emmetts.dev on-brand and presentable** - centered on screen is preferred, no nav-bar required (needs #p7d) #7le
+- [ ] **use /shaughv-design + /shaughv-cdn to make health.emmetts.dev on-brand and presentable** - Emmett's spec: marketing+login → signed-in MCP profile (no health data); keep big Connect/Reconnect button + status bar w/ last-sync; add copyable raw MCP URL + Codex install command; centered, no nav-bar. READ docs/agents/handoff/2026-07-09-003-* first (spec + DO-NOT-TOUCH list) (needs #p7d) #7le
 
 ## Active
 
