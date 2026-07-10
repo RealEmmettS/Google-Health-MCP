@@ -24,5 +24,8 @@ coverage/
 *.pem
 *.log
 
+# conversation exports (may contain secrets) — never commit
+/*.txt
+
 .vercel
 .env*

@@ -6,14 +6,14 @@
 - [ ] **Custom REST API surface (future, Emmett's call)** - bearer-token (PAT) authenticated standard API over the same health services, alongside the MCP #api
 
 ## To-Do
-- [ ] **Phase 6 — Write tools + audit logging** - nutrition CRUD, hydration, measurements, optional profile write, mutation audit rows (needs #p5m) (ms #v1) #p6w
-- [ ] **Phase 7 — Deploy + wire clients** - env verified, live OAuth+MCP E2E, prompt battery, negative checks; Emmett adds connectors in each client (needs #p6w) (ms #v1) (owner emmett+agent) #p7d
 - [ ] **use /shaughv-design to make the health.emmetts.dev on-brand and presentable** - centered on screen is preferred, no nav-bar required (needs #p7d) #7le
 
 ## Active
-- [ ] **Phase 5 — MCP endpoint + read tools + resources** - mcp-handler + withMcpAuth wiring, 9 read tools, 5 resources, freshness metadata, live E2E pass (needs #p4g) (ms #v1) #p5m
+- [ ] **Phase 7 — Deploy + wire clients** - env verified, live OAuth+MCP E2E, prompt battery, negative checks; Emmett adds connectors in each client (needs #p6w) (ms #v1) (owner emmett+agent) #p7d
 
 ## Done
+- [x] **Phase 6 — Write tools + audit logging** - nutrition create/update(replace)/delete, hydration, measurements; update_profile dropped (live API 403 bug); 21/21 live roundtrips + audit rows (needs #p5m) (ms #v1) (done 2026-07-09) #p6w
+- [x] **Phase 5 — MCP endpoint + read tools + resources** - 9 read tools + 5 resources + freshness, thin handlers over src/health-services/; 11/11 live service checks vs real data (needs #p4g) (ms #v1) (done 2026-07-09) #p5m
 - [x] **Phase 3 — Google Health consent + token lifecycle** - start/callback routes, encrypted token store, identity mapping, single-flight refresh; live smoke passed (real steps) (needs #p2a) (ms #v1) (done 2026-07-09) #p3c
 - [x] **Onboarding docs — README, CLAUDE.md, AGENTS.md** - exhaustive front-door + agent (incl. Codex) instructions: what/why/intent, architecture, setup, security, troubleshooting, decisions, watchouts, and task-board usage; sourced from docs/PLAN.md + board  (done 2026-07-09) #3m3
 - [x] **Phase 4 — Google Health API client** - registry (41 types), client with scope prechecks/401-retry/429-backoff, Luxon time utils, 65 tests (needs #p3c) (ms #v1) (done 2026-07-09) #p4g

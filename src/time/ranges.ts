@@ -124,6 +124,49 @@ export function lastNightWindow(
   };
 }
 
+/** UTC-offset duration string for a zoned instant, e.g. "-18000s". */
+export function offsetString(dt: DateTime): string {
+  return `${dt.offset * 60}s`;
+}
+
+/**
+ * Parses a user-supplied dateTime (ISO, naive strings interpreted in the
+ * user's timezone) or defaults to now. Used by the write tools.
+ */
+export function parseUserDateTime(
+  dateTime: string | undefined,
+  timezone: string = DEFAULT_TIMEZONE,
+): DateTime {
+  if (!dateTime) return nowIn(timezone);
+  return assertValid(
+    DateTime.fromISO(dateTime, { zone: timezone }),
+    `dateTime "${dateTime}"`,
+  ).setZone(timezone);
+}
+
+/** SessionTimeInterval for a point-in-time log (API requires start < end). */
+export function toSessionInterval(dt: DateTime): {
+  startTime: string;
+  startUtcOffset: string;
+  endTime: string;
+  endUtcOffset: string;
+} {
+  const end = dt.plus({ minutes: 1 });
+  return {
+    startTime: toUtcIso(dt),
+    startUtcOffset: offsetString(dt),
+    endTime: toUtcIso(end),
+    endUtcOffset: offsetString(end),
+  };
+}
+
+export function toObservationSampleTime(dt: DateTime): {
+  physicalTime: string;
+  utcOffset: string;
+} {
+  return { physicalTime: toUtcIso(dt), utcOffset: offsetString(dt) };
+}
+
 /** Civil closed range for dailyRollUp (docs example: 00:00:00 → 23:59:59). */
 export function dailyRollupCivilRange(
   startDateISO: string,

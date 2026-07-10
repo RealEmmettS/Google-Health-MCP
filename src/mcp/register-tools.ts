@@ -19,6 +19,13 @@ import { getSleepSummary } from "../health-services/sleep";
 import { getSyncStatus } from "../health-services/status";
 import { getTodaySteps } from "../health-services/steps";
 import { resolveAppUser } from "../health-services/user";
+import {
+  createHydrationLog,
+  createNutritionLog,
+  deleteNutritionLogs,
+  updateMeasurement,
+  updateNutritionLog,
+} from "../health-services/writes";
 import { redactError } from "../security/redact";
 
 /**
@@ -315,6 +322,146 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
         return rollupHealthData(user, client, args);
       }),
   );
+
+  // ── write tools (nutrition/hydration/measurements/profile ONLY — sleep,
+  //    exercise, and settings writes are absent by design) ──────────────────
+  const mealTypeArg = z
+    .enum([
+      "breakfast",
+      "lunch",
+      "dinner",
+      "snack",
+      "anytime",
+      "before_breakfast",
+      "before_lunch",
+      "before_dinner",
+      "after_dinner",
+    ])
+    .optional();
+  const dateTimeArg = z
+    .string()
+    .max(40)
+    .optional()
+    .describe("When it happened (ISO; naive values use the user's timezone). Defaults to now.");
+
+  server.registerTool(
+    "create_nutrition_log",
+    {
+      title: "Log a meal or snack",
+      description:
+        "Records a nutrition entry (the Fitbit Air can't track food). Use ONLY values the user stated — never estimate silently. Returns the data-point name needed for later edits/deletion.",
+      inputSchema: {
+        description: z.string().min(1).max(200).describe("What was eaten, e.g. 'Greek yogurt'"),
+        dateTime: dateTimeArg,
+        timezone: timezoneArg.optional(),
+        mealType: mealTypeArg,
+        caloriesKcal: z.number().min(0).max(20000).optional(),
+        carbohydrateGrams: z.number().min(0).max(5000).optional(),
+        fatGrams: z.number().min(0).max(5000).optional(),
+        proteinGrams: z.number().min(0).max(5000).optional(),
+        fiberGrams: z.number().min(0).max(1000).optional(),
+        sugarGrams: z.number().min(0).max(5000).optional(),
+        sodiumMilligrams: z.number().min(0).max(100000).optional(),
+      },
+    },
+    async (args) =>
+      run(async () => {
+        const { user, client } = await getCtx();
+        return createNutritionLog(user, client, args);
+      }),
+  );
+
+  server.registerTool(
+    "update_nutrition_log",
+    {
+      title: "Edit a nutrition entry",
+      description:
+        "Updates an app-created nutrition entry by its data-point name (from get_nutrition_log or a create result). Only provided fields change.",
+      inputSchema: {
+        dataPointName: z.string().max(300).describe("Full resource name of the entry"),
+        description: z.string().min(1).max(200).optional(),
+        dateTime: dateTimeArg,
+        timezone: timezoneArg.optional(),
+        mealType: mealTypeArg,
+        caloriesKcal: z.number().min(0).max(20000).optional(),
+        carbohydrateGrams: z.number().min(0).max(5000).optional(),
+        fatGrams: z.number().min(0).max(5000).optional(),
+        proteinGrams: z.number().min(0).max(5000).optional(),
+        fiberGrams: z.number().min(0).max(1000).optional(),
+        sugarGrams: z.number().min(0).max(5000).optional(),
+        sodiumMilligrams: z.number().min(0).max(100000).optional(),
+      },
+    },
+    async (args) =>
+      run(async () => {
+        const { user, client } = await getCtx();
+        return updateNutritionLog(user, client, args);
+      }),
+  );
+
+  server.registerTool(
+    "delete_nutrition_log",
+    {
+      title: "Delete nutrition/hydration entries",
+      description:
+        "Deletes entries by their exact data-point names (all nutrition-log, or all hydration-log, per call). Confirm with the user before deleting.",
+      inputSchema: {
+        dataPointNames: z.array(z.string().max(300)).min(1).max(20),
+      },
+    },
+    async (args) =>
+      run(async () => {
+        const { user, client } = await getCtx();
+        return deleteNutritionLogs(user, client, args);
+      }),
+  );
+
+  server.registerTool(
+    "create_hydration_log",
+    {
+      title: "Log water/hydration",
+      description: "Records fluid intake. Stored in milliliters; unit is preserved for display.",
+      inputSchema: {
+        volume: z.number().positive().max(20000),
+        unit: z.enum(["mL", "L", "fl_oz", "cup"]),
+        dateTime: dateTimeArg,
+        timezone: timezoneArg.optional(),
+      },
+    },
+    async (args) =>
+      run(async () => {
+        const { user, client } = await getCtx();
+        return createHydrationLog(user, client, args);
+      }),
+  );
+
+  server.registerTool(
+    "update_measurement",
+    {
+      title: "Record a body measurement",
+      description:
+        "Records weight (lb/kg/g), body fat (percent), or height (in/cm/mm) at a point in time. Use ONLY user-stated values — never infer a measurement.",
+      inputSchema: {
+        measurementType: z.enum(["weight", "body-fat", "height"]),
+        value: z.number().positive().max(1000000),
+        unit: z.enum(["lb", "kg", "g", "percent", "in", "cm", "mm"]),
+        dateTime: dateTimeArg,
+        timezone: timezoneArg.optional(),
+        notes: z.string().max(200).optional().describe("Optional note (weight only)"),
+      },
+    },
+    async (args) =>
+      run(async () => {
+        const { user, client } = await getCtx();
+        return updateMeasurement(user, client, args);
+      }),
+  );
+
+  // update_profile is deliberately NOT registered: the live updateProfile
+  // endpoint returns 403 MISSING_OAUTH_SCOPE even with the documented
+  // profile.writeonly scope verifiably on the token (probed 2026-07-09,
+  // server-side enforcement bug). Service code exists in
+  // health-services/writes.ts (updateProfileStrides) for when Google fixes it.
 
   // ── resources ─────────────────────────────────────────────────────────────
   const jsonResource = (uri: string, data: unknown) => ({

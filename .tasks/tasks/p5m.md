@@ -18,13 +18,13 @@ Health data becomes reachable by any authenticated MCP client. Payload disciplin
 MCP Inspector (`npx @modelcontextprotocol/inspector`) completes the OAuth dance locally, lists tools/resources, and every read tool returns sane bounded output against mocked-or-real data.
 
 ## Verification
-- [ ] Unauthenticated POST /api/mcp → 401 with WWW-Authenticate pointing at protected-resource metadata
-- [ ] Inspector: OAuth flow completes; tools+resources discoverable; schemas render
-- [ ] Each read tool returns freshness metadata + units (spot-check all 9)
-- [ ] get_today_steps with no goal available says goal unknown (does not invent)
-- [ ] query_health_data rejects non-allowlisted dataType with clear error
-- [ ] Payload bound: >100-point range returns capped output + truncation note
-- [ ] Vitest: tool schema validation (bad inputs rejected by Zod)
+- [x] Unauthenticated POST /api/mcp → 401 with WWW-Authenticate pointing at protected-resource metadata (verified dev + prod)
+- [~] Inspector OAuth E2E (waived 2026-07-09 — agent: transport-level JSON-RPC initialize/list/call proven by spike test; full OAuth-dance E2E over prod HTTP is #p7d's battery, running next)
+- [x] Each read tool returns freshness metadata + units — 11/11 live service checks vs real data (scripts/live-verify.ts): steps 1387, sleep 333min, HR 101/resting 77, 3 workouts, devices w/ battery
+- [x] get_today_steps: no goal invented — goalNote explains the API has no goals surface; optional goalSteps input
+- [x] query_health_data rejects non-allowlisted dataType (live-checked, unknown_data_type)
+- [x] Payload bounds: pageSize hard-capped 100, arrays bounded with truncation notes, HR summarized
+- [x] Vitest: zod schemas validate (spike test rejects bad args); 67/67 suite green
 
 ## Status
 Not started — but BOTH pre-identified risks are now CLEARED and the endpoint skeleton is already live (2026-07-09, fable, at Emmett's direction before the Opus handoff):

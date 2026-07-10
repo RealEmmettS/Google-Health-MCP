@@ -260,9 +260,25 @@ export class GoogleHealthClient {
     return this.request<unknown>("/users/me/pairedDevices");
   }
 
+  /**
+   * PATCH /users/me/profile (users.updateProfile — confirmed in the v4 REST
+   * reference). Caller is responsible for the profile write-scope check.
+   */
+  async updateProfile(body: unknown, updateMask: string): Promise<unknown> {
+    return this.request<unknown>(
+      `/users/me/profile?updateMask=${encodeURIComponent(updateMask)}`,
+      { method: "PATCH", body: JSON.stringify(body) },
+    );
+  }
+
   /** Diagnostic-only raw GET (scripts/gh-probe.ts). Not for tool code. */
   async rawGet(path: string): Promise<unknown> {
     return this.request<unknown>(path);
+  }
+
+  /** Diagnostic-only raw PATCH (scripts/gh-patch-probe.ts). Not for tool code. */
+  async rawPatch(path: string, body: unknown): Promise<unknown> {
+    return this.request<unknown>(path, { method: "PATCH", body: JSON.stringify(body) });
   }
 }
 

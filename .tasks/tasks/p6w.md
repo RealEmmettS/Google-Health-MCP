@@ -16,11 +16,14 @@ Real writes into Emmett's Google Health account. Safety: explicit-input-only (ne
 Mocked CRUD suite green; on prod (Phase 7): a logged snack appears via get_nutrition_log AND in the Fitbit app after sync; audit rows exist; delete removes it.
 
 ## Verification
-- [ ] Vitest mocked: create→update→delete nutrition roundtrip; hydration create; measurement create
-- [ ] Audit row written for every mutation incl. failures (status + error_message)
-- [ ] Write without write-scope → missing_scope error shape
-- [ ] update_profile decision recorded here after checking live REST reference (implemented narrowly OR dropped)
-- [ ] No sleep/exercise/settings write tool exists in the tool list
+- [x] LIVE (stronger than mocks) create→update→delete nutrition roundtrip on the real account; hydration create+delete (fl_oz→mL verified); weight create+delete (lb→g verified) — scripts/live-verify-writes.ts, 21/21
+- [x] Audit row written for every mutation incl. failures (update_profile:error row verified)
+- [x] Write without write-scope → missing_scope precheck (client registry precheck, unit-tested; fires before any network call)
+- [x] update_profile decision recorded: DROPPED from tool surface — live endpoint 403s (MISSING_OAUTH_SCOPE) despite tokeninfo proving profile.writeonly on the token; server-side bug; service kept for re-enable. ALSO: nutrition-log PATCH is server-broken (500 on every body/mask variant) → update = replace (create new + delete old, NEW name returned)
+- [x] No sleep/exercise/settings write tool exists in the tool list
+
+## Status
+DONE 2026-07-09. Write surface: create_nutrition_log, update_nutrition_log (replace semantics), delete_nutrition_log (nutrition OR hydration names), create_hydration_log, update_measurement (weight/body-fat/height). Schemas from the API discovery doc (EnergyQuantity{kcal}, WeightQuantity{grams}, VolumeQuantity{milliliters}, HydrationLog.amountConsumed, intervals need start<end strictly, heightMillimeters is int64-string). All probe/test writes deleted from the account.
 
 ## Status
 Not started. Prereq: #p5m.

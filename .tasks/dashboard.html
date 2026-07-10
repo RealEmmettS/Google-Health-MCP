@@ -1214,6 +1214,11 @@
     .tm-btn { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px; padding: 4px 12px; cursor: pointer; font-family: inherit; }
     .tm-btn:hover { border-color: var(--accent); }
     .tm-desc-rendered { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-size: 14px; }
+    /* Read-only description: collapse when tall (Show more/less), expand into a capped, scrollable region. */
+    .tm-desc-rendered.collapsed { position: relative; max-height: 200px; overflow: hidden; }
+    .tm-desc-rendered.expanded { max-height: 50vh; overflow-y: auto; }
+    .tm-desc-rendered.collapsed::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; background: linear-gradient(to bottom, transparent, var(--bg-primary)); pointer-events: none; border-radius: 0 0 8px 8px; }
+    .tm-desc-more { display: block; width: 100%; margin-top: 8px; text-align: center; }
     .tm-desc-rendered h2 { font-size: 17px; margin: 12px 0 6px; }
     .tm-desc-rendered h3 { font-size: 15px; margin: 10px 0 4px; }
     .tm-desc-rendered h4 { font-size: 13px; margin: 8px 0 4px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -3802,6 +3807,7 @@
     let tmDetailLoaded = false;              // gate: don't judge verification before it's read
     let tmDescEditing = false;
     let tmDescDirty = false;
+    let tmDescExpanded = false;              // read-only description: Show more/less state, survives re-renders
 
     function nowStamp() {
       const d = new Date();
@@ -3960,6 +3966,7 @@
       tmTask = task;
       tmDescEditing = false;
       tmDescDirty = false;
+      tmDescExpanded = false;
       tmDetail = parseDetail('');
       tmDetailLoaded = !SERVER_MODE;   // file:// has no detail files — nothing to wait for
       tmTitleEl.value = task.title;
@@ -4121,6 +4128,34 @@
       }
     }
 
+    // Mount a read-only rendered description that collapses when it's tall, with an
+    // intuitive Show more/less toggle and a capped, scrollable expanded state. Short
+    // descriptions (that fit the collapsed cap) render whole with no control. `state` is
+    // a {get,set} pair over the owning modal's expanded flag, so the choice survives the
+    // in-modal re-renders and resets to collapsed when the modal reopens.
+    function mountCollapsibleDesc(area, markdown, state) {
+      const div = document.createElement('div');
+      div.className = 'tm-desc-rendered';
+      div.innerHTML = renderTaskMarkdown(markdown);
+      area.appendChild(div);
+      const COLLAPSED_MAX = 200;
+      if (div.scrollHeight > COLLAPSED_MAX + 8) {   // only wire the toggle when it truly overflows
+        const btn = document.createElement('button');
+        btn.className = 'tm-btn tm-desc-more';
+        const apply = () => {
+          const open = state.get();
+          div.classList.toggle('expanded', open);
+          div.classList.toggle('collapsed', !open);
+          btn.textContent = open ? 'Show less ▴' : 'Show more ▾';
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+        btn.addEventListener('click', () => { state.set(!state.get()); apply(); });
+        area.appendChild(btn);
+        apply();
+      }
+      return div;
+    }
+
     function renderTmDesc() {
       const area = document.getElementById('tmDescArea');
       if (!area) return;
@@ -4154,10 +4189,10 @@
         });
       } else {
         area.innerHTML = '';
-        const div = document.createElement('div');
-        div.className = 'tm-desc-rendered';
-        div.innerHTML = renderTaskMarkdown(tmDetail.description);
-        area.appendChild(div);
+        mountCollapsibleDesc(area, tmDetail.description, {
+          get: () => tmDescExpanded,
+          set: (v) => { tmDescExpanded = v; },
+        });
         if (toggle) toggle.onclick = () => { tmDescEditing = true; renderTmDesc(); };
       }
     }
@@ -4433,6 +4468,7 @@
 
     let msTask = null;                    // the open milestone (live ref into `milestones`)
     let msDescEditing = false;
+    let msDescExpanded = false;           // read-only description: Show more/less state, survives re-renders
     let railCollapsed = false;
     try { railCollapsed = localStorage.getItem('shaughv-tasks-rail') === 'collapsed'; } catch (_) {}
     let lastMsPct = {};                   // id → last rendered fill %, so the bar sweeps, not jumps
@@ -4588,6 +4624,7 @@
     function openMilestoneModal(m) {
       msTask = m;
       msDescEditing = false;
+      msDescExpanded = false;
       msTitleEl.value = m.title;
       msIdEl.textContent = '#' + m.id;
       msCheckboxEl.className = 'checkbox ' + (m.checked ? 'checked' : '');
@@ -4665,10 +4702,10 @@
           showStatus('Description saved');
         });
       } else {
-        const div = document.createElement('div');
-        div.className = 'tm-desc-rendered';
-        div.innerHTML = renderTaskMarkdown(d.description);
-        descArea.appendChild(div);
+        mountCollapsibleDesc(descArea, d.description, {
+          get: () => msDescExpanded,
+          set: (v) => { msDescExpanded = v; },
+        });
         descToggle.onclick = () => { msDescEditing = true; renderMsModalBody(); };
       }
 
