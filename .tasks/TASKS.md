@@ -10,6 +10,7 @@
 ## Active
 
 ## Done
+- [x] **Fix mobile homepage headline overflow** - “HEALTH, CONNECTED.” now stays comfortably inside the hero panel with no narrow-viewport horizontal scroll (done 2026-07-10) #mbl
 - [x] **use /shaughv-design + /shaughv-cdn to make health.emmetts.dev on-brand and presentable** - Emmett's spec: marketing+login → signed-in MCP profile (no health data); keep big Connect/Reconnect button + status bar w/ last-sync; add copyable raw MCP URL + Codex install command; centered, no nav-bar. READ docs/agents/handoff/2026-07-09-003-* first (spec + DO-NOT-TOUCH list) (needs #p7d) (done 2026-07-10) #7le
 - [x] **Connector-feedback fixes — daily filter, sleep dedupe/stagesStatus, cadence-aware staleness** - daily-* types now honor startTime via civil-date filter (was silent no-op, live-verified); stagesSummary deduped + stagesStatus surfaced w/ CLASSIC explanation; isPossiblyStale daily-aware; reconcile + ECG/IRN notes recorded; 74/74 tests (done 2026-07-09) #fb1
 - [x] **Surface sleepType + stages-algorithm status in the sleep tool** - research verdict: Google Health API v4 IS the only cloud surface for a Google-account Fitbit Air (no better sleep API; sleep score not exposed anywhere; legacy Web API sunsets Sept 2026; Health Connect on-device; Google Fit REST EOL end-2026; CLASSIC = device-side capture failure). Actionable shipped in #fb1: `type` + NEW `stagesStatus` + explanatory freshness note; `daily-resting-heart-rate` confirmed in registry (done 2026-07-09) #slp

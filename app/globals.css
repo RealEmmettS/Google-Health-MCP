@@ -56,7 +56,6 @@
 }
 
 html {
-  min-width: 320px;
   min-height: 100%;
   background: var(--bg);
 }
@@ -1081,7 +1080,8 @@ a {
   }
 
   .hero-title {
-    font-size: clamp(2.1rem, 10.8vw, 3.55rem);
+    font-size: clamp(2rem, 9.6vw, 3.25rem);
+    line-height: 0.92;
   }
 
   .button-large {
