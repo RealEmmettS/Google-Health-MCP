@@ -10,16 +10,7 @@ export function SignOutButton() {
         await authClient.signOut();
         window.location.href = "/";
       }}
-      style={{
-        padding: "0.4rem 0.9rem",
-        background: "transparent",
-        color: "#f2f2f2",
-        border: "1px solid #f2f2f2",
-        fontFamily: "inherit",
-        fontSize: "0.85rem",
-        letterSpacing: "0.05em",
-        cursor: "pointer",
-      }}
+      className="button button-secondary sign-out-button"
     >
       Sign out
     </button>

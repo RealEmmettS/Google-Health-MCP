@@ -6,9 +6,9 @@
 - [ ] **Custom REST API surface (future, Emmett's call)** - bearer-token (PAT) authenticated standard API over the same health services, alongside the MCP (needs #p7d) #api
 
 ## To-Do
-- [ ] **use /shaughv-design + /shaughv-cdn to make health.emmetts.dev on-brand and presentable** - Emmett's spec: marketing+login → signed-in MCP profile (no health data); keep big Connect/Reconnect button + status bar w/ last-sync; add copyable raw MCP URL + Codex install command; centered, no nav-bar. READ docs/agents/handoff/2026-07-09-003-* first (spec + DO-NOT-TOUCH list) (needs #p7d) #7le
 
 ## Active
+- [ ] **use /shaughv-design + /shaughv-cdn to make health.emmetts.dev on-brand and presentable** - Emmett's spec: marketing+login → signed-in MCP profile (no health data); keep big Connect/Reconnect button + status bar w/ last-sync; add copyable raw MCP URL + Codex install command; centered, no nav-bar. READ docs/agents/handoff/2026-07-09-003-* first (spec + DO-NOT-TOUCH list) (needs #p7d) #7le
 
 ## Done
 - [x] **Connector-feedback fixes — daily filter, sleep dedupe/stagesStatus, cadence-aware staleness** - daily-* types now honor startTime via civil-date filter (was silent no-op, live-verified); stagesSummary deduped + stagesStatus surfaced w/ CLASSIC explanation; isPossiblyStale daily-aware; reconcile + ECG/IRN notes recorded; 74/74 tests (done 2026-07-09) #fb1
