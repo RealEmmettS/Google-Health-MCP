@@ -1,25 +1,31 @@
 # shaughv-health-mcp — Build Plan (v1)
 
-**Repo:** `C:\Users\hey\git\Google-Health-MCP` (empty — README only) · **Executor:** Opus 4.8 · **Planned by:** Fable 5 with Emmett, 2026-07-08
+**Repo:** `C:\Users\hey\git\Google-Health-MCP` · **Planned by:** Fable 5 with Emmett, 2026-07-08 · **v1 implemented and verified:** 2026-07-09
 
 ---
 
 ## Context
 
-Emmett owns a Fitbit Air whose data lands in Google Health (the Fitbit Web API successor). He wants a **remote MCP server on Vercel** so LLM assistants can answer health questions from real data ("How many steps today?", "How did I sleep?", "Why am I tired?", "What did I eat yesterday?") and can **write** nutrition/hydration/measurement/profile entries that the device doesn't track. The MCP is a *thin, typed, authenticated data adapter* — the LLM does the reasoning. Not a warehouse, not analytics, no medical claims.
+Emmett owns a Fitbit Air whose data lands in Google Health (the Fitbit Web API successor). He wanted a **remote MCP server on Vercel** so trusted LLM assistants can answer health questions from real data ("How many steps today?", "How did I sleep?", "Why am I tired?", "What did I eat yesterday?") and can **write** nutrition, hydration, and measurement entries that the device doesn't track. Christian is the second approved user and connects only his own Google Health account. The MCP is a *thin, typed, authenticated data adapter* — the LLM does the reasoning. Not a warehouse, not analytics, no medical claims.
 
 A detailed ChatGPT handoff spec exists at `C:\Users\hey\Downloads\shaughv-health-mcp_handoff_spec_v2.md`. It is directionally correct and this plan follows its structure, **except where decisions below override it** (MCP auth, webhooks timing, caching). Where they conflict, THIS PLAN WINS.
 
+Accepted records under `docs/adr/` govern their specific decision scope and override older
+plan wording. In particular,
+[ADR-0001](adr/0001-private-allowlist-only.md) replaces "single-user / Emmett only" with the
+implemented private allowlist for Emmett and Christian and fixes the decision not to pursue
+public OAuth verification or CASA.
+
 ### Decisions made with Emmett (2026-07-08)
 1. **Clients (v1):** Claude Code/Desktop, claude.ai web + mobile custom connectors, AND ChatGPT connectors → MCP auth must be **full OAuth 2.1 with Dynamic Client Registration**. (claude.ai/ChatGPT connectors do not support static bearer headers.)
-2. **MCP auth = Google-federated OAuth**: our server is the OAuth authorization server (via **better-auth + `@better-auth/mcp`** plugin); the human login step is **Google Sign-In restricted to Emmett's Google account(s)** via an email allowlist. No WorkOS/Clerk/etc.
-3. **Webhooks deferred to v1.1.** V1 fetches fresh from Google on demand (single user, 300 req/min/user quota — no caching needed for correctness). DB schema includes the webhook tables + a **freshness ledger** from day one so v1.1 is purely additive. NOTE (Emmett asked): webhook payloads contain NO health values — only `{healthUserId, dataType, operation, intervals}` pointers. The ledger stores latest-notification-per-(user, dataType), not values.
-4. **Google OAuth app will be published to "In production" (unverified)** — Emmett's manual step — because Testing status expires refresh tokens after 7 days. (The codelab response he saw literally showed `refresh_token_expires_in: 604799` = 7 days.)
+2. **MCP auth = Google-federated OAuth**: our server is the OAuth authorization server via **better-auth's built-in `mcp` plugin**; the human login step is **Google Sign-In restricted to the identities in `ALLOWED_GOOGLE_EMAILS`**. No WorkOS/Clerk/etc.
+3. **Webhooks deferred to v1.1.** V1 fetches fresh from Google on demand (two approved users, 300 req/min/user quota — no caching needed for correctness). DB schema includes the webhook tables + a **freshness ledger** from day one so v1.1 is purely additive. NOTE (Emmett asked): webhook payloads contain NO health values — only `{healthUserId, dataType, operation, intervals}` pointers. The ledger stores latest-notification-per-(user, dataType), not values.
+4. **Google OAuth app stays "In production" and unverified.** Production status avoids Testing's seven-day refresh-token lifetime. Public verification, the unverified first-100-user route, and CASA were evaluated and rejected; the exact audience and superseding requirements are in [ADR-0001](adr/0001-private-allowlist-only.md).
 
 ### Existing infrastructure
-- **Neon Postgres** already created via Vercel Marketplace: `shaughv-health-db` (Neon ID `divine-cloud-92550441`), not yet attached to a Vercel project. Connection strings were shared in-session; runtime uses pooled `DATABASE_URL`, migrations use `DATABASE_URL_UNPOOLED`. (Optional hygiene: rotate the password in Neon console after setup since it transited chat.)
-- **Google Cloud:** Google Health API enabled; OAuth consent screen configured with scopes (see screenshots): activity_and_fitness.readonly, health_metrics_and_measurements.readonly, location.readonly, nutrition.readonly, sleep.readonly, health_metrics_and_measurements.writeonly, nutrition.writeonly, profile.readonly, profile.writeonly, irn.readonly, ecg.readonly, settings.readonly, userinfo.email. OAuth **web client "Shaughv OAuth Client 1" is mid-creation with NO redirect URIs yet** — finish it during Phase 7 with the URIs listed below.
-- **No Vercel project yet.** Emmett creates it by importing the GitHub repo when we say ready (end of Phase 7 prep), then connects the Neon integration (one click in Storage tab).
+- **Neon Postgres:** `shaughv-health-db` was provisioned and connected from the Vercel dashboard through its Storage/Marketplace integration, rather than as a separately operated application service. Vercel injects pooled `DATABASE_URL` for runtime and unpooled `DATABASE_URL_UNPOOLED` for migrations. Local and production share this database and therefore share `TOKEN_ENCRYPTION_KEY`. Neon Auth is disabled.
+- **Google Cloud:** Google Health API is enabled. OAuth web client "Shaughv OAuth Client 1" has both better-auth and Google Health callback URIs for the canonical domain, Vercel domain, and localhost. The OAuth app is External, In production, and intentionally unverified per ADR-0001.
+- **Vercel:** production is live at `health.emmetts.dev`; Deployment Protection is preview-only because the application supplies its own runtime auth.
 
 ---
 
@@ -31,7 +37,7 @@ Fitbit Air → Fitbit app sync → Google Health cloud → Google Health API (he
 LLM client (claude.ai / ChatGPT / Claude Code) ──OAuth 2.1 DCR──> Next.js on Vercel (mcp-handler) ──> tools/resources
 ```
 
-**Stack:** Next.js App Router (latest stable via `create-next-app`), TypeScript, **Node runtime** (never edge — needs `node:crypto`, DB driver), `mcp-handler` (streamable HTTP only, no SSE/Redis), `better-auth` + `@better-auth/mcp`, Drizzle ORM + `@neondatabase/serverless`, Zod, Luxon (timezones), Vitest + MSW/undici-mocks for tests.
+**Stack:** Next.js App Router, TypeScript, **Node runtime** (never edge — needs `node:crypto`, DB driver), `mcp-handler` (streamable HTTP only, no SSE/Redis), `better-auth` with its built-in `mcp` plugin, Drizzle ORM + `@neondatabase/serverless`, Zod, Luxon (timezones), Vitest + MSW/undici-mocks for tests.
 
 ### Four auth layers — never conflate (handoff §3)
 1. Vercel account login — Emmett's, irrelevant to runtime.
@@ -74,8 +80,8 @@ Runtime DB access via pooled URL; `drizzle-kit` migrations run from dev machine 
 
 ## Security invariants
 - AES-256-GCM app-level encryption for Google tokens; key from `TOKEN_ENCRYPTION_KEY` (32-byte base64); store iv/tag/key_version. NEVER plaintext tokens in DB, logs, or errors — build a `redact()` helper and use it in all error paths.
-- Token refresh: `getValidAccessToken(userId)` refreshes when <5 min to expiry, **single-flight** (Postgres `SELECT ... FOR UPDATE` on the token row) to avoid concurrent-refresh races; on refresh failure mark connection `reauth_required`.
-- `/api/auth/google-health/start` requires an authenticated better-auth session (Emmett logged in via Google) — not world-startable.
+- Token refresh: `getValidAccessToken(userId)` refreshes when <5 min to expiry, using an atomic, expiring claim on the token row for best-effort **single-flight** behavior with the stateless Neon HTTP driver; on refresh failure mark connection `reauth_required`.
+- `/api/auth/google-health/start` requires an authenticated, allowlisted better-auth session — not world-startable.
 - Write tools: validate with Zod, refuse unsupported writes, audit-log every mutation.
 - No medical diagnosis language anywhere; freshness/limitation notes on every response (handoff §19–20).
 
@@ -107,11 +113,11 @@ Input schemas exactly per handoff §11 (they're good). Payload bounds: default p
 
 ## Phases (each = tasks on the board; commit per phase)
 
-**Phase 0 — Bootstrap:** Run `/tasks-start` (scaffold `.tasks/`, create milestone + tasks mirroring these phases). Copy this plan into repo as `docs/PLAN.md`. Scaffold: `create-next-app@latest` (TS, App Router, no Tailwind needed — or minimal styling; SHAUGHV design optional later), install deps (`mcp-handler`, `@modelcontextprotocol/sdk`, `zod`, `better-auth`, `@better-auth/mcp`, `drizzle-orm`, `@neondatabase/serverless`, `drizzle-kit`, `luxon`, `vitest`, `msw`), `.env.example`, README skeleton, `.env.development.local` with the Neon URL (gitignored). Cross-platform npm scripts (Windows dev box!).
+**Phase 0 — Bootstrap:** Run `/tasks-start` (scaffold `.tasks/`, create milestone + tasks mirroring these phases). Copy this plan into repo as `docs/PLAN.md`. Scaffold: `create-next-app@latest` (TS, App Router, no Tailwind needed — or minimal styling; SHAUGHV design optional later), install deps (`mcp-handler`, `@modelcontextprotocol/sdk`, `zod`, `better-auth`, `drizzle-orm`, `@neondatabase/serverless`, `drizzle-kit`, `luxon`, `vitest`, `msw`), `.env.example`, README skeleton, `.env.development.local` with the Neon URL (gitignored). Cross-platform npm scripts (Windows dev box!).
 
 **Phase 1 — DB + security foundation:** Drizzle schema (all tables above) + better-auth codegen tables; migrations applied to Neon; `src/security/encryption.ts` (AES-256-GCM + key_version), redaction helper, audit-log service. Unit tests: encrypt/decrypt roundtrip, tamper detection, redaction.
 
-**Phase 2 — MCP auth (better-auth):** better-auth config: Google social provider (basic scopes), MCP plugin, DCR on, email allowlist enforcement (reject non-allowlisted at sign-in callback), Drizzle adapter on Neon. Well-known metadata routes. Landing/dashboard pages. Verify locally: sign-in works, non-allowlisted account rejected, `/register` + `/authorize` + `/token` respond per spec. **Consult current better-auth docs (Context7) at build time — the MCP plugin API moved to `@better-auth/mcp` mid-2026 and moves fast.**
+**Phase 2 — MCP auth (better-auth):** better-auth config: Google social provider (basic scopes), built-in MCP plugin, DCR on, email allowlist enforcement (reject non-allowlisted at sign-in callback), Drizzle adapter on Neon. Well-known metadata routes. Landing/dashboard pages. Verify locally: sign-in works, non-allowlisted account rejected, `/register` + `/authorize` + `/token` respond per spec. **The implemented version is better-auth 1.6.23's built-in `mcp` plugin; consult current docs before changing or migrating it because the API moves quickly.**
 
 **Phase 3 — Google Health consent + tokens:** start/callback routes, DB-backed state (hashed, 10-min expiry, single-use), token encrypt+store, `users/me/identity` fetch → store `healthUserId` + `legacyUserId`, reconnect path (update-not-duplicate, detect scope changes), `getValidAccessToken` with single-flight refresh. Tests: state lifecycle, refresh path, reauth_required on refresh failure (mocked token endpoint).
 

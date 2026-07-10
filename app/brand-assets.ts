@@ -16,10 +16,6 @@ export const SHAUGHV_ASSETS = {
   },
   wordmark:
     "https://cdn.shaughv.com/brand/shaughv/logos/SHAUGHV-Official.svg",
-  faviconDark:
-    "https://cdn.shaughv.com/brand/shaughv/favicons/SHAUGHV-Favicon-Dark.svg",
-  faviconLight:
-    "https://cdn.shaughv.com/brand/shaughv/favicons/SHAUGHV-Favicon-Light.svg",
   animatedMark: "https://cdn.shaughv.com/js/animated-brand-mark.js",
   loader: "https://cdn.shaughv.com/js/shaughv-loader.js",
 } as const;

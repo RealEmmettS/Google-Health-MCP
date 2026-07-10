@@ -1,7 +1,8 @@
 /**
  * The MCP server is private: only Google accounts listed in
- * ALLOWED_GOOGLE_EMAILS may sign in (docs/PLAN.md auth layer 4). To grant
- * someone access, add their Google email to the env var — nothing else.
+ * ALLOWED_GOOGLE_EMAILS may sign in (docs/PLAN.md auth layer 4). The approved
+ * identities are fixed by docs/adr/0001-private-allowlist-only.md; an env edit
+ * alone is not authority to expand the audience.
  */
 
 export interface AllowlistEnv {

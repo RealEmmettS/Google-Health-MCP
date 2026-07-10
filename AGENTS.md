@@ -10,18 +10,22 @@ operational rules. This file states shared facts briefly and points to `README.m
 1. **`docs/PLAN.md`** — the authoritative build plan and source of truth: architecture, the
    four auth layers, DB schema, MCP tool surface, phase breakdown, watchouts, and the E2E
    verification bar. It overrides the older ChatGPT handoff spec wherever they conflict.
-2. **`README.md`** — the human overview: what/why, setup (accounts, redirect URIs, env vars),
+2. **`docs/adr/0001-private-allowlist-only.md`** — the accepted audience/access decision:
+   private allowlist for Emmett and Christian, no public OAuth verification or CASA. It
+   overrides earlier "single-user / Emmett only" wording.
+3. **`README.md`** — the human overview: what/why, setup (accounts, redirect URIs, env vars),
    the architecture diagram, and troubleshooting.
-3. **`.tasks/CLAUDE.md`** — the project's working memory (who Emmett is, key terms, project
+4. **`.tasks/CLAUDE.md`** — the project's working memory (who Emmett is, key terms, project
    state, preferences). "CLAUDE.md" is just the filename the tasks system uses; it is not
    tool-specific — read it regardless of which agent you are.
-4. **The `.tasks/` board** — `.tasks/TASKS.md` for what's Active/next, and the relevant
+5. **The `.tasks/` board** — `.tasks/TASKS.md` for what's Active/next, and the relevant
    `.tasks/tasks/<id>.md` for the decisions and carry-over notes behind each task.
 
 ## What this is (brief — see README for depth)
 
-A **private, single-user remote MCP server** on Vercel (`health.emmetts.dev`) exposing
-Emmett's Google Health / Fitbit Air data to trusted LLM clients — reads for
+A **private, allowlist-only remote MCP server** on Vercel (`health.emmetts.dev`) for Emmett
+and Christian. Each approved person exposes only their own Google Health data to trusted LLM
+clients — reads for
 activity/sleep/heart/nutrition, writes for nutrition/hydration/measurements only. A thin,
 typed, authenticated data adapter: the LLM reasons; the server returns accurate data with
 freshness metadata. No medical claims. Stack: Next.js 16 (App Router, Node runtime),
@@ -59,6 +63,11 @@ prose snapshot that may have gone stale.
 
 ## Recorded decisions (do not silently reverse)
 
+- **Audience stays private and allowlist-only: Emmett and Christian.** No public signup,
+  unverified first-100-user rollout, Google restricted-scope verification, or CASA. DCR stays
+  open only for connector compatibility; authorization still requires an allowlisted login.
+  Any additional person or public-access proposal requires an amended/superseding ADR. Full
+  reasoning and current implementation: `docs/adr/0001-private-allowlist-only.md`.
 - **MCP stack = `mcp-handler` + official MCP SDK on Vercel serverless — deliberately NOT
   FastMCP.** FastMCP wants a long-running process with its own server/sessions/auth; this app
   is request-scoped and its OAuth story (better-auth) already lives in the same Next.js app.
@@ -77,6 +86,10 @@ prose snapshot that may have gone stale.
 
 ## Watchouts
 
+- **Allowlist removal is not complete token revocation.** It blocks new users/sessions, but
+  already-issued MCP access/refresh tokens are checked by token lookup and expiry. Immediate
+  offboarding also requires revoking better-auth sessions/MCP tokens and the user's Google
+  Health connection; see ADR-0001.
 - **Kebab vs snake** data-type names — registry only.
 - **Civil vs physical time:** `rollUp` takes a physical-time range; `dailyRollUp` takes a
   civil range with **non-zero-padded** month/day integers (leading zeros are rejected). Sleep
@@ -152,9 +165,7 @@ multiple boards can run on this machine at once.
 ## Where things live
 
 See `README.md` §"Repository structure" for the full tree. Quick map: `app/` = Next.js routes
-and pages (auth, well-known metadata, healthcheck; the MCP endpoint `app/api/[transport]/`
-arrives in Phase 5); `src/` = auth, db (Drizzle schema + client), security (encryption +
-redaction), audit, and the Google Health registry/scopes/errors (the typed client + time
-utils land in Phase 4; the shared `src/health-services/` layer in Phase 5); `drizzle/` =
-migrations; `tests/unit/` = Vitest.
-</content>
+and pages (auth, well-known metadata, healthcheck, the live MCP endpoint, and the local SVG
+favicon); `src/` = auth, db, security, audit, the typed Google Health client/registry,
+timezone helpers, shared health services, and thin MCP registration; `drizzle/` = migrations;
+`tests/unit/` = Vitest.

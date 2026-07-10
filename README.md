@@ -1,10 +1,11 @@
 # shaughv-health-mcp
 
-A **private, single-user remote MCP server** on Vercel that lets Emmett's trusted LLM
-assistants — Claude Code / Claude Desktop, claude.ai (web + mobile connectors), and
-ChatGPT connectors — **read** his Google Health / Fitbit Air data ("How many steps today?",
-"How did I sleep?", "Why am I tired?", "What did I eat yesterday?") and **write** the things
-a Fitbit Air can't track itself: nutrition, hydration, and body measurements.
+A **private, allowlist-only remote MCP server** on Vercel for Emmett and Christian. Their
+trusted LLM assistants — Claude Code / Claude Desktop, claude.ai (web + mobile connectors),
+and ChatGPT connectors — can **read** each approved user's own Google Health data ("How many
+steps today?", "How did I sleep?", "Why am I tired?", "What did I eat yesterday?") and
+**write** the things a wearable can't track itself: nutrition, hydration, and body
+measurements.
 
 It is a **thin, typed, authenticated data adapter** over the
 [Google Health API](https://developers.google.com/health) (`health.googleapis.com/v4`).
@@ -14,7 +15,9 @@ product, or anything that diagnoses — there are no medical claims anywhere in 
 
 > **`docs/PLAN.md` is the build plan and the source of truth** for architecture, the four
 > auth layers, the database schema, the tool surface, the watchouts, and the E2E
-> verification bar. This README is the human front door; the plan governs the build.
+> verification bar. Accepted architecture decisions under **`docs/adr/`** govern their
+> specific scope; [ADR-0001](docs/adr/0001-private-allowlist-only.md) fixes the private
+> audience and Google verification posture. This README is the human front door.
 > Live phase/task status is on the `.tasks/` board — see [Task board](#task-board).
 
 ---
@@ -51,7 +54,7 @@ product, or anything that diagnoses — there are no medical claims anywhere in 
 | A thin, typed adapter over `health.googleapis.com/v4` | A data warehouse or ETL pipeline |
 | Read access to activity, sleep, heart, nutrition | An analytics or dashboard product |
 | Write access for nutrition, hydration, measurements | A writer of sleep / exercise / settings (absent **by design**) |
-| Private and single-user (Emmett only, allowlisted) | Multi-tenant or public |
+| Private and allowlist-only (Emmett and Christian; isolated per user) | Public or self-service multi-tenant |
 | A returner of data + freshness metadata + units | A source of diagnoses, advice, or medical claims |
 
 The device data path is **never live** — a Fitbit Air syncs to the Fitbit app, which
@@ -61,8 +64,11 @@ therefore carries `freshness` metadata (`retrievedAt`, `latestDataTime?`, `isPos
 
 ## Who it's for and how it's used
 
-**Audience:** Emmett, and the LLM assistants he authorizes. Nobody else can sign in
-(sign-in is locked to `ALLOWED_GOOGLE_EMAILS`).
+**Audience:** Emmett and Christian, and the LLM assistants each authorizes. Each person can
+reach only their own Google Health connection. Nobody else can sign in: the exact approved
+identities and the decision not to pursue public verification are fixed by
+[ADR-0001](docs/adr/0001-private-allowlist-only.md), and enforced through
+`ALLOWED_GOOGLE_EMAILS`.
 
 **Intent — how Emmett uses it.** He asks his assistants natural questions and expects
 grounded answers with real numbers, timestamps, and freshness notes:
@@ -160,32 +166,25 @@ Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and sc
 
 ## Current status
 
-Milestone **`#v1`** (target 2026-07-16). The `.tasks/` board is the live source of phase
-status; this section is a coarse snapshot that intentionally avoids fast-moving detail.
+Milestone **`#v1` is complete and live**. The `.tasks/` board remains the source of truth for
+future work.
 
-- **Done and verified on prod:** repo bootstrap, operator infrastructure (Vercel project
-  live on `health.emmetts.dev`, Neon connected, Google OAuth client wired with all six
-  redirect URIs, app published to production), the database + security foundation
-  (encryption, redaction, audit, all 15 tables migrated), and **MCP client auth** (better-auth
-  OAuth 2.1 + DCR, Google sign-in locked to the allowlist — live sign-in confirmed on prod).
-- **Landed / wrapping up:** the **Google Health consent + token lifecycle** flow (health-scope
-  consent, encrypted token store, identity mapping, single-flight refresh) — deployed to prod,
-  awaiting Emmett's one-time health-consent click test — and the **typed Google Health API
-  client** (data-type registry, request methods, error normalization, Luxon time utils).
-- **Pending:** the MCP endpoint + read tools + resources (Phase 5), write tools + audit
-  (Phase 6), and the deploy/wire-clients E2E acceptance run (Phase 7).
-- **Check the board for exact state** — phases are moving daily; `.tasks/TASKS.md` is
-  authoritative.
-- **Deferred by design:** Google Health webhooks (**v1.1**, `#w11`).
-
-> The MCP endpoint (`/api/mcp`) is **not live yet** — it lands in Phase 5. The client
-> connection commands below are the intended interface once that phase and Phase 7 ship.
+- Production is live at `health.emmetts.dev`; Vercel, Neon, Google OAuth, migrations, and all
+  auth layers are wired.
+- The MCP endpoint, 10 read/diagnostic tools, 5 write tools, and 5 resources are deployed.
+- Google Health consent, encrypted token storage/refresh, identity mapping, reads, writes,
+  audit logging, and freshness behavior have been verified against real data.
+- The full DCR → PKCE authorize → token → bearer MCP chain is covered by the E2E harness;
+  the core prompt battery also passed through the real claude.ai connector.
+- The current suite contains 74 unit/integration tests. Google Health webhooks remain deferred
+  by design to **v1.1** (`#w11`).
 
 ## Repository structure
 
 ```
 .
 ├── docs/PLAN.md                    ← SOURCE OF TRUTH (architecture, decisions, phases, E2E bar)
+├── docs/adr/                       ← accepted architecture decision records
 ├── README.md                       ← this file (human front door)
 ├── CLAUDE.md                       ← agent instructions for Claude sessions
 ├── AGENTS.md                       ← agent instructions, tool-neutral (Codex/Cursor/etc.)
@@ -195,9 +194,11 @@ status; this section is a coarse snapshot that intentionally avoids fast-moving 
 │
 ├── app/                            ← Next.js App Router
 │   ├── layout.tsx · page.tsx       ← landing / status dashboard
+│   ├── icon.svg                     ← local Google Health MCP favicon
 │   ├── sign-in/page.tsx            ← Google sign-in (resumes interrupted OAuth flows)
 │   ├── components/sign-out-button.tsx
 │   ├── api/
+│   │   ├── [transport]/route.ts              ← live MCP endpoint (`/api/mcp`)
 │   │   ├── auth/[...all]/route.ts           ← better-auth handler (sign-in, /mcp/authorize, /token, DCR /register)
 │   │   ├── auth/google-health/start/route.ts    ← health-consent redirect (session-gated)
 │   │   ├── auth/google-health/callback/route.ts ← code exchange → encrypt+store → identity map
@@ -205,7 +206,6 @@ status; this section is a coarse snapshot that intentionally avoids fast-moving 
 │   └── .well-known/
 │       ├── oauth-authorization-server/route.ts
 │       └── oauth-protected-resource/route.ts
-│   #   app/api/[transport]/route.ts          ← MCP endpoint /api/mcp — ARRIVES in Phase 5
 │
 ├── src/
 │   ├── auth/           ← auth.ts (better-auth config), allowlist, app-user resolution,
@@ -214,9 +214,10 @@ status; this section is a coarse snapshot that intentionally avoids fast-moving 
 │   ├── db/             ← schema.ts (8 domain tables), auth-schema.ts (7 better-auth tables), client.ts
 │   ├── security/       ← encryption.ts (AES-256-GCM), redact.ts
 │   ├── audit/          ← mutation-audit.ts (insert-only audit writer)
-│   └── google-health/  ← registry.ts (data-type single source of truth), scopes.ts, errors.ts
-│   #   src/google-health/client.ts + src/time/  ← land in Phase 4
-│   #   src/health-services/                       ← shared service layer, Phase 5 (also enables #api)
+│   ├── google-health/  ← typed API client, data-type registry, scopes, and errors
+│   ├── time/           ← timezone-safe physical/civil range helpers
+│   ├── health-services/ ← shared orchestration layer (also enables future #api)
+│   └── mcp/            ← thin tool and resource registration
 │
 ├── drizzle/            ← generated SQL migrations + meta
 ├── scripts/db-inspect.mjs   ← utility: list/inspect Neon tables
@@ -238,13 +239,15 @@ Database tables (15 total): domain — `app_users`, `oauth_connections`, `oauth_
    **publish the app to "In production"**. Publishing is essential: in *Testing* status
    Google expires refresh tokens after **7 days** (`refresh_token_expires_in: 604799`). The
    "unverified app" badge that appears after publishing is expected and stays — **do not**
-   submit for verification.
+   submit for verification. Public verification and CASA were evaluated and rejected in
+   [ADR-0001](docs/adr/0001-private-allowlist-only.md).
 2. **Vercel** — import this repo as a project. Framework auto-detects as Next.js. Keep
    **Deployment Protection = preview-only** (production must stay open so programmatic MCP
    clients can reach it; the app enforces its own auth).
-3. **Neon** — a Postgres database provisioned via the Vercel Marketplace and connected to the
-   project in the Storage tab. The integration injects `DATABASE_URL` (pooled) and
-   `DATABASE_URL_UNPOOLED` automatically.
+3. **Neon** — the Postgres database was provisioned and connected from the Vercel dashboard
+   through its Storage/Marketplace integration; it is not a separately operated application
+   service. The integration injects `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED`
+   automatically. Neon Auth is disabled.
 
 ### 2. Google OAuth redirect URIs
 
@@ -290,11 +293,11 @@ markdown.
 | `DATABASE_URL_UNPOOLED` | Direct Neon connection | Used **only** by `drizzle-kit` migrations |
 | `GOOGLE_CLIENT_ID` | Google OAuth client id | One client serves both flows |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | |
-| `TOKEN_ENCRYPTION_KEY` | 32-byte base64 AES-256-GCM key | **Different value local vs prod.** Losing it orphans all stored tokens (reconnect required) |
+| `TOKEN_ENCRYPTION_KEY` | 32-byte base64 AES-256-GCM key | Environments sharing this Neon database must share this key. Losing or splitting it orphans stored tokens (reconnect required) |
 | `BETTER_AUTH_SECRET` | better-auth signing secret | |
 | `BETTER_AUTH_URL` | Auth issuer / base URL | `http://localhost:3000` local · `https://health.emmetts.dev` prod |
 | `NEXT_PUBLIC_APP_URL` | Public app URL | Matches `BETTER_AUTH_URL` per environment |
-| `ALLOWED_GOOGLE_EMAILS` | Comma-separated allowlist | The Google account(s) that own the Fitbit/Google Health data; the sign-in perimeter |
+| `ALLOWED_GOOGLE_EMAILS` | Comma-separated allowlist | Fail-closed sign-in perimeter; exact approved identities are governed by ADR-0001 |
 | `GOOGLE_CLOUD_PROJECT_NUMBER` | v1.1 webhooks | Leave empty until v1.1 |
 | `GOOGLE_HEALTH_SUBSCRIBER_ID` | v1.1 webhooks | Leave empty until v1.1 |
 | `WEBHOOK_AUTH_SECRET` | v1.1 webhooks | Leave empty until v1.1 |
@@ -327,8 +330,8 @@ fired on push — if a deploy doesn't appear, deploy manually via the Vercel CLI
 
 ## Connecting an MCP client
 
-> Available once the MCP endpoint ships (Phase 5) and prod is wired (Phase 7). Each client
-> walks the OAuth flow and you sign in with the allowlisted Google account.
+> The production endpoint is live. Each client walks the OAuth flow and an approved person
+> signs in with their allowlisted Google account.
 
 - **Claude Code:**
   `claude mcp add --transport http health https://health.emmetts.dev/api/mcp`
@@ -372,12 +375,18 @@ bug); the service layer is kept for re-enablement.
 - **Four auth layers, never conflated** (table above). The MCP endpoint requires a valid
   OAuth token; sign-in is allowlisted to `ALLOWED_GOOGLE_EMAILS`; DCR is open by design
   (any client may *register* — safety comes from the allowlisted *login*, not registration).
+  The approved people and the prohibition on public signup are fixed by
+  [ADR-0001](docs/adr/0001-private-allowlist-only.md).
 - **Google tokens are AES-256-GCM encrypted at rest** (`TOKEN_ENCRYPTION_KEY`, with
   `key_version` for rotation). No plaintext tokens in the DB, logs, or error paths — a
   `redact()` helper strips token patterns (`ya29.`, `1//`, `GOCSPX-`, JWTs, `Bearer`/`Basic`,
   Neon `npg_`) before anything is logged.
-- **Token refresh is single-flight** (`SELECT … FOR UPDATE` on the token row) to avoid
-  concurrent-refresh races; on refresh failure the connection is marked `reauth_required`.
+- **Token refresh is single-flight** through an atomic, expiring database claim on the token
+  row (compatible with the stateless Neon HTTP driver); on refresh failure the connection is
+  marked `reauth_required`.
+- **Allowlist removal blocks new sign-ins, not already-issued MCP tokens by itself.** Immediate
+  offboarding also requires revoking the person's better-auth sessions and MCP tokens plus
+  their stored Google Health connection; see ADR-0001's revocation section.
 - **Writes** (nutrition / hydration / measurements only) are Zod-validated, explicit-input
   only, and every mutation is audit-logged in `mutation_audit_log`. There are **no** sleep /
   exercise / settings write tools at all.
@@ -390,7 +399,7 @@ bug); the service layer is kept for re-enablement.
 | Symptom | Cause / fix |
 |---|---|
 | **Refresh tokens die after ~7 days** | The Google OAuth app is in *Testing* status. Publish it to **In production** (Audience page). Testing caps refresh tokens at 7 days (`refresh_token_expires_in: 604799`). |
-| **"Google hasn't verified this app" warning** | Expected for an unverified, in-production app. Proceed (Advanced → continue). **Do not** submit for verification. |
+| **"Google hasn't verified this app" warning** | Expected for this private, unverified, in-production app. Approved users may proceed (Advanced → continue). **Do not** submit for verification; see ADR-0001. |
 | **Redirect URI mismatch / new domain 404s** | Every domain that serves the app needs its two redirect URIs registered on the OAuth client. Redirect changes and DNS/CNAME can take minutes to propagate. |
 | **`reauth_required` on the dashboard or in tool errors** | The health refresh token failed or expired (often the 7-day Testing cap). Re-run the Google Health consent flow (Connect/Reconnect). |
 | **Data looks stale / a workout is missing** | The device path is not live: Fitbit Air → Fitbit app → Google Health has real sync latency. `freshness.isPossiblyStale` + `latestDataTime` flag this; missing data ≠ zero activity. |
@@ -419,10 +428,10 @@ The live dashboard is a zero-dependency Node server; resolve its port from
 
 ## Further reading
 
+- **`docs/adr/0001-private-allowlist-only.md`** — accepted private-audience, OAuth
+  verification, and access-control decision.
 - **`docs/PLAN.md`** — the authoritative build plan (read first).
 - **`CLAUDE.md`** — instructions for Claude coding sessions.
 - **`AGENTS.md`** — the same operational guidance, tool-neutral, for any agent (Codex,
   Cursor, etc.).
 - **`.env.example`** — the env-var reference.
-</content>
-</invoke>

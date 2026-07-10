@@ -44,7 +44,7 @@ function PublicHome() {
 
         <section className="hero-panel reveal-stage reveal-stage-one">
           <div className="index-line">
-            <span>Private / Single user</span>
+            <span>Private / Allowlist only</span>
             <span>Index 001</span>
           </div>
 
@@ -56,8 +56,8 @@ function PublicHome() {
               <span>connected.</span>
             </h1>
             <p className="hero-description">
-              A private MCP bridge between my Google Health account and the AI
-              assistants I trust.
+              A private MCP bridge between approved Google Health accounts and
+              trusted AI assistants.
             </p>
             <GoogleSignInButton callbackURL="/" label="Sign in with Google" />
             <p className="allowlist-note">

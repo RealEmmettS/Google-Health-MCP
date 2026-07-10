@@ -11,8 +11,8 @@ import { isAllowedEmail } from "./allowlist";
  * for MCP clients (claude.ai, ChatGPT, Claude Code) via the better-auth `mcp`
  * plugin (built-in in better-auth 1.6.x; migrate to @better-auth/mcp when 1.7
  * ships). The ONLY human login is Google Sign-In, and it is hard-locked to
- * ALLOWED_GOOGLE_EMAILS at BOTH user-creation and session-creation — adding a
- * person to the allowlist env var is the only way to grant access.
+ * ALLOWED_GOOGLE_EMAILS at BOTH user-creation and session-creation. The exact
+ * approved identities and change-control rule live in ADR-0001.
  *
  * Google Health data consent (auth layer 3) is a SEPARATE flow — see
  * /api/auth/google-health/* (Phase 3). Do not conflate the two.
@@ -78,8 +78,9 @@ export const auth = betterAuth({
     },
     session: {
       create: {
-        // Belt-and-suspenders: even a pre-existing user row can't mint a
-        // session unless currently allowlisted (covers later removals too).
+        // Belt-and-suspenders: even a pre-existing user row can't mint a new
+        // browser session unless currently allowlisted. Already-issued MCP
+        // tokens require explicit revocation; see ADR-0001.
         before: async (session) => {
           await assertUserIdAllowed(session.userId);
         },

@@ -4,6 +4,18 @@ All notable changes to shaughv-health-mcp. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 The `.tasks/` board tracks in-flight work; this file records what shipped.
 
+## [Unreleased]
+
+### Changed
+- Added ADR-0001, fixing the product boundary as private and allowlist-only for Emmett and
+  Christian. Public signup, the unverified first-100-user path, Google restricted-scope
+  verification, and CASA are explicitly out of scope unless a future ADR supersedes it.
+- Reconciled active documentation and public copy with the two-person audience, and recorded
+  the current offboarding caveat: an allowlist removal must be paired with explicit
+  session/MCP-token and Google Health connection revocation for immediate cutoff.
+- Added a local, Quiver-generated SVG favicon for the Google Health MCP and replaced the
+  external generic brand favicons so the deployed site no longer falls back to Vercel's icon.
+
 ## [0.1.1] — 2026-07-09
 
 First real-world-feedback release (issues surfaced by agents using the live connector).
