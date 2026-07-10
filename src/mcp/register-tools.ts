@@ -192,7 +192,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     {
       title: "Get sleep summary",
       description:
-        "Sleep for last night (default) or the night ENDING on a given date: duration, stage summary, main + other sessions. Sessions cross midnight; freshness notes flag still-processing data.",
+        "Sleep for last night (default) or the night ENDING on a given date: duration, stage summary, main + other sessions. Sessions cross midnight; freshness notes flag still-processing data. Sessions are STAGES (deep/light/REM) or CLASSIC (single asleep block — a device capture condition, NOT poor sleep; see stagesStatus).",
       inputSchema: {
         date: dateArg.optional().describe("The morning the sleep ENDED on"),
         timezone: timezoneArg.optional(),
@@ -273,7 +273,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     {
       title: "Query raw health data",
       description:
-        "Generic list/reconcile over any supported data type (see the health://data-types resource). Prefer the dedicated tools for common questions. Filters use snake_case field prefixes.",
+        "Generic list/reconcile over any supported data type (see the health://data-types resource). Prefer the dedicated tools for common questions. Filters use snake_case field prefixes. Mode 'reconcile' reads Google's merged/deduped stream — prefer it if per-source duplication is suspected (e.g. tracker + phone both logging steps).",
       inputSchema: {
         dataType: z.string().max(64).describe("Kebab-case data type, e.g. body-fat"),
         mode: z.enum(["list", "reconcile"]).optional(),
@@ -281,12 +281,16 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
           .string()
           .max(500)
           .optional()
-          .describe('e.g. body_fat.sample_time.physical_time >= "2026-07-01T00:00:00Z"'),
+          .describe(
+            'e.g. body_fat.sample_time.physical_time >= "2026-07-01T00:00:00Z"; daily-* types filter on a civil date: daily_heart_rate_variability.date >= "2026-07-05"',
+          ),
         startTime: z
           .string()
           .max(40)
           .optional()
-          .describe("UTC ISO instant; auto-builds a filter when no filter given"),
+          .describe(
+            "ISO instant or YYYY-MM-DD; auto-builds the right filter per data type when no filter given (daily-* types constrain by civil date)",
+          ),
         pageSize: z.number().int().min(1).max(100).optional(),
         pageToken: z.string().max(200).optional(),
       },

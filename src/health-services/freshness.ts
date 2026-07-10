@@ -16,13 +16,22 @@ const BASE_NOTE =
 
 const STALE_AFTER_HOURS = 3;
 
+/**
+ * Once-per-day metrics (sleep, daily-* aggregates) are computed nightly — a
+ * value dated today or yesterday is CORRECT, not stale. 48h from the value's
+ * date/midnight flags only a genuinely missed day.
+ */
+export const DAILY_STALE_AFTER_HOURS = 48;
+
 export function makeFreshness(
   latestDataTime?: string | null,
   extraNote?: string,
+  options?: { staleAfterHours?: number },
 ): Freshness {
+  const staleAfterHours = options?.staleAfterHours ?? STALE_AFTER_HOURS;
   const latest = latestDataTime ? DateTime.fromISO(latestDataTime) : null;
   const isPossiblyStale =
-    !latest?.isValid || DateTime.utc().diff(latest, "hours").hours > STALE_AFTER_HOURS;
+    !latest?.isValid || DateTime.utc().diff(latest, "hours").hours > staleAfterHours;
   return {
     retrievedAt: new Date().toISOString(),
     latestDataTime: latest?.isValid ? latest.toUTC().toISO() ?? undefined : undefined,

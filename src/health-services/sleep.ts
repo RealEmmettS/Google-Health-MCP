@@ -2,14 +2,15 @@ import { DateTime } from "luxon";
 import type { AppUser } from "../auth/app-user";
 import type { GoogleHealthClient } from "../google-health/client";
 import { lastNightWindow, nowIn, toCivilDateString } from "../time/ranges";
-import { makeFreshness, maxTime, type Freshness } from "./freshness";
+import { DAILY_STALE_AFTER_HOURS, makeFreshness, maxTime, type Freshness } from "./freshness";
 import { getUserTimezone } from "./profile";
 import { asRec, bound, num, str } from "./shape";
 
 interface SleepSession {
   startTime?: string;
   endTime?: string;
-  isMain: boolean;
+  /** Google's own main-session flag, when the record carries one. */
+  googleMarkedMain?: boolean;
   minutesAsleep?: number;
   minutesAwake?: number;
   minutesInSleepPeriod?: number;
@@ -18,6 +19,24 @@ interface SleepSession {
   stageSegmentCount?: number;
   stages?: unknown[];
   type?: string;
+  /** e.g. REJECTED_COVERAGE — Google's reason when a night lacks stages. */
+  stagesStatus?: string;
+}
+
+/**
+ * Google's raw stagesSummary can contain exact-duplicate rows (live-observed
+ * on CLASSIC sessions: the same ASLEEP row twice). Dedupe so downstream sums
+ * don't double-count minutes; genuinely distinct rows always survive.
+ */
+function dedupeStagesSummary(value: unknown): unknown {
+  if (!Array.isArray(value)) return value;
+  const seen = new Set<string>();
+  return value.filter((row) => {
+    const key = JSON.stringify(row);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export interface SleepSummary {
@@ -68,15 +87,16 @@ export async function getSleepSummary(
       return {
         startTime: str(interval.startTime),
         endTime: str(interval.endTime),
-        isMain: metadata.main === true,
+        googleMarkedMain: typeof metadata.main === "boolean" ? metadata.main : undefined,
         minutesAsleep: num(summary.minutesAsleep),
         minutesAwake: num(summary.minutesAwake),
         minutesInSleepPeriod: num(summary.minutesInSleepPeriod),
         minutesToFallAsleep: num(summary.minutesToFallAsleep),
-        stagesSummary: summary.stagesSummary,
+        stagesSummary: dedupeStagesSummary(summary.stagesSummary),
         stageSegmentCount: stages?.length,
         stages: args.includeStages ? stages?.slice(0, 80) : undefined,
         type: str(sleep.type),
+        stagesStatus: str(metadata.stagesStatus),
       };
     })
     // Keep sessions that END on the reference date (in the user's zone).
@@ -87,7 +107,9 @@ export async function getSleepSummary(
     })
     .sort((a, b) => (b.minutesInSleepPeriod ?? 0) - (a.minutesInSleepPeriod ?? 0));
 
-  const mainSession = sessions.find((s) => s.isMain) ?? sessions[0];
+  // Main = Google's flag when present, else the longest session (sessions are
+  // sorted by minutesInSleepPeriod desc above).
+  const mainSession = sessions.find((s) => s.googleMarkedMain) ?? sessions[0];
   const others = bound(
     sessions.filter((s) => s !== mainSession),
     5,
@@ -98,6 +120,22 @@ export async function getSleepSummary(
     mainSession?.endTime &&
     DateTime.utc().diff(DateTime.fromISO(mainSession.endTime), "hours").hours < 2;
 
+  const notes: string[] = [];
+  if (endedRecently) {
+    notes.push("The sleep session ended recently — stage analysis may still be processing.");
+  } else if (sessions.length === 0) {
+    notes.push(
+      "No sleep session has synced for this date yet — the device may not have synced since waking.",
+    );
+  }
+  if (mainSession?.type === "CLASSIC") {
+    notes.push(
+      `This is a CLASSIC session — the device recorded a single asleep/awake block instead of deep/light/REM stages${
+        mainSession.stagesStatus ? ` (stagesStatus: ${mainSession.stagesStatus})` : ""
+      }. That reflects capture conditions (short session, loose band, or HR signal gaps), not sleep quality.`,
+    );
+  }
+
   return {
     mode,
     date,
@@ -106,13 +144,10 @@ export async function getSleepSummary(
     mainSession,
     otherSessions: others.items,
     truncated: others.truncated,
-    freshness: makeFreshness(
-      latestDataTime,
-      endedRecently
-        ? "The sleep session ended recently — stage analysis may still be processing."
-        : sessions.length === 0
-          ? "No sleep session has synced for this date yet — the device may not have synced since waking."
-          : undefined,
-    ),
+    // Sleep is a once-per-night record: this morning's session must not read
+    // as stale by the evening — only a missed day should flag.
+    freshness: makeFreshness(latestDataTime, notes.join(" ") || undefined, {
+      staleAfterHours: DAILY_STALE_AFTER_HOURS,
+    }),
   };
 }
