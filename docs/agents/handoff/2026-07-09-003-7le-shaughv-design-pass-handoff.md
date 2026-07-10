@@ -84,11 +84,19 @@ repo `CLAUDE.md`, working memory in `.tasks/CLAUDE.md`, prior handoffs (001 = ar
   AES-256-GCM-encrypted tokens in Neon with single-flight refresh.
 - **Google Health client:** 41-type registry, scope prechecks, 401-retry/429-backoff
   (`src/google-health/*`), Luxon time utils (`src/time/*`).
-- **Verification assets:** 67 unit tests, `scripts/live-verify.ts` (11/11 reads),
+- **Verification assets:** 74 unit tests, `scripts/live-verify.ts` (11/11 reads),
   `scripts/live-verify-writes.ts` (21/21 writes), `scripts/live-verify-e2e.ts` (full OAuth+MCP
   chain — your regression gate).
 - **Verified today with a REAL client:** Emmett's claude.ai connector listed all 15 tools and
   ran reads + write roundtrips against his real account, through prod.
+
+**Post-handoff drift (same day, v0.1.1 — see CHANGELOG.md):** a connector-feedback fix batch
+(#fb1) landed after this handoff was first written. `daily-*` types now honor `startTime` via
+a civil-date filter; sleep output changed shape (`isMain` → optional `googleMarkedMain`, new
+`stagesStatus`, deduped `stagesSummary`); staleness is cadence-aware. **None of it touches
+your UI files** — it's all in `src/health-services/` + tool descriptions — but don't be
+surprised that the deployed behavior post-dates handoffs 001/002 and parts of this doc's
+first draft. `main` is the truth.
 
 ## DO NOT TOUCH (UI/UX work stays out of all of this)
 
@@ -134,7 +142,7 @@ catch and show the status pill state instead). Read-only imports; do not modify 
 
 ## Verification (build your `.tasks/tasks/7le.md` checklist from this)
 
-- `npm run typecheck` · `npm test` (67 tests) · `npm run build` all green.
+- `npm run typecheck` · `npm test` (74 tests) · `npm run build` all green.
 - `npm run dev` (Bash tool or PowerShell `run_in_background`; plain `Start-Process npm` fails
   on this box) and visually check all states: signed-out home, /sign-in, signed-in dashboard
   (Emmett can click the signed-in state if you can't). Prefer Claude-in-Chrome MCP tools for

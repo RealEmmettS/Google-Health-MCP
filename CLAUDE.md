@@ -78,7 +78,9 @@ with freshness metadata. No medical claims.
 - **Civil vs physical time:** `rollUp` takes a physical-time range; `dailyRollUp` takes a
   civil range with **non-zero-padded** month/day integers (the API rejects leading zeros —
   "Octal/hex numbers are not valid JSON"). Sleep sessions cross midnight — query by
-  `civil_end_time >= <date>`. Default timezone `America/Chicago`; be DST-safe (Luxon).
+  `civil_end_time >= <date>`. `daily-*` types carry NO physical timestamp — filter on the
+  civil `date` field (`<snake>.date >= "YYYY-MM-DD"`); a sample-time filter silently returns
+  everything (live-verified 2026-07-09). Default timezone `America/Chicago`; be DST-safe (Luxon).
 - **True zeros / on-wrist filtering:** some data types have real zeros (steps, distance,
   floors, altitude, total-calories); most gaps are missing data, not zero activity. Never
   phrase a gap as inactivity.

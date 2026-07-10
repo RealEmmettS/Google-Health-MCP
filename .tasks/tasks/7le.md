@@ -17,7 +17,7 @@ Prod-visible changes on a live, in-use service. The auth flows route THROUGH the
 Site reads as SHAUGHV (Emmett approves), centered, no nav-bar, spec items all present; all auth flows still work.
 
 ## Verification
-- [ ] typecheck + 67 tests + build green
+- [ ] typecheck + 74 tests + build green
 - [ ] All three states visually checked on dev (signed-out marketing, /sign-in, signed-in profile) — Chrome MCP preferred
 - [ ] Status bar: connection state renders on load; last-sync streams in via Suspense without blocking paint; degrades cleanly when not connected/reauth
 - [ ] Raw MCP URL prominent + copyable; Codex install command shown and VERIFIED against current Codex docs

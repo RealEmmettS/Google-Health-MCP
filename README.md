@@ -342,15 +342,25 @@ Defined in `docs/PLAN.md` §"MCP surface (v1)"; input schemas per the handoff sp
 read response carries `freshness` + units and is payload-bounded (default pageSize ≤ 100; HR
 series summarized via rollups; truncation notes when capped).
 
-**Read tools (9):** `get_today_steps`, `get_sleep_summary`, `get_latest_heart_rate`,
+**Read tools (9, + `ping`):** `get_today_steps`, `get_sleep_summary`, `get_latest_heart_rate`,
 `get_exercise_week`, `get_nutrition_log`, `get_health_context` (bundle: sleep + latest HR +
 resting HR/HRV + recent activity + nutrition — data only, no conclusions), `query_health_data`
 (generic list/reconcile, registry-allowlisted), `rollup_health_data`, `get_sync_status`.
 
-**Write tools (5, +1 conditional):** `create_nutrition_log`, `update_nutrition_log`,
-`delete_nutrition_log`, `create_hydration_log`, `update_measurement` (weight | body-fat |
-height). `update_profile` only if the live v4 REST reference confirms a writable profile
-endpoint — otherwise dropped.
+Notable behaviors: `query_health_data` auto-builds the right filter per record type — including
+the civil `date` field for `daily-*` aggregates, which carry no physical timestamp (a
+sample-time filter would silently return everything); use `mode: "reconcile"` for Google's
+merged/deduped stream when multiple sources log the same metric. `get_sleep_summary`
+distinguishes `STAGES` (deep/light/REM) from `CLASSIC` sessions (a single asleep block — a
+device capture condition, surfaced via `stagesStatus`, e.g. `REJECTED_COVERAGE`, not poor
+sleep). Staleness is cadence-aware: once-per-night metrics (sleep, `daily-*`) don't flag
+`isPossiblyStale` for a same-day value; live-ish samples use a 3-hour threshold.
+
+**Write tools (5):** `create_nutrition_log`, `update_nutrition_log` (replace semantics — the
+live PATCH endpoint 500s; a new data-point name is returned), `delete_nutrition_log`,
+`create_hydration_log`, `update_measurement` (weight | body-fat | height). `update_profile`
+was **dropped**: the live endpoint 403s despite the granted scope (documented server-side
+bug); the service layer is kept for re-enablement.
 
 **Resources (5):** `health://profile`, `health://settings`, `health://connected-user`,
 `health://data-types`, `health://freshness`.

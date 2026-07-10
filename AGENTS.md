@@ -80,8 +80,10 @@ prose snapshot that may have gone stale.
 - **Kebab vs snake** data-type names — registry only.
 - **Civil vs physical time:** `rollUp` takes a physical-time range; `dailyRollUp` takes a
   civil range with **non-zero-padded** month/day integers (leading zeros are rejected). Sleep
-  crosses midnight — query by `civil_end_time >= <date>`. Default timezone `America/Chicago`;
-  be DST-safe.
+  crosses midnight — query by `civil_end_time >= <date>`. `daily-*` data types carry NO
+  physical timestamp — filter them on the civil `date` field (`<snake>.date >= "YYYY-MM-DD"`);
+  a sample-time filter silently returns everything (live-verified 2026-07-09). Default
+  timezone `America/Chicago`; be DST-safe.
 - **True zeros:** some data types have real zeros (steps, distance, floors, altitude,
   total-calories); most gaps are missing data. Never phrase a gap as inactivity.
 - **Refresh tokens** arrive only with `access_type=offline` (+ usually `prompt=consent`);
