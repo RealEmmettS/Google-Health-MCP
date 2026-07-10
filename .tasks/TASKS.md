@@ -9,7 +9,7 @@
 - [ ] **use /shaughv-design to make the health.emmetts.dev on-brand and presentable** - centered on screen is preferred, no nav-bar required (needs #p7d) #7le
 
 ## Active
-- [ ] **Phase 7 — Deploy + wire clients** - env verified, live OAuth+MCP E2E, prompt battery, negative checks; Emmett adds connectors in each client (needs #p6w) (ms #v1) (owner emmett+agent) #p7d
+- [ ] **Phase 7 — Deploy + wire clients** - AGENT SCOPE COMPLETE: full OAuth+MCP chain proven live on localhost + prod (scripts/live-verify-e2e.ts), form-encoding #313 cleared, unauth 401, real data over the wire. Remaining is operator-only: add connectors in Claude Code/claude.ai/ChatGPT + run NL prompt battery + ~1-week refresh recheck (needs #p6w) (ms #v1) (owner emmett+agent) #p7d
 
 ## Done
 - [x] **Phase 6 — Write tools + audit logging** - nutrition create/update(replace)/delete, hydration, measurements; update_profile dropped (live API 403 bug); 21/21 live roundtrips + audit rows (needs #p5m) (ms #v1) (done 2026-07-09) #p6w
