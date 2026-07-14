@@ -9,12 +9,13 @@
 ## To-Do
 
 ## Active
-- [ ] **Resolve Claude work-computer OAuth handoff failure** - prod reached Google session + token issuance; strengthen exact Claude OAuth coverage, document safe client reset, and correlate a real work-computer retry (owner emmett+agent) #cau
+- [ ] **Resolve Claude work-computer OAuth handoff failure** - 0.1.3 is live; fresh native Claude Code + Codex auth/tool calls and exact callback/refresh profiles pass, awaiting the intended work workspace retry (owner emmett+agent) #cau
   - [x] Extend OAuth E2E coverage for signed-out parameter preservation + public PKCE clients
   - [x] Exercise exact hosted Claude, direct Claude Code, and Codex callback profiles plus refresh grants
   - [x] Complete fresh native Claude Code and Codex logins and read-only production tool calls
   - [x] Record the safe Claude remote-connector reset and diagnostic decision path
   - [x] Verify unit tests, typecheck, build, OAuth paths, production metadata, and test-row cleanup
+  - [x] Deploy 0.1.3 and verify live refresh headers plus post-refresh MCP use
   - [ ] Reconnect once from the intended work Claude workspace and run a read-only Health tool (owner emmett)
   - [ ] Confirm the account-level connector propagates to Claude Desktop and Claude Code (owner emmett)
 
