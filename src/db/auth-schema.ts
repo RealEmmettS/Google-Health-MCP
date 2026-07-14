@@ -133,6 +133,33 @@ export const oauthConsent = pgTable(
   ],
 );
 
+// Better Auth's JWT plugin persists encrypted private signing keys. Local,
+// Preview, and Production intentionally use different BETTER_AUTH_SECRET
+// values while sharing the Neon database, so each environment needs its own
+// key ring; otherwise one environment cannot decrypt another's private key.
+const mcpOauthJwksColumns = () => ({
+  id: text("id").primaryKey(),
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"),
+});
+
+export const mcpOauthJwksProduction = pgTable(
+  "mcp_oauth_jwks_production",
+  mcpOauthJwksColumns(),
+);
+
+export const mcpOauthJwksPreview = pgTable(
+  "mcp_oauth_jwks_preview",
+  mcpOauthJwksColumns(),
+);
+
+export const mcpOauthJwksDevelopment = pgTable(
+  "mcp_oauth_jwks_development",
+  mcpOauthJwksColumns(),
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),

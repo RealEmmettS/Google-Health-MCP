@@ -15,6 +15,13 @@
       "when": 1783578065683,
       "tag": "0001_token-lock",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783993663959,
+      "tag": "0002_many_dagger",
+      "breakpoints": true
     }
   ]
 }

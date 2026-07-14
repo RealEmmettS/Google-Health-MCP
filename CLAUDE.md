@@ -71,10 +71,14 @@ with freshness metadata. No medical claims.
   reopens the FastMCP question — but only if/when Emmett green-lights an evaluation. Until then,
   don't build anything gratuitously Vercel-locked; if you must, add a line to `rlw.md`'s
   migration-surface inventory.
-- **Auth = better-auth 1.6.23's BUILT-IN `mcp` plugin** (`better-auth/plugins`), **not**
-  `@better-auth/mcp` (that package targets the unreleased better-auth 1.7 and was removed from
-  deps). Auth endpoints live under `/api/auth/mcp/*` (authorize, token, register, jwks,
-  userinfo); the token endpoint must accept **form-encoded POST** (a claude.ai connector quirk).
+- **Auth currently stays on better-auth 1.6.23's deprecated built-in `mcp` plugin**
+  (`better-auth/plugins`) so existing connector registrations/tokens survive. Release 0.1.2 adds
+  a time-boxed compatibility boundary: required S256 PKCE, exact supplied-resource validation,
+  persisted encrypted RS256 keys through Better Auth's `jwt()` plugin, and repaired
+  JWKS/UserInfo/ID-token responses. Do not remove that bridge or swap providers piecemeal. The
+  maintained `@better-auth/oauth-provider` migration is tracked as `#oap` and requires a
+  coordinated connector re-auth. Auth endpoints live under `/api/auth/mcp/*`; the token endpoint
+  must keep accepting **form-encoded POST** (a claude.ai connector quirk).
 - **TypeScript is pinned to `^5`** (5.9.x). Next 16's build-time type checker cannot load the
   TS 7 native compiler; an unpinned install resolved TS 7 and broke the Vercel build.
 - **REST API surface (`#api`) is a future idea**, feasible and additive. Its one present-day

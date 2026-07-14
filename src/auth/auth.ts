@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
-import { mcp } from "better-auth/plugins";
+import { jwt, mcp } from "better-auth/plugins";
 import { sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { isAllowedEmail } from "./allowlist";
@@ -26,6 +26,13 @@ const baseURL =
 const PRIVATE_SERVER_MESSAGE =
   "This is a private server. Your Google account is not on its allowlist.";
 
+const jwksModelName =
+  process.env.VERCEL_ENV === "production"
+    ? "mcpOauthJwksProduction"
+    : process.env.VERCEL_ENV === "preview"
+      ? "mcpOauthJwksPreview"
+      : "mcpOauthJwksDevelopment";
+
 async function assertUserIdAllowed(userId: string): Promise<void> {
   const result = await db.execute(
     sql`select "email" from "user" where "id" = ${userId} limit 1`,
@@ -49,6 +56,18 @@ export const auth = betterAuth({
     },
   },
   plugins: [
+    // The legacy MCP plugin advertises RS256 but generates an unverifiable,
+    // ephemeral HS256 ID token. Its successful token response is repaired at
+    // the HTTP boundary with this persisted, encrypted RS256 key ring.
+    jwt({
+      disableSettingJwtHeader: true,
+      jwks: {
+        jwksPath: "/mcp/jwks",
+        keyPairConfig: { alg: "RS256", modulusLength: 2048 },
+      },
+      jwt: { issuer: new URL(baseURL).origin },
+      schema: { jwks: { modelName: jwksModelName } },
+    }),
     mcp({
       loginPage: "/sign-in",
       // RFC 9728 resource identifier — the MCP endpoint clients connect to.
@@ -58,11 +77,17 @@ export const auth = betterAuth({
         loginPage: "/sign-in",
         // claude.ai and ChatGPT connectors self-register (RFC 7591).
         allowDynamicClientRegistration: true,
-        // Refresh tokens ROLL on every use (plugin re-issues with a fresh
-        // expiry), so this is the max idle gap before a client must re-auth.
-        // Emmett's intent: connect once, never re-auth — 60 days of idle
-        // tolerance (default was 7). Access tokens stay short (1h default).
+        // Every successful refresh receives a fresh token with this expiry,
+        // preserving Emmett's 60-day idle tolerance (default was 7). The
+        // deprecated plugin does not revoke the prior refresh row immediately;
+        // that durable token-model migration is tracked separately in #oap.
+        // Access tokens stay short (1h default).
         refreshTokenExpiresIn: 60 * 60 * 24 * 60,
+        // The legacy MCP plugin's runtime default does not actually enforce
+        // PKCE even though its public types/docs say it does. Require S256 for
+        // every authorization-code client, especially public Claude Code
+        // registrations that cannot protect a client secret.
+        requirePKCE: true,
       },
     }),
   ],

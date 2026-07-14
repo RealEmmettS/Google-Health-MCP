@@ -408,6 +408,77 @@ bug); the service layer is kept for re-enablement.
 | **Build fails on TypeScript** | Keep `typescript` pinned to `^5`. Next 16's build-time type checker cannot load the TS 7 native compiler. |
 | **No deploy after `git push`** | The auto-deploy webhook has occasionally not fired; deploy manually via the Vercel CLI. |
 | **Non-allowlisted Google account can't sign in** | Working as intended — sign-in is rejected server-side for any email not in `ALLOWED_GOOGLE_EMAILS` (fails closed on an empty allowlist). |
+| **Claude returns from the browser immediately, then the connector fails** | An existing Google session can make Google sign-in silent, so the missing account-chooser page is not itself an error. Use the [work-computer OAuth runbook](#claude-work-computer-oauth-browser-returns-connector-still-fails) to locate the stage that failed. |
+
+### Claude work-computer OAuth: browser returns, connector still fails
+
+This is the **MCP client-auth** flow, not Google Health consent. If the browser already has a
+valid Google session, clicking **Sign in with Google** can complete without showing Google's
+account chooser. The saved MCP authorization request then resumes and returns to Claude
+immediately. That silent SSO path is normal; the useful question is what happened *after* the
+return.
+
+Anthropic's [remote-connector guide](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp)
+explains that remote connectors are configured and brokered through the Claude account, with
+the MCP connection originating from Anthropic's servers rather than the workstation. They can
+be shared across Claude on the web, Desktop, and Claude Code when the same account and
+workspace are selected; see Anthropic's
+[connector guidance](https://support.claude.com/en/articles/11725091-when-to-use-desktop-and-web-connectors).
+On Team and Enterprise plans, an Owner or Primary Owner must add/enable the connector for the
+organization, and each user normally authenticates it individually.
+
+Record the last confirmed stage before changing anything:
+
+| Last confirmed stage | What it means |
+|---|---|
+| The Health MCP sign-in page never opens | Check Claude's connector URL, selected account/workspace, and organization connector configuration. |
+| The sign-in page opens; no Google chooser appears; the browser returns to Claude | This can be normal silent Google SSO. Continue tracing the callback/token stages. |
+| Google or the Health MCP shows an error before returning | Investigate Google sign-in, the email allowlist, redirect URI, or server-side authorization error. |
+| Claude receives the callback, but the server records no access-token issuance | Investigate the callback handoff and token exchange. |
+| The server issues an access token, but no authenticated `/api/mcp` request follows | On versions before 0.1.2, the client may have rejected the malformed legacy ID token after access-token persistence. On 0.1.2+, first confirm JWKS/ID-token verification, then investigate Claude's connector state, credential persistence, workspace, or duplicate configuration. |
+| An authenticated MCP initialize or tool request reaches `/api/mcp` | OAuth succeeded; troubleshoot MCP transport, reconnection, or the tool call separately. |
+
+For the work-computer incident that prompted this runbook, production evidence showed Claude
+access tokens being persisted after the browser returned. A regression replay then found that
+better-auth's deprecated MCP path issued an ephemeral `HS256` ID token while advertising
+`RS256`, omitted the issuer, wrote `auth_time` in milliseconds, and advertised JWKS/UserInfo
+endpoints that returned 404. A strict client can reject that response before its first Bearer
+request even though the server has already stored the access token. Version 0.1.2 repairs that
+boundary with an encrypted, persisted `RS256` signing key and live JWKS/UserInfo endpoints;
+the work-computer retry remains the final acceptance check. This is MCP client auth, not evidence
+that Google Health consent failed.
+
+Do **not** rotate shared auth/encryption secrets, revoke unrelated users' or clients' tokens,
+disconnect Google Health, or clear every credential as a first response. Scope any reset to the
+one affected connector.
+
+Recovery sequence:
+
+1. Capture the exact Claude error (including any `ofid_...` identifier), local timestamp with
+   timezone, Claude Code or Desktop version, selected Claude account/workspace, and whether the
+   connector came from Claude's account settings or a direct Claude Code MCP entry.
+2. Update Claude Code/Desktop, fully quit the affected clients (including the Desktop tray
+   process), reopen them, and confirm the same account and workspace are selected.
+3. Check the account-level connector in Claude's connector settings. On Team/Enterprise, have
+   an Owner or Primary Owner confirm its organization configuration. Disconnect/reconnect the
+   affected user, or remove and re-add that remote connector **once**; avoid repeated retries
+   that create more client registrations without isolating the failing stage. Re-add it only at
+   `https://health.emmetts.dev/api/mcp`, authenticate once, and test it on Claude web before
+   checking Desktop and Code.
+4. In Claude Code, check `claude mcp list` and `/mcp` for a separately configured direct entry
+   pointing to the same URL. Direct local/project/user entries take precedence over a duplicate
+   claude.ai connector. For that duplicate direct entry only, use **Clear authentication** in
+   `/mcp`, remove the duplicate, and retry with the account connector (or re-add the direct entry
+   once if it is intentionally preferred). Anthropic documents this precedence and the clear-auth
+   control in the [Claude Code MCP guide](https://code.claude.com/docs/en/mcp).
+5. Use Claude Code's “paste the full callback URL” fallback only when the browser ends on a
+   literal connection error at a local `http://localhost:<port>/callback` URL and Claude Code is
+   prompting for that URL. It does not apply to a normal remote return to Claude Desktop or to a
+   callback that already completed.
+6. If the failure persists on 0.1.2 after the ID token verifies against the advertised JWKS,
+   preserve the captured `ofid_...`, timestamp, versions, workspace type, and sanitized `/mcp`
+   status for Anthropic support, together with the server-side timeline. A valid token response
+   followed by no authenticated MCP request is then a post-token client/connector failure.
 
 ## Task board
 

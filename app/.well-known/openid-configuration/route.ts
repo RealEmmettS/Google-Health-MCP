@@ -2,8 +2,8 @@ import { oAuthDiscoveryMetadata } from "better-auth/plugins";
 import { auth } from "@/src/auth/auth";
 import { repairAuthorizationServerMetadata } from "@/src/auth/mcp-oauth-compat";
 
-// RFC 8414 authorization-server metadata. MCP clients (claude.ai, ChatGPT,
-// Claude Code) discover the authorize/token/register endpoints here.
+// OIDC discovery for strict clients that validate the ID token separately
+// from the RFC 8414 metadata used by MCP authorization discovery.
 export const runtime = "nodejs";
 
 const discovery = oAuthDiscoveryMetadata(auth);

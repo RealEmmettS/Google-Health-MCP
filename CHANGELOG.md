@@ -6,6 +6,39 @@ The `.tasks/` board tracks in-flight work; this file records what shipped.
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-07-13
+
+Claude OAuth compatibility and incident-diagnostics release. The work-computer reconnect remains
+the final acceptance check; this release fixes the regression-proven server response defect
+without claiming that every downstream Claude credential-persistence failure is resolved.
+
+### Fixed
+
+- Repaired the deprecated Better Auth MCP plugin's OIDC token response. It previously emitted an
+  ephemeral `HS256` ID token while discovery advertised `RS256`, omitted `iss`, used millisecond
+  `auth_time`, and advertised JWKS/UserInfo endpoints that returned 404. ID tokens are now signed
+  with an encrypted, persisted RS256 key, expose a matching JWKS, carry normalized OIDC claims,
+  and work with a scope-filtered UserInfo endpoint.
+- Required S256 PKCE for every authorization-code flow, including confidential hosted clients;
+  rejected any supplied OAuth resource other than the canonical
+  `https://health.emmetts.dev/api/mcp`; and preserved no-store/no-cache headers after response
+  rewriting.
+- Preflighted durable ID-token signing before the legacy handler can consume a one-time code or
+  persist credentials, preventing an unavailable signing key from leaving an unrepeatable failed
+  exchange.
+
+### Added
+
+- Confidential `client_secret_post` and public `none` DCR/PKCE E2E scenarios with exact signed-out
+  parameter preservation, negative PKCE/resource attempts, cryptographic JWKS verification,
+  immediate Bearer initialize/tools-list, scoped UserInfo, and zero-row cleanup assertions.
+- A Claude work-computer runbook covering silent Google SSO, account/workspace selection,
+  Team/Enterprise Owner setup, safe connector-scoped reset, web-first testing, Claude Code's
+  callback paste fallback, and the evidence required for an Anthropic escalation.
+- Environment-specific JWKS tables so Development, Preview, and Production can share Neon while
+  encrypting their private signing keys with distinct Better Auth secrets. The maintained OAuth
+  Provider migration is tracked separately as board task `#oap`.
+
 ### Changed
 - Added ADR-0001, fixing the product boundary as private and allowlist-only for Emmett and
   Christian. Public signup, the unverified first-100-user path, Google restricted-scope

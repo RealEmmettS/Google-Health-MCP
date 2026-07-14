@@ -1,6 +1,7 @@
 # Tasks
 
 ## Backlog
+- [ ] **Migrate MCP auth off Better Auth's deprecated legacy plugin** - staged move to the maintained OAuth Provider with exact audience/resource validation and a deliberate connector re-auth window (owner agent+emmett) #oap
 - [ ] **v1.1 — Google Health webhooks** - service account + IAM, subscriber registration, signature verification, freshness ledger population; see docs/PLAN.md Phase 8 #w11
 - [ ] **Evaluate Railway migration (future, Emmett's call)** - if/when leaving Vercel serverless; FastMCP becomes viable then; track Vercel-locked surface here #rlw
 - [ ] **Custom REST API surface (future, Emmett's call)** - bearer-token (PAT) authenticated standard API over the same health services, alongside the MCP (needs #p7d) #api
@@ -8,6 +9,12 @@
 ## To-Do
 
 ## Active
+- [ ] **Resolve Claude work-computer OAuth handoff failure** - prod reached Google session + token issuance; strengthen exact Claude OAuth coverage, document safe client reset, and correlate a real work-computer retry (owner emmett+agent) #cau
+  - [x] Extend OAuth E2E coverage for signed-out parameter preservation + public PKCE clients
+  - [x] Record the safe Claude remote-connector reset and diagnostic decision path
+  - [ ] Verify unit tests, typecheck, build, OAuth paths, production metadata, and test-row cleanup
+  - [ ] Reconnect once from the intended work Claude workspace and run a read-only Health tool (owner emmett)
+  - [ ] Confirm the account-level connector propagates to Claude Desktop and Claude Code (owner emmett)
 
 ## Done
 - [x] **Fix mobile homepage headline overflow** - “HEALTH, CONNECTED.” now stays comfortably inside the hero panel with no narrow-viewport horizontal scroll (done 2026-07-10) #mbl
