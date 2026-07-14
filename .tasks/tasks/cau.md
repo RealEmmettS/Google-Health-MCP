@@ -39,13 +39,13 @@ An apparent immediate-expiry theory was falsified: the database stores Better Au
 - [x] JWKS and scoped UserInfo endpoints resolve; signing private keys remain encrypted at rest in environment-specific key rings
 - [x] E2E cleanup runs on success and failure; no test session/application/token/consent rows remain
 - [x] `npm test`, `npm run typecheck`, and `npm run build` pass
-- [ ] Production metadata and unauthenticated MCP 401 + exposed `WWW-Authenticate` remain correct
+- [x] Production metadata and unauthenticated MCP 401 + exposed `WWW-Authenticate` remain correct
 - [ ] One read-only Health tool succeeds from the intended work Claude workspace (owner emmett)
 - [ ] The same remote connector is usable from Claude Desktop and Claude Code (owner emmett)
 
 ## Status
 
-ACTIVE. The replay proved and reproduced a server-owned OIDC response defect after access-token persistence; a narrow 0.1.2 RS256 compatibility repair is in verification. Emmett still owns the real work-computer reconnect and cross-surface acceptance, so this task must remain Active after deployment until that succeeds or produces an Anthropic trace.
+ACTIVE. The regression-proven server defect is fixed and 0.1.2 is live. Production health, OAuth/OIDC/protected-resource discovery, public-only RS256 JWKS, encrypted production key storage, wrong-resource rejection, and the unauthenticated MCP challenge all pass. Emmett still owns the real work-computer reconnect and cross-surface acceptance, so this task remains Active until that succeeds or produces an Anthropic trace.
 
 ## Activity
 
@@ -54,3 +54,4 @@ ACTIVE. The replay proved and reproduced a server-owned OIDC response defect aft
 - 2026-07-13 — Added confidential + public DCR/PKCE replay paths. Both reached token issuance and immediate Bearer MCP successfully, while seven OIDC assertions failed: HS256 contradicted RS256 discovery, `iss`/`auth_time` were invalid, and advertised JWKS/UserInfo returned 404. This converted the incident from a client-only hypothesis to a regression-proven server compatibility defect. (agent: codex)
 - 2026-07-13 — Implemented the narrow bridge: required S256 PKCE, canonical-resource validation, persisted encrypted RS256 signing keys split by Development/Preview/Production secret domain, repaired ID-token claims, and real JWKS/UserInfo routes. Added unit coverage and additive migration `0002`; tracked the full provider migration separately as `#oap`. (agent: codex)
 - 2026-07-13 — Security re-review closed mixed-case/suffix media-type bypasses, oversized-body/RSA-preflight abuse, exact-route matching, false `auth_time`/ACR metadata, missing OIDC discovery, and accidental dependency drift by pinning Better Auth 1.6.23. Migration `0002` was applied before code deployment. Final local gates: 82/82 unit tests, typecheck, production build, both confidential/public OAuth scenarios, live read-only steps, and zero cleanup rows all pass. Security finding outcome: fixed; legacy refresh/resource-token model debt remains explicitly in `#oap`. (agent: codex)
+- 2026-07-13 — Pushed `127b9b2`; Vercel production deployment `dpl_5jbMwt44ta1iAvu6AzaxcJjE4Teq` became Ready and moved `health.emmetts.dev`. Safe production checks passed: health, RFC 8414 + OIDC discovery agreement, canonical protected-resource metadata, one public-only RSA/RS256 JWKS key, encrypted private-key envelope in Neon, exposed MCP 401 challenge, and wrong-resource rejection. Server release is complete; operator web/Desktop/Code acceptance remains open. (agent: codex)
