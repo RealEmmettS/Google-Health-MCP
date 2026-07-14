@@ -6,6 +6,37 @@ The `.tasks/` board tracks in-flight work; this file records what shipped.
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-07-14
+
+OAuth client-compatibility verification release. The deployed 0.1.2 authentication repair was
+already working for fresh Claude and Codex connections; this patch closes a refresh-response
+cache-control gap found while extending the regression harness.
+
+### Fixed
+
+- Added the RFC 6749 `Cache-Control: no-store` and `Pragma: no-cache` directives to successful
+  refresh-token responses, including responses without an ID token to rewrite.
+
+### Added
+
+- Exercised the exact hosted Claude callback (`https://claude.ai/api/mcp/auth_callback`), a
+  Claude Code `localhost` loopback callback, and Codex's `127.0.0.1` callback-with-path shape as
+  separate DCR/PKCE scenarios.
+- Added form-encoded refresh grants for confidential and public clients, fresh-token checks, and
+  immediate authenticated MCP initialize/tools-list/UserInfo verification after each refresh.
+
+### Verified
+
+- Fresh native OAuth logins and read-only MCP tool calls succeeded through both Claude Code and
+  Codex against production. The correlated server timeline showed token issuance followed by
+  authenticated MCP traffic and no relevant OAuth/MCP server errors.
+
+### Notes
+
+- The deprecated provider still does not atomically invalidate a predecessor refresh token after
+  issuing its successor. Functional refresh interoperability is verified, while replay-safe token
+  families remain explicitly tracked in board task `#oap` for the coordinated provider migration.
+
 ## [0.1.2] — 2026-07-13
 
 Claude OAuth compatibility and incident-diagnostics release. The work-computer reconnect remains

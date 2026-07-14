@@ -17,7 +17,7 @@ const handler = withMcpAuth(auth, (req, session) => {
   return createMcpHandler(
     (server) => registerTools(server, { userId: session.userId }),
     {
-      serverInfo: { name: "shaughv-health-mcp", version: "0.1.2" },
+      serverInfo: { name: "shaughv-health-mcp", version: "0.1.3" },
     },
     {
       basePath: "/api",

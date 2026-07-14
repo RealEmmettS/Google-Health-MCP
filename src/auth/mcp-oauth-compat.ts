@@ -335,7 +335,12 @@ export async function repairMcpTokenResponse(
     string,
     unknown
   > | null;
-  if (!body || typeof body.id_token !== "string") return response;
+  if (!body || typeof body.id_token !== "string") {
+    // The legacy handler omits the RFC 6749 cache directives on successful
+    // refresh grants. Every successful token response carries credentials,
+    // even when there is no ID token to repair.
+    return withNoStore(response);
+  }
 
   try {
     const expectedClientId = await tokenRequestClientId(requestCopy);

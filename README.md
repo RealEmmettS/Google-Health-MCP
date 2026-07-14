@@ -448,6 +448,15 @@ boundary with an encrypted, persisted `RS256` signing key and live JWKS/UserInfo
 the work-computer retry remains the final acceptance check. This is MCP client auth, not evidence
 that Google Health consent failed.
 
+A fresh 2026-07-14 revalidation also completed native DCR, S256 PKCE, browser handoff, loopback
+callback, token exchange, MCP initialize/discovery, and a read-only tool call through **both**
+Claude Code and Codex against production. Claude used a `localhost` callback; Codex used its
+`127.0.0.1:<ephemeral>/callback/<server-id>` shape. The account-level Claude connector and the
+separately authenticated direct Claude Code entry were both connected, and the correlated server
+window contained no relevant OAuth/MCP 5xx or unexpected 4xx responses. A new failure that occurs
+before any server request is therefore on the client, work-network, or workspace-policy side, not
+an MCP callback failure demonstrated at the Health server.
+
 Do **not** rotate shared auth/encryption secrets, revoke unrelated users' or clients' tokens,
 disconnect Google Health, or clear every credential as a first response. Scope any reset to the
 one affected connector.
@@ -459,6 +468,8 @@ Recovery sequence:
    connector came from Claude's account settings or a direct Claude Code MCP entry.
 2. Update Claude Code/Desktop, fully quit the affected clients (including the Desktop tray
    process), reopen them, and confirm the same account and workspace are selected.
+   Use the latest available release; see Anthropic's
+   [Claude Code changelog](https://code.claude.com/docs/en/changelog).
 3. Check the account-level connector in Claude's connector settings. On Team/Enterprise, have
    an Owner or Primary Owner confirm its organization configuration. Disconnect/reconnect the
    affected user, or remove and re-add that remote connector **once**; avoid repeated retries
@@ -479,6 +490,13 @@ Recovery sequence:
    preserve the captured `ofid_...`, timestamp, versions, workspace type, and sanitized `/mcp`
    status for Anthropic support, together with the server-side timeline. A valid token response
    followed by no authenticated MCP request is then a post-token client/connector failure.
+
+For Codex, `codex mcp list` should show the Health entry as `OAuth`; use
+`codex mcp login shaughv-health` for a connector-scoped retry. Codex registers a public client and
+owns a randomized `127.0.0.1` callback, so no fixed Codex callback belongs in Google Cloud. If a
+Codex run fails before the server receives DCR or an unauthenticated MCP discovery probe, update
+Codex and correct the local model/client configuration first. See OpenAI's
+[Codex MCP guide](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
 
 ## Task board
 

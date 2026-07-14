@@ -1,6 +1,6 @@
 {
   "name": "shaughv-health-mcp",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "Remote MCP server on Vercel exposing Google Health / Fitbit data to trusted LLM clients",
   "scripts": {

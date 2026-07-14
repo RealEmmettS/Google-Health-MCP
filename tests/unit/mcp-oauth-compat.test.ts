@@ -112,6 +112,34 @@ describe("legacy MCP OAuth compatibility boundary", () => {
     });
   });
 
+  it("adds OAuth no-store semantics to a refresh response without an ID token", async () => {
+    const request = new Request("https://health.example.test/api/auth/mcp/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: "client-1",
+        refresh_token: "opaque-refresh-token",
+      }),
+    });
+    const sign = vi.fn(async () => "unused");
+
+    const repaired = await repairMcpTokenResponse(
+      request,
+      Response.json({
+        access_token: "opaque-access-token",
+        refresh_token: "rotated-refresh-token",
+        token_type: "bearer",
+        expires_in: 3600,
+      }),
+      sign,
+    );
+
+    expect(repaired.headers.get("cache-control")).toBe("no-store");
+    expect(repaired.headers.get("pragma")).toBe("no-cache");
+    expect(sign).not.toHaveBeenCalled();
+  });
+
   it("does not invent auth_time when the legacy token did not contain it", async () => {
     const now = Math.floor(Date.now() / 1000);
     const legacy = await new SignJWT({ sub: "user-1", aud: "client-1" })

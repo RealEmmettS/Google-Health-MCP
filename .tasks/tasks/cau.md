@@ -33,6 +33,8 @@ An apparent immediate-expiry theory was falsified: the database stores Better Au
 - [x] Signed-out authorize redirects to `/sign-in` with response type, client id, redirect URI, scope, state, PKCE challenge/method, and resource unchanged
 - [x] Confidential-client DCR → authorize → form-token → immediate Bearer initialize/tools-list passes
 - [x] Public-client DCR (`none`) → authorize → form-token without secret → immediate Bearer initialize/tools-list passes
+- [x] Exact hosted Claude callback, Claude Code `localhost`, and Codex `127.0.0.1` callback-with-path profiles pass
+- [x] Public/confidential refresh grants return fresh token pairs and the refreshed Bearer immediately initializes MCP and lists tools
 - [x] DCR optional RFC fields are absent rather than `null`; token response includes bearer type, positive expiry, access token, and refresh token
 - [x] ID tokens verify as RS256 against the advertised JWKS with issuer, audience, subject, nonce, and NumericDate claims intact
 - [x] Missing PKCE and a non-canonical resource are rejected before the authorization code is consumed
@@ -40,6 +42,8 @@ An apparent immediate-expiry theory was falsified: the database stores Better Au
 - [x] E2E cleanup runs on success and failure; no test session/application/token/consent rows remain
 - [x] `npm test`, `npm run typecheck`, and `npm run build` pass
 - [x] Production metadata and unauthenticated MCP 401 + exposed `WWW-Authenticate` remain correct
+- [x] Fresh native Codex login completes DCR/PKCE/loopback callback and a read-only production tool call
+- [x] Fresh direct Claude Code login completes DCR/PKCE/loopback callback and a read-only production ping; account connector is also connected
 - [ ] One read-only Health tool succeeds from the intended work Claude workspace (owner emmett)
 - [ ] The same remote connector is usable from Claude Desktop and Claude Code (owner emmett)
 
@@ -55,3 +59,5 @@ ACTIVE. The regression-proven server defect is fixed and 0.1.2 is live. Producti
 - 2026-07-13 — Implemented the narrow bridge: required S256 PKCE, canonical-resource validation, persisted encrypted RS256 signing keys split by Development/Preview/Production secret domain, repaired ID-token claims, and real JWKS/UserInfo routes. Added unit coverage and additive migration `0002`; tracked the full provider migration separately as `#oap`. (agent: codex)
 - 2026-07-13 — Security re-review closed mixed-case/suffix media-type bypasses, oversized-body/RSA-preflight abuse, exact-route matching, false `auth_time`/ACR metadata, missing OIDC discovery, and accidental dependency drift by pinning Better Auth 1.6.23. Migration `0002` was applied before code deployment. Final local gates: 82/82 unit tests, typecheck, production build, both confidential/public OAuth scenarios, live read-only steps, and zero cleanup rows all pass. Security finding outcome: fixed; legacy refresh/resource-token model debt remains explicitly in `#oap`. (agent: codex)
 - 2026-07-13 — Pushed `127b9b2`; Vercel production deployment `dpl_5jbMwt44ta1iAvu6AzaxcJjE4Teq` became Ready and moved `health.emmetts.dev`. Safe production checks passed: health, RFC 8414 + OIDC discovery agreement, canonical protected-resource metadata, one public-only RSA/RS256 JWKS key, encrypted private-key envelope in Neon, exposed MCP 401 challenge, and wrong-resource rejection. Server release is complete; operator web/Desktop/Code acceptance remains open. (agent: codex)
+- 2026-07-14 — Revalidated production with the native clients rather than a simulation alone. Codex completed fresh public DCR, S256 PKCE, a randomized `127.0.0.1` callback, token persistence, and a read-only Health tool. The account-level Claude connector was connected; a separate direct Claude Code entry completed fresh public DCR, a `localhost` callback, and a read-only ping. Correlated production logs showed each token followed by authenticated MCP traffic and no relevant 5xx/unexpected 4xx responses. The original 0.1.2 fix is working; the intended work-computer/workspace acceptance remains operator-owned. (agent: codex)
+- 2026-07-14 — Corrected the verifier's client profiles to use Claude's exact hosted callback plus both loopback host shapes, and added public/confidential refresh grants with immediate post-refresh MCP use. That exposed one unrelated RFC 6749 gap: legacy refresh responses omitted no-store/no-cache. The narrow 0.1.3 response-header fix passes 83 unit tests, typecheck, build, and the full three-profile local OAuth E2E with zero cleanup rows. Legacy refresh-token replay remains separate, explicitly recorded migration debt in `#oap`. (agent: codex)

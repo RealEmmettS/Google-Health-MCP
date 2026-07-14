@@ -5,13 +5,14 @@
  *
  * Real client paths (what claude.ai / ChatGPT / Claude Code actually do):
  *   1. read /.well-known/oauth-authorization-server
- *   2. DCR register both a confidential hosted client and a public client
+ *   2. DCR register a hosted confidential client plus the public loopback
+ *      callback shapes used by Claude Code and Codex
  *   3. PKCE /authorize  (Google login is the only un-automatable step; we
  *      satisfy it by minting a better-auth session row + signing its cookie
  *      exactly as the server would — same HMAC scheme and cookie naming)
- *   4. form-encoded /token exchange  → access_token
- *   5. POST /api/mcp with each Bearer token → initialize + tools/list
- *   6. run representative tools through the confidential-client token
+ *   4. form-encoded /token exchange and refresh → fresh access_token pairs
+ *   5. POST /api/mcp with every initial/refreshed Bearer token → initialize + tools/list
+ *   6. run representative tools through the refreshed confidential-client token
  *
  * The script intentionally has no direct-token fallback: an OAuth failure must
  * remain visible. Every session, verification code, DCR client, consent, and
@@ -34,7 +35,9 @@ const positionalArgs = cliArgs.filter((arg) => arg !== MUTATION_OPT_IN);
 const BASE = (positionalArgs[0] ?? "http://localhost:3000").replace(/\/+$/, "");
 const EMAIL = positionalArgs[1] ?? "eshaughv@gmail.com";
 const RESOURCE = `${BASE}/api/mcp`;
-const REDIRECT_URI = "http://localhost:9876/callback";
+const CLAUDE_HOSTED_REDIRECT_URI = "https://claude.ai/api/mcp/auth_callback";
+const CLAUDE_CODE_REDIRECT_URI = "http://localhost:9876/callback";
+const CODEX_REDIRECT_URI = "http://127.0.0.1:9877/callback/e2e-health-mcp";
 const SECRET = process.env.BETTER_AUTH_SECRET ?? "";
 const REQUESTED_SCOPE = "openid profile email offline_access";
 const DCR_OPTIONAL_FIELDS = [
@@ -61,11 +64,15 @@ interface OAuthScenario {
   label: string;
   clientName: string;
   authMethod: AuthMethod;
+  redirectUri: string;
 }
 
 interface OAuthResult {
   accessToken: string;
+  refreshToken: string;
   clientId: string;
+  clientSecret: string;
+  authMethod: AuthMethod;
   label: string;
 }
 
@@ -399,7 +406,7 @@ async function main() {
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           client_name: scenario.clientName,
-          redirect_uris: [REDIRECT_URI],
+          redirect_uris: [scenario.redirectUri],
           grant_types: ["authorization_code", "refresh_token"],
           response_types: ["code"],
           token_endpoint_auth_method: scenario.authMethod,
@@ -448,7 +455,7 @@ async function main() {
       const authorizeParams = new URLSearchParams({
         response_type: "code",
         client_id: clientId,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: scenario.redirectUri,
         scope: REQUESTED_SCOPE,
         state,
         nonce,
@@ -490,7 +497,7 @@ async function main() {
       if (code) verificationCodes.add(code);
       const gotCode =
         !!callbackUrl &&
-        `${callbackUrl.origin}${callbackUrl.pathname}` === REDIRECT_URI &&
+        `${callbackUrl.origin}${callbackUrl.pathname}` === scenario.redirectUri &&
         callbackUrl.searchParams.get("state") === state &&
         !!code;
       check(
@@ -508,7 +515,7 @@ async function main() {
       const tokenRequestBase = new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: REDIRECT_URI,
+        redirect_uri: scenario.redirectUri,
         client_id: clientId,
         resource: RESOURCE,
         ...(scenario.authMethod === "client_secret_post" ? { client_secret: clientSecret } : {}),
@@ -643,7 +650,104 @@ async function main() {
         `iat=${Number.isInteger(issuedAt) ? "integer" : "invalid"} exp=${Number.isInteger(expiresAt) ? "integer" : "invalid"} auth_time=${hasAuthTime ? (Number.isInteger(authTime) ? "integer" : "invalid") : "omitted"}`,
       );
 
-      return accessToken ? { accessToken, clientId, label: scenario.label } : null;
+      return accessToken && refreshToken
+        ? {
+            accessToken,
+            refreshToken,
+            clientId,
+            clientSecret,
+            authMethod: scenario.authMethod,
+            label: scenario.label,
+          }
+        : null;
+    };
+
+    const exerciseRefresh = async (result: OAuthResult): Promise<OAuthResult | null> => {
+      const refreshForm = new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: result.refreshToken,
+        client_id: result.clientId,
+        resource: RESOURCE,
+        ...(result.authMethod === "client_secret_post"
+          ? { client_secret: result.clientSecret }
+          : {}),
+      });
+      if (result.authMethod === "client_secret_post") {
+        const unauthenticatedForm = new URLSearchParams(refreshForm);
+        unauthenticatedForm.delete("client_secret");
+        const unauthenticatedResponse = await fetch(tokenEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Accept: "application/json",
+          },
+          body: unauthenticatedForm.toString(),
+        });
+        const unauthenticatedBody = (await unauthenticatedResponse
+          .json()
+          .catch(() => ({}))) as JsonObject;
+        check(
+          `${result.label}: confidential refresh without its secret returns invalid_client`,
+          unauthenticatedResponse.status === 401 &&
+            unauthenticatedBody.error === "invalid_client",
+          `status=${unauthenticatedResponse.status} error=${String(unauthenticatedBody.error ?? "missing")}`,
+        );
+      }
+
+      const invalidRefreshForm = new URLSearchParams(refreshForm);
+      invalidRefreshForm.set("refresh_token", `invalid-${randomUUID()}`);
+      const invalidResponse = await fetch(tokenEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: invalidRefreshForm.toString(),
+      });
+      const invalidBody = (await invalidResponse.json().catch(() => ({}))) as JsonObject;
+      check(
+        `${result.label}: an unknown refresh token returns invalid_grant`,
+        (invalidResponse.status === 400 || invalidResponse.status === 401) &&
+          invalidBody.error === "invalid_grant",
+        `status=${invalidResponse.status} error=${String(invalidBody.error ?? "missing")}`,
+      );
+
+      const response = await fetch(tokenEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
+        body: refreshForm.toString(),
+      });
+      checkNoStoreHeaders(`${result.label}: refresh`, response);
+      const body = (await response.json().catch(() => ({}))) as JsonObject;
+      const accessToken = typeof body.access_token === "string" ? body.access_token : "";
+      const refreshToken = typeof body.refresh_token === "string" ? body.refresh_token : "";
+      const scopes = typeof body.scope === "string" ? body.scope.split(" ") : [];
+      // A distinct successor proves that standard clients can advance their
+      // stored credential. The legacy provider does not atomically invalidate
+      // the predecessor; that security-model migration remains tracked in #oap.
+      check(
+        `${result.label}: form-encoded refresh returns a fresh Bearer token pair`,
+        response.ok &&
+          accessToken.length > 0 &&
+          refreshToken.length > 0 &&
+          refreshToken !== result.refreshToken &&
+          String(body.token_type).toLowerCase() === "bearer" &&
+          typeof body.expires_in === "number" &&
+          body.expires_in > 0 &&
+          REQUESTED_SCOPE.split(" ").every((scope) => scopes.includes(scope)),
+        `status=${response.status} changed=${refreshToken && refreshToken !== result.refreshToken ? "yes" : "no"}`,
+      );
+      return accessToken && refreshToken
+        ? {
+            ...result,
+            accessToken,
+            refreshToken,
+            label: `${result.label} refreshed`,
+          }
+        : null;
     };
 
     const exerciseMcp = async (result: OAuthResult) => {
@@ -794,14 +898,22 @@ async function main() {
 
     const scenarios: OAuthScenario[] = [
       {
-        label: "confidential client",
+        label: "hosted confidential client",
         clientName: `e2e-confidential-${runId}`,
         authMethod: "client_secret_post",
+        redirectUri: CLAUDE_HOSTED_REDIRECT_URI,
       },
       {
-        label: "public PKCE client",
-        clientName: `e2e-public-${runId}`,
+        label: "Claude Code public client",
+        clientName: `e2e-claude-code-public-${runId}`,
         authMethod: "none",
+        redirectUri: CLAUDE_CODE_REDIRECT_URI,
+      },
+      {
+        label: "Codex public client",
+        clientName: `e2e-codex-public-${runId}`,
+        authMethod: "none",
+        redirectUri: CODEX_REDIRECT_URI,
       },
     ];
 
@@ -815,8 +927,18 @@ async function main() {
         const mcp = await exerciseMcp(result);
         await assertPersistedExpiry(result);
         await exerciseUserInfo(result);
-        if (scenario.authMethod === "client_secret_post" && mcp.ready) {
-          await exerciseConfidentialTools(result, mcp.mcpSession);
+        const refreshed = await exerciseRefresh(result);
+        if (!refreshed) continue;
+
+        const refreshedMcp = await exerciseMcp(refreshed);
+        await assertPersistedExpiry(refreshed);
+        await exerciseUserInfo(refreshed);
+        if (
+          scenario.authMethod === "client_secret_post" &&
+          mcp.ready &&
+          refreshedMcp.ready
+        ) {
+          await exerciseConfidentialTools(refreshed, refreshedMcp.mcpSession);
         }
       } catch (error) {
         const message = redactError(error).message;
