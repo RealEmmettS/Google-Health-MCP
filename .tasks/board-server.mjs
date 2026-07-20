@@ -677,9 +677,29 @@ function writeFileAtomic(dest, buf) {
 }
 
 function readPluginVersion() {
-  const root = process.env.CLAUDE_PLUGIN_ROOT;
-  if (root) { const j = readJsonSafe(path.join(root, '.claude-plugin', 'plugin.json')); if (j?.version) return j.version; }
+  const local = readJsonSafe(path.join(TASKS_DIR, '.board-version.json'));
+  if (local?.pluginVersion) return local.pluginVersion;
+  if (process.env.SHAUGHV_TASKS_PLUGIN_VERSION) return process.env.SHAUGHV_TASKS_PLUGIN_VERSION;
+  const sourceMarker = process.env.SHAUGHV_TASKS_ASSETS_DIR
+    ? readJsonSafe(path.join(process.env.SHAUGHV_TASKS_ASSETS_DIR, 'board-version.json'))
+    : null;
+  if (sourceMarker?.pluginVersion) return sourceMarker.pluginVersion;
+  for (const root of [process.env.CLAUDE_PLUGIN_ROOT, process.env.CODEX_PLUGIN_ROOT].filter(Boolean)) {
+    for (const rel of [path.join('.claude-plugin', 'plugin.json'), path.join('.codex-plugin', 'plugin.json')]) {
+      const j = readJsonSafe(path.join(root, rel));
+      if (j?.version) return j.version;
+    }
+  }
   return 'unknown';
+}
+
+function shippedAssetsDir() {
+  if (process.env.SHAUGHV_TASKS_ASSETS_DIR) return path.resolve(process.env.SHAUGHV_TASKS_ASSETS_DIR);
+  for (const root of [process.env.CLAUDE_PLUGIN_ROOT, process.env.CODEX_PLUGIN_ROOT].filter(Boolean)) {
+    const candidate = path.join(root, 'skills', 'tasks-start', 'assets');
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
 }
 
 function writeManifest(m) {
@@ -842,9 +862,9 @@ async function fetchAssetFrom(source, rel, spec) {
     return await httpsGet(spec.cdn);
   }
   if (source === 'shipped') {
-    const root = process.env.CLAUDE_PLUGIN_ROOT;
-    if (!root) return null; // can't locate the plugin bundle without it
-    try { return await fsp.readFile(path.join(root, 'skills', 'tasks-start', 'assets', 'vendor', ...rel.split('/'))); }
+    const assets = shippedAssetsDir();
+    if (!assets) return null; // can't locate the plugin bundle without an explicit or host-provided path
+    try { return await fsp.readFile(path.join(assets, 'vendor', ...rel.split('/'))); }
     catch { return null; }
   }
   if (source === 'npm') {
