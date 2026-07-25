@@ -34,9 +34,10 @@ Trusted MCP clients gain a “what changed?” surface. Risks are notification s
 
 ## Status
 
-ACTIVE. Schema/service/tool/resource/acknowledgement and retention are implemented. Duplicate and real-delivery evidence depend on the production subscriber.
+ACTIVE. Schema/service/tool/resource/acknowledgement and retention are implemented, and the empty inbox is readable through the production MCP. Duplicate and real-delivery evidence depend on the first genuine Google notification.
 
 ## Activity
 
 - 2026-07-25 04:05 — created from Emmett's direct request for proactive behavior, with outbound delivery explicitly deferred (agent: codex)
 - 2026-07-25 11:00 — implemented seven-day deduplicated pointer inbox, bounded list/acknowledge tools, `health://updates`, daily retention, and disconnect/delete cleanup (agent: codex)
+- 2026-07-25 11:42 — production `get_health_updates` returns a bounded empty inbox as expected; Google subscriber is active, awaiting a real data-change notification for final enqueue/acknowledge evidence (agent: codex)
