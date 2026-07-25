@@ -10,13 +10,7 @@
 
 ## Active
 - [ ] **v1.1 — Google Health webhooks** - authenticated subscriber, signature verification, durable freshness ledger, and encrypted-cache invalidation (needs #fsp) (ms #v11) (owner agent+emmett) #w11
-- [ ] **Add bounded health trends** - structured 7/30/90-day coverage-aware trends without medical interpretation (needs #fsp) (ms #v11) (owner agent) #qry
 - [ ] **Add proactive health update inbox** - turn webhook signals into deduplicated MCP-readable updates without claiming outbound push (needs #w11, #qry) (ms #v11) (owner agent) #upd
-- [ ] **Make the MCP single-user and add health-data controls** - remove Christian everywhere, revoke/delete his access and stored rows, publish privacy disclosure, and add disconnect/delete actions (ms #v11) (owner agent+emmett) #prv
-  - [x] Remove Christian from code, docs, task memory, and production allowlist
-  - [x] Revoke Christian's MCP sessions/tokens and Google Health connection
-  - [x] Delete Christian's locally stored Health data and verify isolation
-  - [x] Add privacy, disconnect, and Health-data deletion controls
 - [ ] **Resolve Claude work-computer OAuth handoff failure** - 0.1.3 is live; fresh native Claude Code + Codex auth/tool calls and exact callback/refresh profiles pass, awaiting the intended work workspace retry (owner emmett+agent) #cau
   - [x] Extend OAuth E2E coverage for signed-out parameter preservation + public PKCE clients
   - [x] Exercise exact hosted Claude, direct Claude Code, and Codex callback profiles plus refresh grants
@@ -28,6 +22,12 @@
   - [ ] Confirm the account-level connector propagates to Claude Desktop and Claude Code (owner emmett)
 
 ## Done
+- [x] **Add bounded health trends** - structured 7/30/90-day coverage-aware trends without medical interpretation (done 2026-07-25) (needs #fsp) (ms #v11) (owner agent) #qry
+- [x] **Make the MCP single-user and add health-data controls** - removed Christian everywhere, verified no access/stored rows existed, published privacy disclosure, and added disconnect/delete actions (done 2026-07-25) (ms #v11) (owner agent+emmett) #prv
+  - [x] Remove Christian from code, docs, task memory, and production allowlist
+  - [x] Revoke Christian's MCP sessions/tokens and Google Health connection
+  - [x] Delete Christian's locally stored Health data and verify isolation
+  - [x] Add privacy, disconnect, and Health-data deletion controls
 - [x] **Add encrypted health cache and faster truthful reads** - exact-response AES-256-GCM cache, request dedupe/concurrency, invalidation, provenance, and freshness fixes (done 2026-07-25) (ms #v11) (owner agent) #fsp
   - [x] Add encrypted exact-response cache with range-aware TTLs
   - [x] Add request-scoped deduplication and bounded concurrency

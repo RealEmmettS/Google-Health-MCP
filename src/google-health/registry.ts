@@ -2,7 +2,7 @@
  * Google Health API data-type registry — single source of truth.
  *
  * Source: Google Health API data types table, developers.google.com/health
- * — transcribed 2026-07-09.
+ * — operations and webhook support last reconciled 2026-07-25.
  *
  * Rule (docs/PLAN.md "Watchouts"): kebab-case names are used in endpoint
  * paths (e.g. `body-fat`); snake_case names are used as filter-parameter
@@ -393,7 +393,7 @@ export const DATA_TYPES: Readonly<Record<string, DataTypeSpec>> = {
     recordType: "Interval",
     scopeGroup: "activity_and_fitness",
     ops: ["rollup", "dailyRollup"],
-    webhookSupport: true,
+    webhookSupport: false,
     trueZeros: true,
   },
   "vo2-max": {

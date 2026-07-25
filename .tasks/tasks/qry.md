@@ -29,13 +29,14 @@ One call can answer comparative questions with fewer tool round trips. Risks are
 - [x] 7/30/90-day bounded ranges, pagination, civil dates, gaps, and true-zero fixtures pass
 - [x] Output includes units, coverage, freshness, and source limitations
 - [x] Payload remains bounded and contains no diagnosis language
-- [ ] Live connector returns at least one available metric correctly
+- [x] Live connector returns at least one available metric correctly
 
 ## Status
 
-ACTIVE. Service/tool implementation and live Google API shaping pass. Production MCP connector acceptance remains after deploy.
+DONE. Unit, live Google, and production MCP connector evidence all pass with explicit coverage and cache provenance.
 
 ## Activity
 
 - 2026-07-25 04:05 — created from Emmett's direct order to include richer trends in v1.1 (agent: codex)
 - 2026-07-25 11:00 — added `get_health_trends` for nine metrics and 7/30/90-day windows; corrected live civil-rollup, oxygen, and respiratory shapes; 7-day live run returned coverage and a cache-only repeat (agent: codex)
+- 2026-07-25 11:31 — production MCP force-refresh returned live 7-day steps (7/7) and sleep (6/7), followed by an identical cache-only repeat (agent: codex)

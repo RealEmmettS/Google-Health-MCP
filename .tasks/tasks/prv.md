@@ -32,20 +32,22 @@ Christian immediately loses access and his local data becomes unrecoverable; Emm
 | Production identity inventory | parameterized Neon count query for `[redacted]` | Better Auth user=null; app user=null; all session/token/connection/cache/freshness/inbox/audit/webhook counts=0 | Christian never onboarded, so no destructive DB deletion or Google token revocation existed to perform | Google OAuth Audience UI still needs inspection | PASS |
 | Single-user config | local env membership check; `vercel env add ... --force --sensitive` | local and Production allowlist set to Emmett primary+alias; project/webhook/cron vars written | New deployment will activate single-user perimeter | Sensitive Vercel values are write-only by design | PASS |
 | Privacy controls | `tests/unit/privacy-routes.test.ts`; production build | Same-origin auth, exact destructive phrase, and resolved-user scoping pass; `/privacy` and both routes built | Controls are identity scoped and visible | Not clicked destructively for Emmett | PASS |
+| Production continuity and Google audience | authenticated production MCP reads; Google Auth Platform Audience | MCP 0.2.0 sync/trends/updates pass; app is In production with 1 lifetime user and no Test Users surface | Emmett remains connected; Christian never authorized the app and has no test-user entry to remove | OAuth user cap does not reveal the user's email, so identity is correlated with the sole production DB user | PASS |
 
 ## Verification
 
 - [x] ADR, configuration, docs, and task memory define Emmett as the sole approved user
 - [x] Christian has zero active Better Auth sessions/MCP tokens/Google Health connection rows
 - [x] Christian-linked cache, freshness, webhook, and mutation-audit rows are zero
-- [ ] Emmett's connection and read tools still work after offboarding
+- [x] Emmett's connection and read tools still work after offboarding
 - [x] Privacy disclosure and authenticated disconnect/delete flows pass isolation tests
 
 ## Status
 
-ACTIVE. Database offboarding is complete by verified absence, production allowlist is written, and privacy controls pass. Final gate is Emmett read continuity after the new deployment activates the env revision.
+DONE. Christian has no app, token, Health, or OAuth-test-user state; Emmett is the sole production user and his authenticated reads continue on 0.2.0.
 
 ## Activity
 
 - 2026-07-25 04:05 — created and moved directly to Active after Emmett authorized single-user scope and Christian's removal (agent: codex)
 - 2026-07-25 11:00 — production inventory proved Christian has no identity or stored rows; removed him locally and in Vercel Production, accepted ADR-0002, added per-request bearer allowlist checks and privacy/disconnect/delete controls (agent: codex)
+- 2026-07-25 11:33 — verified Emmett's production MCP 0.2.0 connection/read continuity and inspected Google Auth Platform: In production, one lifetime OAuth user, and no Test Users surface; Christian never authorized and had nothing further to revoke (agent: codex)
