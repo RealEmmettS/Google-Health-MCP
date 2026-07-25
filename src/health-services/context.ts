@@ -1,6 +1,6 @@
 import type { AppUser } from "../auth/app-user";
 import type { GoogleHealthClient } from "../google-health/client";
-import { makeFreshness, type Freshness } from "./freshness";
+import { makeFreshness, maxTime, type Freshness } from "./freshness";
 import { getLatestHeartRate } from "./heart";
 import { getNutritionLog } from "./nutrition";
 import { getUserTimezone } from "./profile";
@@ -40,17 +40,20 @@ export async function getHealthContext(
     nutrition: args.questionType !== "heart_rate" || true,
   };
 
+  const sleepPromise = wants.sleep
+    ? getSleepSummary(user, client, { timezone }).catch((e: Error) => {
+        sectionErrors.sleep = e.message;
+        return undefined;
+      })
+    : Promise.resolve(undefined);
+
   const [sleep, heart, steps, nutrition] = await Promise.all([
-    wants.sleep
-      ? getSleepSummary(user, client, { timezone }).catch((e: Error) => {
-          sectionErrors.sleep = e.message;
-          return undefined;
-        })
-      : undefined,
+    sleepPromise,
     wants.heart
       ? getLatestHeartRate(user, client, {
           lookbackMinutes: 180,
           includeContext: true,
+          sleepSummary: sleepPromise,
         }).catch((e: Error) => {
           sectionErrors.latestHeartRate = e.message;
           return undefined;
@@ -70,6 +73,39 @@ export async function getHealthContext(
       : undefined,
   ]);
 
+  const sections = [
+    ["sleep", sleep],
+    ["latestHeartRate", heart],
+    ["todaySteps", steps],
+    ["nutritionToday", nutrition],
+  ] as const;
+  const sectionFreshness: Array<{ name: string; freshness: Freshness }> = [];
+  for (const [name, value] of sections) {
+    const freshness =
+      value && typeof value === "object"
+        ? (value as { freshness?: Freshness }).freshness
+        : undefined;
+    if (freshness) {
+      sectionFreshness.push({ name, freshness });
+    }
+  }
+  const staleSections = sectionFreshness
+    .filter(({ freshness }) => freshness.isPossiblyStale)
+    .map(({ name }) => name);
+  const missingSections = sections
+    .filter(([, value]) => value === undefined)
+    .map(([name]) => name);
+  const aggregateFreshness = makeFreshness(
+    maxTime(...sectionFreshness.map(({ freshness }) => freshness.latestDataTime)),
+    [...staleSections, ...missingSections].length
+      ? `Context is incomplete or possibly stale for: ${[
+          ...new Set([...staleSections, ...missingSections]),
+        ].join(", ")}. Review each section's freshness.`
+      : "All requested context sections returned without a stale flag.",
+  );
+  aggregateFreshness.isPossiblyStale =
+    staleSections.length > 0 || missingSections.length > 0;
+
   return {
     questionType: args.questionType,
     timezone,
@@ -84,6 +120,6 @@ export async function getHealthContext(
       "Absent nutrition/hydration logs mean nothing was LOGGED, not that nothing was consumed.",
       "If severe symptoms are present (chest pain, fainting, shortness of breath), suggest seeking medical care rather than analyzing data.",
     ],
-    freshness: makeFreshness(),
+    freshness: aggregateFreshness,
   };
 }

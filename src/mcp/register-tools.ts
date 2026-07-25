@@ -18,6 +18,11 @@ import { queryHealthData, rollupHealthData } from "../health-services/query";
 import { getSleepSummary } from "../health-services/sleep";
 import { getSyncStatus } from "../health-services/status";
 import { getTodaySteps } from "../health-services/steps";
+import { getHealthTrends, TREND_METRICS } from "../health-services/trends";
+import {
+  acknowledgeHealthUpdates,
+  getHealthUpdates,
+} from "../health-services/updates";
 import { resolveAppUser } from "../health-services/user";
 import {
   createHydrationLog,
@@ -61,6 +66,23 @@ function fail(payload: unknown): ToolResult {
   };
 }
 
+function attachProvenance(data: unknown, client: GoogleHealthClient): unknown {
+  const dataProvenance = client.getDataProvenance();
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    return { ...(data as Record<string, unknown>), dataProvenance };
+  }
+  return { data, dataProvenance };
+}
+
+async function runRead<T>(
+  client: GoogleHealthClient,
+  forceRefresh: boolean | undefined,
+  read: () => Promise<T>,
+): Promise<unknown> {
+  client.setCacheBypass(forceRefresh === true);
+  return attachProvenance(await read(), client);
+}
+
 /** Maps service errors to the handoff §21 client-facing shapes. */
 async function run(fn: () => Promise<unknown>): Promise<ToolResult> {
   try {
@@ -95,6 +117,10 @@ const timezoneArg = z
   .string()
   .max(64)
   .describe("IANA timezone override, e.g. America/Chicago (defaults to the user's Google Health setting)");
+const forceRefreshArg = z
+  .boolean()
+  .optional()
+  .describe("Bypass the short-lived encrypted cache and refresh this answer from Google");
 
 export function registerTools(server: McpServer, ctx: ToolContext): void {
   let resolved: Promise<ResolvedContext> | null = null;
@@ -131,12 +157,12 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       title: "Get sync status",
       description:
         "Google Health connection health: status, granted scopes, identity mapping, paired-device battery, and a synced-through estimate. Use when data seems missing or stale.",
-      inputSchema: {},
+      inputSchema: { forceRefresh: forceRefreshArg },
     },
-    async () =>
+    async ({ forceRefresh }) =>
       run(async () => {
         const { user, client } = await getCtx();
-        return getSyncStatus(user, client);
+        return runRead(client, forceRefresh, () => getSyncStatus(user, client));
       }),
   );
 
@@ -157,12 +183,13 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
           .max(200000)
           .optional()
           .describe("The user's step goal, ONLY if they have stated it"),
+        forceRefresh: forceRefreshArg,
       },
     },
     async (args) =>
       run(async () => {
         const { user, client } = await getCtx();
-        return getTodaySteps(user, client, args);
+        return runRead(client, args.forceRefresh, () => getTodaySteps(user, client, args));
       }),
   );
 
@@ -177,12 +204,13 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
           .optional()
           .describe("Any date in the desired week; snaps to that week's Monday"),
         timezone: timezoneArg.optional(),
+        forceRefresh: forceRefreshArg,
       },
     },
     async (args) =>
       run(async () => {
         const { user, client } = await getCtx();
-        return getExerciseWeek(user, client, args);
+        return runRead(client, args.forceRefresh, () => getExerciseWeek(user, client, args));
       }),
   );
 
@@ -201,12 +229,13 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
           .boolean()
           .optional()
           .describe("Include the per-segment stage list (larger payload)"),
+        forceRefresh: forceRefreshArg,
       },
     },
     async (args) =>
       run(async () => {
         const { user, client } = await getCtx();
-        return getSleepSummary(user, client, args);
+        return runRead(client, args.forceRefresh, () => getSleepSummary(user, client, args));
       }),
   );
 
@@ -220,12 +249,13 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       inputSchema: {
         lookbackMinutes: z.number().int().min(5).max(1440).optional(),
         includeContext: z.boolean().optional(),
+        forceRefresh: forceRefreshArg,
       },
     },
     async (args) =>
       run(async () => {
         const { user, client } = await getCtx();
-        return getLatestHeartRate(user, client, args);
+        return runRead(client, args.forceRefresh, () => getLatestHeartRate(user, client, args));
       }),
   );
 
@@ -239,12 +269,13 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       inputSchema: {
         date: dateArg.optional(),
         timezone: timezoneArg.optional(),
+        forceRefresh: forceRefreshArg,
       },
     },
     async (args) =>
       run(async () => {
         const { user, client } = await getCtx();
-        return getNutritionLog(user, client, args);
+        return runRead(client, args.forceRefresh, () => getNutritionLog(user, client, args));
       }),
   );
 
@@ -258,12 +289,79 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       inputSchema: {
         questionType: z.enum(["fatigue", "heart_rate", "general"]),
         timezone: timezoneArg.optional(),
+        forceRefresh: forceRefreshArg,
       },
     },
     async (args) =>
       run(async () => {
         const { user, client } = await getCtx();
-        return getHealthContext(user, client, args);
+        return runRead(client, args.forceRefresh, () => getHealthContext(user, client, args));
+      }),
+  );
+
+  server.registerTool(
+    "get_health_trends",
+    {
+      title: "Get bounded health trends",
+      description:
+        "Returns gap-preserving 7, 30, or 90-day series for selected health metrics. Mechanical summaries only; compare coverage before interpreting change and do not make medical claims.",
+      inputSchema: {
+        days: z
+          .union([z.literal(7), z.literal(30), z.literal(90)])
+          .default(30)
+          .describe("Bounded trend window"),
+        metrics: z
+          .array(z.enum(TREND_METRICS))
+          .min(1)
+          .max(TREND_METRICS.length)
+          .optional()
+          .describe("Defaults to all supported trend metrics"),
+        timezone: timezoneArg.optional(),
+        forceRefresh: forceRefreshArg,
+      },
+    },
+    async (args) =>
+      run(async () => {
+        const { user, client } = await getCtx();
+        return runRead(client, args.forceRefresh, () =>
+          getHealthTrends(user, client, args),
+        );
+      }),
+  );
+
+  server.registerTool(
+    "get_health_updates",
+    {
+      title: "Get new health-data notifications",
+      description:
+        "Lists short-lived Google Health change notifications that have not been acknowledged. Notifications contain pointers only; use a matching read or trend tool for current values.",
+      inputSchema: {
+        includeAcknowledged: z.boolean().optional(),
+        limit: z.number().int().min(1).max(50).optional(),
+      },
+    },
+    async (args) =>
+      run(async () => {
+        const { user } = await getCtx();
+        return getHealthUpdates(user.id, args);
+      }),
+  );
+
+  server.registerTool(
+    "acknowledge_health_updates",
+    {
+      title: "Acknowledge health-data notifications",
+      description:
+        "Marks selected local notification pointers as acknowledged. This does not change or delete any Google Health data.",
+      inputSchema: {
+        updateIds: z.array(z.string().uuid()).max(50).optional(),
+        allPending: z.boolean().optional(),
+      },
+    },
+    async (args) =>
+      run(async () => {
+        const { user } = await getCtx();
+        return acknowledgeHealthUpdates(user.id, args);
       }),
   );
 
@@ -293,12 +391,13 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
           ),
         pageSize: z.number().int().min(1).max(100).optional(),
         pageToken: z.string().max(200).optional(),
+        forceRefresh: forceRefreshArg,
       },
     },
     async (args) =>
       run(async () => {
         const { user, client } = await getCtx();
-        return queryHealthData(user, client, args);
+        return runRead(client, args.forceRefresh, () => queryHealthData(user, client, args));
       }),
   );
 
@@ -318,12 +417,13 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
         endDate: dateArg.optional(),
         windowSizeDays: z.number().int().min(1).max(31).optional(),
         timezone: timezoneArg.optional(),
+        forceRefresh: forceRefreshArg,
       },
     },
     async (args) =>
       run(async () => {
         const { user, client } = await getCtx();
-        return rollupHealthData(user, client, args);
+        return runRead(client, args.forceRefresh, () => rollupHealthData(user, client, args));
       }),
   );
 
@@ -488,7 +588,10 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     },
     async (uri) => {
       const { user, client } = await getCtx();
-      return jsonResource(uri.href, await getProfileCached(user, client));
+      return jsonResource(
+        uri.href,
+        attachProvenance(await getProfileCached(user, client), client),
+      );
     },
   );
 
@@ -502,7 +605,10 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     },
     async (uri) => {
       const { user, client } = await getCtx();
-      return jsonResource(uri.href, await getSettingsCached(user, client));
+      return jsonResource(
+        uri.href,
+        attachProvenance(await getSettingsCached(user, client), client),
+      );
     },
   );
 
@@ -557,15 +663,34 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       jsonResource(uri.href, {
         model:
           "Fitbit Air → Fitbit app sync → Google Health cloud → this server. Data exists here only AFTER a device sync; nothing is live.",
-        fields: {
-          retrievedAt: "When this server fetched from Google Health (always fresh).",
+         fields: {
+          retrievedAt: "When this server assembled the response.",
           latestDataTime: "Timestamp of the newest data point seen in the response.",
           isPossiblyStale:
             "True when no data-point timestamp was seen in the last ~3 hours.",
           note: "Human-readable caveat specific to the response.",
+          dataProvenance:
+            "Whether exact Google responses came from the live API, the short-lived encrypted cache, or a mixture, with source fetch and expiry times.",
+          lastNotifiedAt:
+            "When Google most recently notified this server that a data type changed; the notification itself contains no health value.",
         },
         gaps: "A gap or zero can mean off-wrist, unsynced, or genuinely inactive — steps/distance/floors/altitude/total-calories support explicit true zeros; other types do not.",
         goal: "The v4 API exposes no step goal; goals are only known if the user states them.",
       }),
+  );
+
+  server.registerResource(
+    "updates",
+    "health://updates",
+    {
+      title: "Pending health-data notifications",
+      description:
+        "Short-lived pointer-only notifications that new Google Health data may be available",
+      mimeType: "application/json",
+    },
+    async (uri) => {
+      const { user } = await getCtx();
+      return jsonResource(uri.href, await getHealthUpdates(user.id));
+    },
   );
 }

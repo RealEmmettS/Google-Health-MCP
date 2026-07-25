@@ -6,20 +6,20 @@
 
 ## Context
 
-Emmett owns a Fitbit Air whose data lands in Google Health (the Fitbit Web API successor). He wanted a **remote MCP server on Vercel** so trusted LLM assistants can answer health questions from real data ("How many steps today?", "How did I sleep?", "Why am I tired?", "What did I eat yesterday?") and can **write** nutrition, hydration, and measurement entries that the device doesn't track. Christian is the second approved user and connects only his own Google Health account. The MCP is a *thin, typed, authenticated data adapter* — the LLM does the reasoning. Not a warehouse, not analytics, no medical claims.
+Emmett owns a Fitbit Air whose data lands in Google Health (the Fitbit Web API successor). He wanted a **remote MCP server on Vercel** so trusted LLM assistants can answer health questions from real data ("How many steps today?", "How did I sleep?", "Why am I tired?", "What did I eat yesterday?") and can **write** nutrition, hydration, and measurement entries that the device doesn't track. The MCP is a private, Emmett-only *thin, typed, authenticated data adapter* — the LLM does the reasoning. Not a warehouse, not analytics, no medical claims.
 
 A detailed ChatGPT handoff spec exists at `C:\Users\hey\Downloads\shaughv-health-mcp_handoff_spec_v2.md`. It is directionally correct and this plan follows its structure, **except where decisions below override it** (MCP auth, webhooks timing, caching). Where they conflict, THIS PLAN WINS.
 
 Accepted records under `docs/adr/` govern their specific decision scope and override older
 plan wording. In particular,
-[ADR-0001](adr/0001-private-allowlist-only.md) replaces "single-user / Emmett only" with the
-implemented private allowlist for Emmett and Christian and fixes the decision not to pursue
-public OAuth verification or CASA.
+[ADR-0002](adr/0002-single-user-private.md) fixes the current Emmett-only audience.
+[ADR-0001](adr/0001-private-allowlist-only.md) remains the historical rationale for the
+private, unverified posture and decision not to pursue public OAuth verification or CASA.
 
 ### Decisions made with Emmett (2026-07-08)
 1. **Clients (v1):** Claude Code/Desktop, claude.ai web + mobile custom connectors, AND ChatGPT connectors → MCP auth must be **full OAuth 2.1 with Dynamic Client Registration**. (claude.ai/ChatGPT connectors do not support static bearer headers.)
 2. **MCP auth = Google-federated OAuth**: our server is the OAuth authorization server via **better-auth's built-in `mcp` plugin**; the human login step is **Google Sign-In restricted to the identities in `ALLOWED_GOOGLE_EMAILS`**. No WorkOS/Clerk/etc.
-3. **Webhooks deferred to v1.1.** V1 fetches fresh from Google on demand (two approved users, 300 req/min/user quota — no caching needed for correctness). DB schema includes the webhook tables + a **freshness ledger** from day one so v1.1 is purely additive. NOTE (Emmett asked): webhook payloads contain NO health values — only `{healthUserId, dataType, operation, intervals}` pointers. The ledger stores latest-notification-per-(user, dataType), not values.
+3. **Webhooks deferred to v1.1.** V1 fetches fresh from Google on demand. V1.1 adds short-lived encrypted exact-response caching, pointer-only webhooks, a freshness ledger, and a short-lived update inbox. Webhook payloads contain NO health values — only `{healthUserId, dataType, operation, intervals}` pointers.
 4. **Google OAuth app stays "In production" and unverified.** Production status avoids Testing's seven-day refresh-token lifetime. Public verification, the unverified first-100-user route, and CASA were evaluated and rejected; the exact audience and superseding requirements are in [ADR-0001](adr/0001-private-allowlist-only.md).
 
 ### Existing infrastructure

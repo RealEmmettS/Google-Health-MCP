@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/maintenance/expire-health-data",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 secure/
+.task-detail-tombstones/
 .board-server.json
 .board-nudge.json
 .board-server.log

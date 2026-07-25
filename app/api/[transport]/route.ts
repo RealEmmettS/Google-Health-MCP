@@ -1,6 +1,6 @@
 import { withMcpAuth } from "better-auth/plugins";
 import { createMcpHandler } from "mcp-handler";
-import { auth } from "@/src/auth/auth";
+import { auth, isUserIdAllowed } from "@/src/auth/auth";
 import { registerTools } from "@/src/mcp/register-tools";
 
 /**
@@ -13,11 +13,17 @@ import { registerTools } from "@/src/mcp/register-tools";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const handler = withMcpAuth(auth, (req, session) => {
+const handler = withMcpAuth(auth, async (req, session) => {
+  if (!(await isUserIdAllowed(session.userId))) {
+    return Response.json(
+      { error: "access_revoked", message: "This account is not allowed to use this private server." },
+      { status: 403 },
+    );
+  }
   return createMcpHandler(
     (server) => registerTools(server, { userId: session.userId }),
     {
-      serverInfo: { name: "shaughv-health-mcp", version: "0.1.3" },
+      serverInfo: { name: "shaughv-health-mcp", version: "0.2.0" },
     },
     {
       basePath: "/api",

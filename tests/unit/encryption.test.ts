@@ -2,8 +2,10 @@ import { randomBytes } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   CURRENT_KEY_VERSION,
+  decryptJson,
   decryptSecret,
   EncryptionError,
+  encryptJson,
   encryptSecret,
 } from "../../src/security/encryption";
 
@@ -88,5 +90,44 @@ describe("encryption (AES-256-GCM)", () => {
       expect((error as Error).message).not.toContain("token-material");
       expect((error as Error).message).not.toContain(secret.ciphertext);
     }
+  });
+
+  it("round-trips structured health data without storing plaintext", () => {
+    const value = {
+      dataPoints: [{ steps: 4217, recordedAt: "2026-07-25T12:00:00Z" }],
+    };
+    const secret = encryptJson(value, "health-cache-v1", "user-a:request-a");
+
+    expect(JSON.stringify(secret)).not.toContain("4217");
+    expect(
+      decryptJson<typeof value>(secret, "health-cache-v1", "user-a:request-a"),
+    ).toEqual(value);
+  });
+
+  it("binds structured ciphertext to its user and cache key", () => {
+    const secret = encryptJson(
+      { restingHeartRate: 58 },
+      "health-cache-v1",
+      "user-a:request-a",
+    );
+
+    expect(() =>
+      decryptJson(secret, "health-cache-v1", "user-b:request-a"),
+    ).toThrow(EncryptionError);
+    expect(() =>
+      decryptJson(secret, "health-cache-v1", "user-a:request-b"),
+    ).toThrow(EncryptionError);
+  });
+
+  it("separates token and health-cache encryption purposes", () => {
+    const secret = encryptJson(
+      { hydrationLiters: 1.5 },
+      "health-cache-v1",
+      "user-a:request-a",
+    );
+
+    expect(() =>
+      decryptJson(secret, "different-purpose", "user-a:request-a"),
+    ).toThrow(EncryptionError);
   });
 });

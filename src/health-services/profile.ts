@@ -1,16 +1,13 @@
 import type { AppUser } from "../auth/app-user";
 import type { GoogleHealthClient } from "../google-health/client";
 import { DEFAULT_TIMEZONE } from "../time/ranges";
-import { readThrough } from "./cache";
 
 /**
- * Profile/settings reads (cached 1h — the only cached surface in v1).
+ * Profile/settings reads (cached encrypted for 1h by GoogleHealthClient).
  * Live-verified 2026-07-09: getProfile returns age/membershipStartDate/
  * stride lengths; getSettings returns units/locale/timeZone (NO step goal —
  * the v4 API has no goals surface).
  */
-
-const TTL_SECONDS = 3600;
 
 export interface HealthSettings {
   timeZone?: string;
@@ -23,19 +20,17 @@ export interface HealthSettings {
 }
 
 export async function getProfileCached(
-  user: AppUser,
+  _user: AppUser,
   client: GoogleHealthClient,
 ): Promise<unknown> {
-  return readThrough(user.id, "profile", TTL_SECONDS, () => client.getProfile());
+  return client.getProfile();
 }
 
 export async function getSettingsCached(
-  user: AppUser,
+  _user: AppUser,
   client: GoogleHealthClient,
 ): Promise<HealthSettings> {
-  return readThrough(user.id, "settings", TTL_SECONDS, () =>
-    client.getSettings(),
-  ) as Promise<HealthSettings>;
+  return client.getSettings() as Promise<HealthSettings>;
 }
 
 /** Settings.timeZone is authoritative; app_users default is the fallback. */

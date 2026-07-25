@@ -33,7 +33,11 @@ const BPM_KEYS = ["beatsPerMinute", "bpm", "value", "heartRateBpm"];
 export async function getLatestHeartRate(
   user: AppUser,
   client: GoogleHealthClient,
-  args: { lookbackMinutes?: number; includeContext?: boolean },
+  args: {
+    lookbackMinutes?: number;
+    includeContext?: boolean;
+    sleepSummary?: Promise<{ totalSleepMinutes?: number } | undefined>;
+  },
 ): Promise<LatestHeartRate> {
   const lookback = Math.min(Math.max(args.lookbackMinutes ?? 180, 5), 24 * 60);
   const windows = [...new Set([Math.min(30, lookback), lookback])];
@@ -110,9 +114,12 @@ export async function getLatestHeartRate(
 
     let lastNightSleepMinutes: number | undefined;
     try {
-      const { getSleepSummary } = await import("./sleep");
-      const sleep = await getSleepSummary(user, client, { timezone });
-      lastNightSleepMinutes = sleep.totalSleepMinutes;
+      const sleep =
+        (await args.sleepSummary) ??
+        (await import("./sleep").then(({ getSleepSummary }) =>
+          getSleepSummary(user, client, { timezone }),
+        ));
+      lastNightSleepMinutes = sleep?.totalSleepMinutes;
     } catch {
       lastNightSleepMinutes = undefined;
     }

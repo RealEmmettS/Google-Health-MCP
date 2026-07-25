@@ -33,12 +33,16 @@ const jwksModelName =
       ? "mcpOauthJwksPreview"
       : "mcpOauthJwksDevelopment";
 
-async function assertUserIdAllowed(userId: string): Promise<void> {
+export async function isUserIdAllowed(userId: string): Promise<boolean> {
   const result = await db.execute(
     sql`select "email" from "user" where "id" = ${userId} limit 1`,
   );
   const email = (result.rows?.[0] as { email?: string } | undefined)?.email;
-  if (!isAllowedEmail(email)) {
+  return isAllowedEmail(email);
+}
+
+async function assertUserIdAllowed(userId: string): Promise<void> {
+  if (!(await isUserIdAllowed(userId))) {
     throw new APIError("FORBIDDEN", { message: PRIVATE_SERVER_MESSAGE });
   }
 }
@@ -104,8 +108,9 @@ export const auth = betterAuth({
     session: {
       create: {
         // Belt-and-suspenders: even a pre-existing user row can't mint a new
-        // browser session unless currently allowlisted. Already-issued MCP
-        // tokens require explicit revocation; see ADR-0001.
+        // browser session unless currently allowlisted. The MCP transport also
+        // rechecks every bearer request so allowlist removal takes effect
+        // immediately even before token-table cleanup.
         before: async (session) => {
           await assertUserIdAllowed(session.userId);
         },

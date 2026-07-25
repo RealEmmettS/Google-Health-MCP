@@ -1,4 +1,9 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  hkdfSync,
+  randomBytes,
+} from "node:crypto";
 
 /**
  * AES-256-GCM encryption for Google OAuth tokens at rest (docs/PLAN.md
@@ -46,13 +51,27 @@ function getKey(version: number): Buffer {
   return key;
 }
 
-export function encryptSecret(
+function getPurposeKey(version: number, purpose: string): Buffer {
+  return Buffer.from(
+    hkdfSync(
+      "sha256",
+      getKey(version),
+      Buffer.from("shaughv-health-mcp", "utf8"),
+      Buffer.from(purpose, "utf8"),
+      KEY_BYTES,
+    ),
+  );
+}
+
+function encryptWithKey(
   plaintext: string,
-  keyVersion: number = CURRENT_KEY_VERSION,
+  key: Buffer,
+  keyVersion: number,
+  aad?: string,
 ): EncryptedSecret {
-  const key = getKey(keyVersion);
   const iv = randomBytes(IV_BYTES);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
+  if (aad) cipher.setAAD(Buffer.from(aad, "utf8"));
   const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const tag = cipher.getAuthTag();
   return {
@@ -63,8 +82,7 @@ export function encryptSecret(
   };
 }
 
-export function decryptSecret(secret: EncryptedSecret): string {
-  const key = getKey(secret.keyVersion);
+function decryptWithKey(secret: EncryptedSecret, key: Buffer, aad?: string): string {
   const iv = Buffer.from(secret.iv, "base64");
   const tag = Buffer.from(secret.tag, "base64");
   if (iv.length !== IV_BYTES || tag.length !== TAG_BYTES) {
@@ -72,6 +90,7 @@ export function decryptSecret(secret: EncryptedSecret): string {
   }
   try {
     const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    if (aad) decipher.setAAD(Buffer.from(aad, "utf8"));
     decipher.setAuthTag(tag);
     const plaintext = Buffer.concat([
       decipher.update(Buffer.from(secret.ciphertext, "base64")),
@@ -79,7 +98,54 @@ export function decryptSecret(secret: EncryptedSecret): string {
     ]);
     return plaintext.toString("utf8");
   } catch {
-    // Never include ciphertext or key material in the error.
+    // Never include ciphertext, AAD, or key material in the error.
     throw new EncryptionError("Decryption failed (wrong key or tampered data)");
+  }
+}
+
+export function encryptSecret(
+  plaintext: string,
+  keyVersion: number = CURRENT_KEY_VERSION,
+): EncryptedSecret {
+  return encryptWithKey(plaintext, getKey(keyVersion), keyVersion);
+}
+
+export function decryptSecret(secret: EncryptedSecret): string {
+  return decryptWithKey(secret, getKey(secret.keyVersion));
+}
+
+/**
+ * Encrypts structured health/cache data with a purpose-derived subkey and
+ * authenticated context. The token key remains the root secret, but HKDF
+ * prevents ciphertext from one storage purpose being replayed as another.
+ */
+export function encryptJson<T>(
+  value: T,
+  purpose: string,
+  aad: string,
+  keyVersion: number = CURRENT_KEY_VERSION,
+): EncryptedSecret {
+  return encryptWithKey(
+    JSON.stringify(value),
+    getPurposeKey(keyVersion, purpose),
+    keyVersion,
+    aad,
+  );
+}
+
+export function decryptJson<T>(
+  secret: EncryptedSecret,
+  purpose: string,
+  aad: string,
+): T {
+  const plaintext = decryptWithKey(
+    secret,
+    getPurposeKey(secret.keyVersion, purpose),
+    aad,
+  );
+  try {
+    return JSON.parse(plaintext) as T;
+  } catch {
+    throw new EncryptionError("Decrypted payload is not valid JSON");
   }
 }

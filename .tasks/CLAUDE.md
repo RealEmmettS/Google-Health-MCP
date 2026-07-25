@@ -19,7 +19,7 @@
 | Name | Who | Notes |
 |---|---|---|
 | Emmett | Operator/owner + approved user | `eshaughv@gmail.com` and its native alias `google@emmetts.dev` are approved in `ALLOWED_GOOGLE_EMAILS` |
-| Christian Adleta | Approved user | `[redacted]` is approved in `ALLOWED_GOOGLE_EMAILS`; he connects only his own Google Health data |
+| Christian Adleta | Formerly approved | Removed by Emmett on 2026-07-25; production inventory found no account or stored rows |
 
 ## Terms
 
@@ -49,11 +49,11 @@
 - Never send anything outward (email/posts/etc.) without fresh per-message approval.
 - Cross-platform npm scripts only (Windows dev box).
 - No medical diagnosis language in tool outputs; always include freshness metadata.
-- Access is private and fixed to Emmett and Christian. Do not add another identity, open
-  signup, or pursue Google verification/CASA without an amended or superseding ADR-0001.
-- Removing an identity from `ALLOWED_GOOGLE_EMAILS` blocks new sign-ins but does not revoke
-  existing MCP tokens by itself; immediate offboarding also requires session/MCP-token and
-  Google Health connection revocation.
+- Access is private and fixed to Emmett alone through `eshaughv@gmail.com` and its native
+  alias `google@emmetts.dev`. Do not add another person, open signup, or pursue Google
+  verification/CASA without a superseding ADR-0002.
+- `ALLOWED_GOOGLE_EMAILS` is rechecked on every MCP bearer request. Complete offboarding
+  still deletes Better Auth sessions/MCP grants and the Google Health connection.
 - Vercel env quirk: this project's env vars are SENSITIVE (write-only — `vercel env pull` returns them EMPTY; default came from the Neon connect dialog). Canonical secret copies live in `.env.development.local` + `.tasks/secure/` (both gitignored); never expect to read a secret back from Vercel.
 - TOKEN_ENCRYPTION_KEY is deliberately SHARED between local and prod (one shared Neon DB = one key — split keys poison each other's token rows). Rotated 2026-07-09; ROTATING IT ORPHANS ALL STORED GOOGLE TOKENS → every user must reconnect.
 - BETTER_AUTH_SECRET is SPLIT (local ≠ prod) and that's FINE — do NOT "fix"/align it. It signs each environment's login cookies and encrypts that environment's persisted MCP RS256 private key (separate Development/Preview/Production JWKS tables); legacy MCP access tokens are still validated by DB lookup. `scripts/live-verify-e2e.ts` intentionally has NO direct-token fallback: its forged-session full OAuth chain defaults to localhost and refuses non-local mutations without an explicit flag. Verify production with safe metadata/JWKS/401 probes plus a real client; do not try to align secrets or resurrect token insertion to make the headless script forge a prod login.

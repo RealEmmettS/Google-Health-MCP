@@ -380,6 +380,18 @@ a {
   color: var(--accent-strong);
 }
 
+.button-danger {
+  padding: 0.65rem 0.9rem;
+  border-color: var(--sv-bauhaus-red);
+  background: transparent;
+  color: var(--sv-bauhaus-red);
+}
+
+.button-danger:hover:not(:disabled) {
+  background: var(--sv-bauhaus-red);
+  color: var(--sv-cream-100);
+}
+
 .button-large {
   min-height: 54px;
   padding-inline: 1.65rem;
@@ -864,6 +876,59 @@ a {
   letter-spacing: 0.06em;
   line-height: 1.6;
   text-transform: uppercase;
+}
+
+.public-privacy-link,
+.privacy-policy-link {
+  margin: 1rem 0 0;
+  color: var(--fg-soft);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.public-privacy-link a,
+.privacy-policy-link a {
+  text-underline-offset: 0.25rem;
+}
+
+.privacy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  padding: 0 clamp(1.25rem, 4vw, 2.75rem);
+}
+
+.privacy-actions .inline-error {
+  flex-basis: 100%;
+}
+
+.privacy-copy {
+  padding-bottom: clamp(2rem, 5vw, 3.5rem);
+}
+
+.privacy-prose {
+  max-width: 760px;
+  padding: 0 clamp(1.25rem, 4vw, 2.75rem);
+}
+
+.privacy-prose h2 {
+  margin: 2rem 0 0.55rem;
+  color: var(--fg);
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  text-transform: uppercase;
+}
+
+.privacy-prose p {
+  margin: 0;
+  color: var(--fg-muted);
+}
+
+.privacy-back-link {
+  display: inline-flex;
+  margin-top: 2.25rem;
 }
 
 .sign-in-panel {

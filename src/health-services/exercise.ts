@@ -44,11 +44,28 @@ export async function getExerciseWeek(
     : toCivilDateString(now.startOf("week"));
   const today = toCivilDateString(now);
 
-  const page = await client.listDataPoints({
-    dataType: "exercise",
-    filter: `exercise.interval.civil_start_time >= "${weekStart}T00:00:00"`,
-    pageSize: 50,
-  });
+  async function dailyBuckets(dataType: string): Promise<unknown[]> {
+    try {
+      const rollup = await client.dailyRollUp({
+        dataType,
+        range: dailyRollupCivilRange(weekStart, today, timezone),
+        windowSizeDays: 1,
+      });
+      return (rollup.rollupDataPoints ?? []).slice(0, 8);
+    } catch {
+      return [];
+    }
+  }
+
+  const [page, activeZoneMinutesDaily, activeMinutesDaily] = await Promise.all([
+    client.listDataPoints({
+      dataType: "exercise",
+      filter: `exercise.interval.civil_start_time >= "${weekStart}T00:00:00"`,
+      pageSize: 50,
+    }),
+    dailyBuckets("active-zone-minutes"),
+    dailyBuckets("active-minutes"),
+  ]);
 
   const sessions = (page.dataPoints ?? []).map((dp) => {
     const exercise = asRec(asRec(dp).exercise);
@@ -75,24 +92,6 @@ export async function getExerciseWeek(
     };
   });
   const boundedSessions = bound(sessions, 25);
-
-  async function dailyBuckets(dataType: string): Promise<unknown[]> {
-    try {
-      const rollup = await client.dailyRollUp({
-        dataType,
-        range: dailyRollupCivilRange(weekStart, today, timezone),
-        windowSizeDays: 1,
-      });
-      return (rollup.rollupDataPoints ?? []).slice(0, 8);
-    } catch {
-      return []; // per-type rollup availability is best-effort context
-    }
-  }
-
-  const [activeZoneMinutesDaily, activeMinutesDaily] = await Promise.all([
-    dailyBuckets("active-zone-minutes"),
-    dailyBuckets("active-minutes"),
-  ]);
 
   const sum = (values: Array<number | undefined>) => {
     const present = values.filter((v): v is number => v !== undefined);

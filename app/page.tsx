@@ -6,6 +6,7 @@ import { getConnection } from "@/src/auth/token-store";
 import { BrandLoader, BrandLockup } from "./components/brand-elements";
 import { CopyField } from "./components/copy-field";
 import { GoogleSignInButton } from "./components/google-sign-in-button";
+import { PrivacyControls } from "./components/privacy-controls";
 import { SignOutButton } from "./components/sign-out-button";
 import { SyncStatusDetails } from "./components/sync-status-details";
 
@@ -62,6 +63,9 @@ function PublicHome() {
             <GoogleSignInButton callbackURL="/" label="Sign in with Google" />
             <p className="allowlist-note">
               Allowlist locked — only approved Google accounts can continue.
+            </p>
+            <p className="public-privacy-link">
+              <a href="/privacy">Privacy and stored-data controls</a>
             </p>
           </div>
 
@@ -283,6 +287,29 @@ export default async function Home({
             Private by design — connector registration is open, but only an
             allowlisted Google account can authorize access.
           </p>
+        </section>
+
+        <section className="surface-panel reveal-stage reveal-stage-three">
+          <div className="index-line">
+            <span>§ 03 / Privacy</span>
+            <span>Stored-data control</span>
+          </div>
+          <div className="section-heading section-heading-compact">
+            <div>
+              <p className="eyebrow">Your data</p>
+              <h2 className="connector-title">Keep or remove it.</h2>
+              <p className="section-description">
+                Disconnecting revokes the Google grant when possible and
+                removes connection-derived local data. Full deletion also
+                removes local write audits and your Google Health domain
+                profile. Neither action deletes data held by Google or Fitbit.
+              </p>
+              <p className="privacy-policy-link">
+                <a href="/privacy">Read the privacy and retention disclosure</a>
+              </p>
+            </div>
+          </div>
+          <PrivacyControls connected={connected} />
         </section>
       </div>
     </main>

@@ -10,9 +10,9 @@ operational rules. This file states shared facts briefly and points to `README.m
 1. **`docs/PLAN.md`** — the authoritative build plan and source of truth: architecture, the
    four auth layers, DB schema, MCP tool surface, phase breakdown, watchouts, and the E2E
    verification bar. It overrides the older ChatGPT handoff spec wherever they conflict.
-2. **`docs/adr/0001-private-allowlist-only.md`** — the accepted audience/access decision:
-   private allowlist for Emmett and Christian, no public OAuth verification or CASA. It
-   overrides earlier "single-user / Emmett only" wording.
+2. **`docs/adr/0002-single-user-private.md`** — the current audience/access decision:
+   private and Emmett-only, no public OAuth verification or CASA. ADR-0001 remains the
+   historical private/unverified rationale.
 3. **`README.md`** — the human overview: what/why, setup (accounts, redirect URIs, env vars),
    the architecture diagram, and troubleshooting.
 4. **`.tasks/CLAUDE.md`** — the project's working memory (who Emmett is, key terms, project
@@ -24,8 +24,7 @@ operational rules. This file states shared facts briefly and points to `README.m
 ## What this is (brief — see README for depth)
 
 A **private, allowlist-only remote MCP server** on Vercel (`health.emmetts.dev`) for Emmett
-and Christian. Each approved person exposes only their own Google Health data to trusted LLM
-clients — reads for
+alone (two approved aliases). It exposes his Google Health data to trusted LLM clients — reads for
 activity/sleep/heart/nutrition, writes for nutrition/hydration/measurements only. A thin,
 typed, authenticated data adapter: the LLM reasons; the server returns accurate data with
 freshness metadata. No medical claims. Stack: Next.js 16 (App Router, Node runtime),
@@ -56,18 +55,19 @@ prose snapshot that may have gone stale.
   conversion.
 - **Writes are Zod-validated, explicit-input-only, and audit-logged** to `mutation_audit_log`.
   Never infer a value; never invent a step goal.
-- **Webhooks are v1.1** (`#w11`); their tables exist but stay dormant in v1.
+- **Webhooks are v1.1** (`#w11`); the endpoint stores pointer-only events and must verify
+  Google's Tink-prefixed P-256 signature before durable processing.
 - **Cross-platform scripts only** — the dev box is Windows 11 / PowerShell.
 - **Verify library APIs against current docs at build time** (better-auth and the MCP tooling
   move fast); don't code auth/MCP wiring from memory.
 
 ## Recorded decisions (do not silently reverse)
 
-- **Audience stays private and allowlist-only: Emmett and Christian.** No public signup,
+- **Audience stays private and allowlist-only: Emmett alone.** No public signup,
   unverified first-100-user rollout, Google restricted-scope verification, or CASA. DCR stays
   open only for connector compatibility; authorization still requires an allowlisted login.
   Any additional person or public-access proposal requires an amended/superseding ADR. Full
-  reasoning and current implementation: `docs/adr/0001-private-allowlist-only.md`.
+  reasoning and current implementation: `docs/adr/0002-single-user-private.md`.
 - **MCP stack = `mcp-handler` + official MCP SDK on Vercel serverless — deliberately NOT
   FastMCP.** FastMCP wants a long-running process with its own server/sessions/auth; this app
   is request-scoped and its OAuth story (better-auth) already lives in the same Next.js app.
@@ -90,10 +90,9 @@ prose snapshot that may have gone stale.
 
 ## Watchouts
 
-- **Allowlist removal is not complete token revocation.** It blocks new users/sessions, but
-  already-issued MCP access/refresh tokens are checked by token lookup and expiry. Immediate
-  offboarding also requires revoking better-auth sessions/MCP tokens and the user's Google
-  Health connection; see ADR-0001.
+- **Allowlist removal is rechecked on every MCP bearer request.** Complete offboarding still
+  deletes Better Auth sessions/MCP tokens and the user's Google Health connection; see
+  ADR-0002.
 - **Kebab vs snake** data-type names — registry only.
 - **Civil vs physical time:** `rollUp` takes a physical-time range; `dailyRollUp` takes a
   civil range with **non-zero-padded** month/day integers (leading zeros are rejected). Sleep

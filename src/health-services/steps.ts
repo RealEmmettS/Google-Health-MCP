@@ -37,20 +37,22 @@ export async function getTodaySteps(
   const today = toCivilDateString(nowIn(timezone));
   const date = args.date ?? today;
 
-  const daily = await client.dailyRollUp({
-    dataType: "steps",
-    range: dailyRollupCivilRange(date, date, timezone),
-    windowSizeDays: 1,
-  });
+  const physicalRange = date === today ? todayRange(timezone) : dayRange(date, timezone);
+  const [daily, hourlyResult] = await Promise.all([
+    client.dailyRollUp({
+      dataType: "steps",
+      range: dailyRollupCivilRange(date, date, timezone),
+      windowSizeDays: 1,
+    }),
+    client.rollUp({
+      dataType: "steps",
+      range: physicalRange,
+      windowSize: "3600s",
+    }),
+  ]);
   const steps =
     num(asRec(asRec(daily.rollupDataPoints?.[0]).steps).countSum) ?? 0;
 
-  const physicalRange = date === today ? todayRange(timezone) : dayRange(date, timezone);
-  const hourlyResult = await client.rollUp({
-    dataType: "steps",
-    range: physicalRange,
-    windowSize: "3600s",
-  });
   const hourly = (hourlyResult.rollupDataPoints ?? [])
     .map((point) => {
       const record = asRec(point);
@@ -60,7 +62,6 @@ export async function getTodaySteps(
         steps: num(asRec(record.steps).countSum) ?? 0,
       };
     })
-    .filter((bucket) => bucket.steps > 0)
     .sort((a, b) => (a.startTime ?? "").localeCompare(b.startTime ?? ""));
 
   const latestDataTime = maxTime(...hourly.map((b) => b.endTime));

@@ -4,7 +4,12 @@ import type { GoogleHealthClient } from "../google-health/client";
 import { GoogleHealthError } from "../google-health/errors";
 import { getDataType, type DataTypeSpec } from "../google-health/registry";
 import { dailyRollupCivilRange, nowIn, toCivilDateString } from "../time/ranges";
-import { DAILY_STALE_AFTER_HOURS, makeFreshness, type Freshness } from "./freshness";
+import {
+  DAILY_STALE_AFTER_HOURS,
+  makeFreshness,
+  maxTime,
+  type Freshness,
+} from "./freshness";
 import { getUserTimezone } from "./profile";
 import { asRec, bound, num, str } from "./shape";
 
@@ -61,6 +66,30 @@ function latestPointTime(dataPoints: unknown[], spec: DataTypeSpec): string | un
   }
   if (!best) return undefined;
   return spec.recordType === "Daily" ? best.toISODate() ?? undefined : best.toUTC().toISO() ?? undefined;
+}
+
+function latestRollupTime(points: unknown[]): string | undefined {
+  const candidates: string[] = [];
+  for (const point of points) {
+    const record = asRec(point);
+    const direct = str(record.endTime) ?? str(record.startTime);
+    if (direct) candidates.push(direct);
+    const directDate = civilDateFrom(record);
+    if (directDate) candidates.push(directDate);
+    for (const value of Object.values(record)) {
+      const nested = asRec(value);
+      const nestedDate = civilDateFrom(nested);
+      if (nestedDate) candidates.push(nestedDate);
+      const interval = asRec(nested.interval);
+      const timestamp =
+        str(interval.endTime) ??
+        str(interval.startTime) ??
+        str(nested.endTime) ??
+        str(nested.startTime);
+      if (timestamp) candidates.push(timestamp);
+    }
+  }
+  return maxTime(...candidates);
 }
 
 /**
@@ -200,7 +229,11 @@ export async function rollupHealthData(
       mode: "dailyRollup",
       rollupDataPoints: boundedPoints.items,
       truncated: boundedPoints.truncated,
-      freshness: makeFreshness(),
+      freshness: makeFreshness(
+        latestRollupTime(boundedPoints.items),
+        "Daily rollup freshness is based on the newest returned bucket.",
+        { staleAfterHours: DAILY_STALE_AFTER_HOURS },
+      ),
     };
   }
 
@@ -221,6 +254,11 @@ export async function rollupHealthData(
     mode: "rollup",
     rollupDataPoints: boundedPoints.items,
     truncated: boundedPoints.truncated,
-    freshness: makeFreshness(),
+    freshness: makeFreshness(
+      latestRollupTime(boundedPoints.items),
+      "Physical rollup freshness is based on the newest returned bucket.",
+    ),
   };
 }
+
+export const _internal = { civilDateFrom, latestPointTime, latestRollupTime };

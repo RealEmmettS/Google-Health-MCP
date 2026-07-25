@@ -1,10 +1,13 @@
 # ADR-0001: Keep the Google Health MCP private and allowlist-only
 
-- **Status:** Accepted
+- **Status:** Superseded in part by ADR-0002 (single-user audience and immediate bearer recheck)
 - **Date:** 2026-07-10
 - **Decision owner:** Emmett Shaughnessy
 - **Scope:** Runtime audience, Google OAuth publication/verification posture, and access-control operations
 - **Supersedes:** Earlier wording that described Emmett as the sole user; the service is private but supports the two explicitly approved people below
+
+> Historical record: the private/unverified posture remains relevant, but Christian is no
+> longer approved. See [ADR-0002](0002-single-user-private.md).
 
 ## Context
 

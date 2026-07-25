@@ -16,6 +16,7 @@ import { getValidAccessToken } from "../../src/auth/token-service";
 import { getConnection } from "../../src/auth/token-store";
 import { GoogleHealthClient } from "../../src/google-health/client";
 import { HEALTH_SCOPES } from "../../src/google-health/scopes";
+import * as healthCache from "../../src/health-services/cache";
 import { dailyRollupCivilRange } from "../../src/time/ranges";
 
 const mockedToken = vi.mocked(getValidAccessToken);
@@ -95,6 +96,69 @@ describe("GoogleHealthClient", () => {
     expect(mockedToken).toHaveBeenCalledTimes(2);
     expect(mockedToken).toHaveBeenNthCalledWith(1, "user-1", { forceRefresh: false });
     expect(mockedToken).toHaveBeenNthCalledWith(2, "user-1", { forceRefresh: true });
+  });
+
+  it("deduplicates identical concurrent reads within one MCP request", async () => {
+    let resolveFetch!: (response: Response) => void;
+    fetchMock.mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFetch = resolve;
+        }),
+    );
+    const client = new GoogleHealthClient("user-1");
+    const first = client.listDataPoints({ dataType: "steps" });
+    const second = client.listDataPoints({ dataType: "steps" });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    resolveFetch(ok({ dataPoints: [{ steps: { count: 1 } }] }));
+
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      { dataPoints: [{ steps: { count: 1 } }] },
+      { dataPoints: [{ steps: { count: 1 } }] },
+    ]);
+    expect(mockedToken).toHaveBeenCalledTimes(1);
+    expect(mockedConnection).toHaveBeenCalledTimes(1);
+  });
+
+  it("caps distinct concurrent Google reads at three", async () => {
+    let active = 0;
+    let maximum = 0;
+    fetchMock.mockImplementation(async () => {
+      active += 1;
+      maximum = Math.max(maximum, active);
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      active -= 1;
+      return ok({ dataPoints: [] });
+    });
+    const client = new GoogleHealthClient("user-1");
+
+    await Promise.all(
+      Array.from({ length: 7 }, (_, index) =>
+        client.listDataPoints({
+          dataType: "steps",
+          pageToken: `page-${index}`,
+        }),
+      ),
+    );
+
+    expect(maximum).toBe(3);
+  });
+
+  it("invalidates cached reads after a successful health write", async () => {
+    const invalidate = vi
+      .spyOn(healthCache, "invalidateHealthCache")
+      .mockResolvedValue(2);
+    try {
+      fetchMock.mockResolvedValueOnce(ok({ name: "users/me/dataPoints/new" }));
+      const client = new GoogleHealthClient("user-1", { cacheEnabled: true });
+      await client.createDataPoint("weight", {
+        weight: { weight: { value: 180, unit: "POUND" } },
+      });
+
+      expect(invalidate).toHaveBeenCalledWith("user-1", "weight");
+    } finally {
+      invalidate.mockRestore();
+    }
   });
 
   it("backs off on 429 and eventually succeeds", async () => {

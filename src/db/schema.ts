@@ -146,13 +146,54 @@ export const healthCache = pgTable(
       .references(() => appUsers.id, { onDelete: "cascade" }),
     cacheKey: text("cache_key").notNull(),
     dataType: text("data_type"),
+    operation: text("operation").notNull().default("read"),
     rangeStart: timestamp("range_start", { withTimezone: true }),
     rangeEnd: timestamp("range_end", { withTimezone: true }),
-    payload: jsonb("payload").notNull(),
+    // Deprecated compatibility column. v1.1 clears existing short-lived rows
+    // and never writes plaintext here; keep nullable for one release so the
+    // migration is additive/non-interactive, then drop it in a later cleanup.
+    payload: jsonb("payload"),
+    // Nullable for one rolling-deploy bridge: the prior production runtime
+    // can still write plaintext-only rows between migration and deployment.
+    // v0.2.0 never writes such rows and deletes them on sight.
+    payloadCiphertext: text("payload_ciphertext"),
+    payloadIv: text("payload_iv"),
+    payloadTag: text("payload_tag"),
+    keyVersion: integer("key_version").notNull().default(1),
     latestDataTime: timestamp("latest_data_time", { withTimezone: true }),
+    sourceFetchedAt: timestamp("source_fetched_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique().on(t.userId, t.cacheKey)],
+);
+
+// MCP-readable proactive update inbox. Rows contain notification pointers and
+// lifecycle state only; health values remain in the encrypted short-lived
+// cache and are fetched/shaped when a client reads the update.
+export const healthUpdateInbox = pgTable(
+  "health_update_inbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => appUsers.id, { onDelete: "cascade" }),
+    eventHash: text("event_hash").notNull(),
+    dataType: text("data_type").notNull(),
+    operation: text("operation").notNull(),
+    intervals: jsonb("intervals").notNull().default([]),
+    status: text("status").notNull().default("pending"),
+    notifiedAt: timestamp("notified_at", { withTimezone: true }).notNull().defaultNow(),
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique().on(t.userId, t.eventHash),
+    index("health_update_inbox_user_status_idx").on(t.userId, t.status),
+  ],
 );

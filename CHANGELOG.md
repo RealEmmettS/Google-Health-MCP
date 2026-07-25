@@ -6,6 +6,34 @@ The `.tasks/` board tracks in-flight work; this file records what shipped.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-07-25
+
+### Added
+
+- Short-lived AES-256-GCM encrypted exact-response caching with per-user/request AAD,
+  range-aware TTLs, force-refresh controls, in-flight deduplication, bounded retry/deadline
+  behavior, and explicit live/cache provenance.
+- Gap-preserving 7/30/90-day trend summaries, pointer-only Google Health webhook ingestion,
+  an MCP-readable update inbox, a persistent notification-freshness ledger, and daily
+  retention cleanup.
+- Public privacy/retention disclosure plus authenticated same-origin disconnect and
+  stored-Health-data deletion controls.
+
+### Changed
+
+- Superseded the two-person audience with ADR-0002: Emmett is the sole approved person,
+  represented by `eshaughv@gmail.com` and its native alias `google@emmetts.dev`.
+- The MCP transport now rechecks the allowlist on every bearer request, making removal
+  immediately effective even before token-table cleanup.
+- Updated Next.js to 16.2.11 and overrode its PostCSS and Sharp transitive versions with
+  patched releases.
+
+### Security
+
+- Production dependency audit has no high- or critical-severity findings. Two moderate
+  advisories remain accepted at this boundary: an unused Windows-only static-file path in the
+  MCP SDK's Hono adapter, and a local-development esbuild loader used by Drizzle Kit.
+
 ## [0.1.3] — 2026-07-14
 
 OAuth client-compatibility verification release. The deployed 0.1.2 authentication repair was
