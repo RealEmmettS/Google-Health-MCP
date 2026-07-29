@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getOrCreateAppUser } from "@/src/auth/app-user";
@@ -7,13 +8,18 @@ import {
   exchangeCodeForTokens,
   fetchHealthIdentity,
 } from "@/src/auth/google-health-oauth";
+import { prepareGoogleHealthDpopKey } from "@/src/auth/google-health-dpop";
 import { consumeOAuthState } from "@/src/auth/state";
-import { saveTokens, upsertConnection } from "@/src/auth/token-store";
+import {
+  commitDpopCredentialReplacement,
+  getConnection,
+} from "@/src/auth/token-store";
 import { db } from "@/src/db/client";
 import { appUsers } from "@/src/db/schema";
 import { redactError } from "@/src/security/redact";
 
 export const runtime = "nodejs";
+export const preferredRegion = "iad1";
 
 function redirectHome(params: Record<string, string>): NextResponse {
   const url = new URL("/", appBaseUrl());
@@ -55,24 +61,42 @@ export async function GET(request: Request) {
   }
 
   try {
-    const tokens = await exchangeCodeForTokens(code);
+    const existingConnection = await getConnection(appUser.id);
+    const connectionId = existingConnection?.id ?? randomUUID();
+    const dpopKey = await prepareGoogleHealthDpopKey(connectionId);
+    // A nonce challenge is retried in memory. Nothing is persisted until the
+    // DPoP-bound replacement refresh token has been returned successfully, so
+    // a rejected Health-specific exchange cannot damage the working token.
+    const tokens = await exchangeCodeForTokens(code, {
+      material: dpopKey.material,
+    });
     const grantedScopes = tokens.scope?.split(" ").filter(Boolean) ?? [];
-
-    const connection = await upsertConnection(appUser.id, grantedScopes);
-    await saveTokens(connection.id, tokens);
+    await commitDpopCredentialReplacement({
+      appUserId: appUser.id,
+      connectionId,
+      dpopKey,
+      grantedScopes,
+      tokens,
+    });
 
     // Identity mapping is important (webhooks, troubleshooting) but not fatal
     // to the connection if it hiccups — the dashboard will show the gap.
-    const identity = await fetchHealthIdentity(tokens.access_token);
-    if (identity?.healthUserId || identity?.legacyUserId) {
-      await db
-        .update(appUsers)
-        .set({
-          googleHealthUserId: identity.healthUserId ?? null,
-          legacyFitbitUserId: identity.legacyUserId ?? null,
-          updatedAt: new Date(),
-        })
-        .where(eq(appUsers.id, appUser.id));
+    try {
+      const identity = await fetchHealthIdentity(tokens.access_token);
+      if (identity?.healthUserId || identity?.legacyUserId) {
+        await db
+          .update(appUsers)
+          .set({
+            googleHealthUserId: identity.healthUserId ?? null,
+            legacyFitbitUserId: identity.legacyUserId ?? null,
+            updatedAt: new Date(),
+          })
+          .where(eq(appUsers.id, appUser.id));
+      }
+    } catch (error) {
+      // Credential replacement already committed. Identity is diagnostic
+      // metadata, so preserve the successful connection and log safely.
+      console.warn("google-health identity mapping deferred", redactError(error));
     }
 
     return redirectHome({ health: "connected" });

@@ -35,6 +35,9 @@ export const oauthConnections = pgTable(
     scopes: text("scopes").array().notNull().default([]),
     // active | reauth_required | revoked
     status: text("status").notNull().default("active"),
+    // Monotonic generation for optimistic concurrency between refresh and a
+    // reconnect that atomically replaces the Google credential + DPoP key.
+    credentialVersion: integer("credential_version").notNull().default(1),
     connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
     reauthRequiredAt: timestamp("reauth_required_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -60,10 +63,35 @@ export const oauthTokens = pgTable("oauth_tokens", {
   refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
   tokenType: text("token_type"),
   keyVersion: integer("key_version").notNull().default(1),
-  // Best-effort single-flight refresh lock (neon-http has no interactive
-  // transactions): claimant sets now()+30s; a stale/expired lock is claimable.
-  // Google does not rotate refresh tokens, so a rare double-refresh is benign.
+  // Copy the credential generation onto the row that refresh UPDATEs lock.
+  // PostgreSQL EvalPlanQual can then recheck it after a concurrent reconnect.
+  credentialVersion: integer("credential_version").notNull().default(1),
+  dpopThumbprint: text("dpop_thumbprint"),
+  // Single-flight refresh lock (neon-http has no interactive transactions):
+  // claimant sets a short deadline and contenders may proceed only after an
+  // atomic reacquire. DPoP nonce state makes concurrent refresh unsafe.
   refreshInFlightUntil: timestamp("refresh_in_flight_until", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// One P-256 DPoP key per Google Health connection. The private JWK uses a
+// purpose-derived AES-256-GCM key and authenticated connection-id context;
+// only the public JWK, thumbprint, and Google-issued nonce are plaintext.
+export const googleHealthDpopKey = pgTable("google_health_dpop_key", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  connectionId: uuid("connection_id")
+    .notNull()
+    .unique()
+    .references(() => oauthConnections.id, { onDelete: "cascade" }),
+  privateJwkCiphertext: text("private_jwk_ciphertext").notNull(),
+  privateJwkIv: text("private_jwk_iv").notNull(),
+  privateJwkTag: text("private_jwk_tag").notNull(),
+  keyVersion: integer("key_version").notNull().default(1),
+  credentialVersion: integer("credential_version").notNull().default(1),
+  publicJwk: jsonb("public_jwk").notNull(),
+  thumbprint: text("thumbprint").notNull(),
+  nonce: text("nonce"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -71,3 +71,10 @@ export class TokenExchangeError extends GoogleHealthError {
     super("token_exchange_failed", message);
   }
 }
+
+export class InvalidDpopProofError extends TokenExchangeError {
+  constructor() {
+    super("Google rejected the sender-constrained refresh credential.");
+    this.name = "InvalidDpopProofError";
+  }
+}

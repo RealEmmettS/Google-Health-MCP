@@ -1,5 +1,14 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -131,6 +140,139 @@ export const oauthConsent = pgTable(
     index("oauthConsent_clientId_idx").on(table.clientId),
     index("oauthConsent_userId_idx").on(table.userId),
   ],
+);
+
+// Stable @better-auth/oauth-provider storage. These tables are deliberately
+// separate from the deprecated MCP/OIDC plugin tables above so the 0.3.0
+// cutover can be rolled back without translating or exposing legacy secrets.
+export const mcpOauthClientV2 = pgTable(
+  "mcp_oauth_client_v2",
+  {
+    id: text("id").primaryKey(),
+    clientId: text("client_id").notNull().unique(),
+    clientSecret: text("client_secret"),
+    disabled: boolean("disabled").default(false),
+    skipConsent: boolean("skip_consent"),
+    enableEndSession: boolean("enable_end_session"),
+    subjectType: text("subject_type"),
+    scopes: text("scopes").array(),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+    name: text("name"),
+    uri: text("uri"),
+    icon: text("icon"),
+    contacts: text("contacts").array(),
+    tos: text("tos"),
+    policy: text("policy"),
+    softwareId: text("software_id"),
+    softwareVersion: text("software_version"),
+    softwareStatement: text("software_statement"),
+    redirectUris: text("redirect_uris").array().notNull(),
+    postLogoutRedirectUris: text("post_logout_redirect_uris").array(),
+    tokenEndpointAuthMethod: text("token_endpoint_auth_method"),
+    grantTypes: text("grant_types").array(),
+    responseTypes: text("response_types").array(),
+    public: boolean("public"),
+    type: text("type"),
+    requirePKCE: boolean("require_pkce"),
+    referenceId: text("reference_id"),
+    metadata: jsonb("metadata"),
+  },
+  (table) => [
+    index("mcp_oauth_client_v2_user_id_idx").on(table.userId),
+  ],
+);
+
+// The 1.6.x provider's public schema accidentally omits modelName for this
+// one model. Exporting it under the provider's logical name lets Drizzle map
+// that logical model to the isolated physical v2 table without a cast.
+export const oauthRefreshToken = pgTable(
+  "mcp_oauth_refresh_token_v2",
+  {
+    id: text("id").primaryKey(),
+    token: text("token").notNull().unique(),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => mcpOauthClientV2.clientId, { onDelete: "cascade" }),
+    sessionId: text("session_id").references(() => session.id, {
+      onDelete: "set null",
+    }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    referenceId: text("reference_id"),
+    expiresAt: timestamp("expires_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    revoked: timestamp("revoked"),
+    authTime: timestamp("auth_time"),
+    scopes: text("scopes").array().notNull(),
+  },
+  (table) => [
+    index("mcp_oauth_refresh_token_v2_client_id_idx").on(table.clientId),
+    index("mcp_oauth_refresh_token_v2_session_id_idx").on(table.sessionId),
+    index("mcp_oauth_refresh_token_v2_user_id_idx").on(table.userId),
+  ],
+);
+
+export const mcpOauthAccessTokenV2 = pgTable(
+  "mcp_oauth_access_token_v2",
+  {
+    id: text("id").primaryKey(),
+    token: text("token").unique(),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => mcpOauthClientV2.clientId, { onDelete: "cascade" }),
+    sessionId: text("session_id").references(() => session.id, {
+      onDelete: "set null",
+    }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    referenceId: text("reference_id"),
+    refreshId: text("refresh_id").references(() => oauthRefreshToken.id, {
+      onDelete: "set null",
+    }),
+    expiresAt: timestamp("expires_at"),
+    createdAt: timestamp("created_at").defaultNow(),
+    scopes: text("scopes").array().notNull(),
+  },
+  (table) => [
+    index("mcp_oauth_access_token_v2_client_id_idx").on(table.clientId),
+    index("mcp_oauth_access_token_v2_session_id_idx").on(table.sessionId),
+    index("mcp_oauth_access_token_v2_user_id_idx").on(table.userId),
+    index("mcp_oauth_access_token_v2_refresh_id_idx").on(table.refreshId),
+  ],
+);
+
+export const mcpOauthConsentV2 = pgTable(
+  "mcp_oauth_consent_v2",
+  {
+    id: text("id").primaryKey(),
+    clientId: text("client_id")
+      .notNull()
+      .references(() => mcpOauthClientV2.clientId, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    referenceId: text("reference_id"),
+    scopes: text("scopes").array().notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("mcp_oauth_consent_v2_client_id_idx").on(table.clientId),
+    index("mcp_oauth_consent_v2_user_id_idx").on(table.userId),
+  ],
+);
+
+export const mcpOauthRateLimitV2 = pgTable(
+  "mcp_oauth_rate_limit_v2",
+  {
+    id: text("id").primaryKey(),
+    key: text("key").notNull().unique(),
+    count: integer("count").notNull(),
+    // Epoch milliseconds exceed PostgreSQL int4. Better Auth exposes this as
+    // a JavaScript number, so bigint mode:number is the lossless DB mapping.
+    lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+  },
+  (table) => [index("mcp_oauth_rate_limit_v2_key_idx").on(table.key)],
 );
 
 // Better Auth's JWT plugin persists encrypted private signing keys. Local,

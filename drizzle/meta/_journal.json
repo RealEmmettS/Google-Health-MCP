@@ -29,6 +29,27 @@
       "when": 1784971358804,
       "tag": "0003_encrypted_health_cache_updates",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785310483370,
+      "tag": "0004_cuddly_bug",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785314049105,
+      "tag": "0005_gifted_tyger_tiger",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785315110051,
+      "tag": "0006_lonely_earthquake",
+      "breakpoints": true
     }
   ]
 }

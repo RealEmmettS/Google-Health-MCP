@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { decodeJwt } from "jose";
 import {
   buildHealthAuthorizeUrl,
   exchangeCodeForTokens,
@@ -9,9 +10,14 @@ import {
   TokenExchangeError,
 } from "../../src/google-health/errors";
 import { HEALTH_SCOPES } from "../../src/google-health/scopes";
+import { prepareGoogleHealthDpopKey } from "../../src/auth/google-health-dpop";
 
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status });
+function jsonResponse(
+  status: number,
+  body: unknown,
+  headers?: HeadersInit,
+): Response {
+  return new Response(JSON.stringify(body), { status, headers });
 }
 
 describe("buildHealthAuthorizeUrl", () => {
@@ -46,6 +52,7 @@ describe("token endpoint calls", () => {
     process.env.GOOGLE_CLIENT_ID = "test-client-id";
     process.env.GOOGLE_CLIENT_SECRET = "GOCSPX-test-secret";
     process.env.BETTER_AUTH_URL = "https://health.example.com";
+    process.env.TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 31).toString("base64");
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockReset();
   });
@@ -95,6 +102,69 @@ describe("token endpoint calls", () => {
     expect(body.get("refresh_token")).toBe("1//stored-refresh");
   });
 
+  it("persists a requested DPoP nonce and retries exactly once with a fresh proof", async () => {
+    const prepared = await prepareGoogleHealthDpopKey("connection-oauth-test");
+    const persistNonce = vi.fn(async () => undefined);
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse(
+          400,
+          { error: "use_dpop_nonce" },
+          { "dpop-nonce": "nonce-from-google" },
+        ),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(
+          200,
+          {
+            access_token: "ya29.bound",
+            expires_in: 3599,
+            token_type: "Bearer",
+          },
+          { "dpop-nonce": "next-google-nonce" },
+        ),
+      );
+
+    const tokens = await refreshAccessToken("1//bound", {
+      material: prepared.material,
+      onNonce: persistNonce,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(persistNonce).toHaveBeenCalledWith("nonce-from-google");
+    const firstProof = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<
+      string,
+      string
+    >;
+    const secondProof = (fetchMock.mock.calls[1][1] as RequestInit).headers as Record<
+      string,
+      string
+    >;
+    expect(firstProof.DPoP).not.toBe(secondProof.DPoP);
+    expect(decodeJwt(firstProof.DPoP)).not.toHaveProperty("nonce");
+    expect(decodeJwt(secondProof.DPoP).nonce).toBe("nonce-from-google");
+    expect(tokens).toMatchObject({
+      access_token: "ya29.bound",
+      token_type: "Bearer",
+      dpopNonce: "next-google-nonce",
+    });
+  });
+
+  it("does not retry a second use_dpop_nonce response", async () => {
+    const prepared = await prepareGoogleHealthDpopKey("connection-retry-test");
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse(400, { error: "use_dpop_nonce" }, { "dpop-nonce": "nonce-1" }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse(400, { error: "use_dpop_nonce" }, { "dpop-nonce": "nonce-2" }),
+      );
+
+    await expect(
+      refreshAccessToken("1//bound", { material: prepared.material }),
+    ).rejects.toThrow(TokenExchangeError);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("maps invalid_grant to InvalidGrantError", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse(400, { error: "invalid_grant", error_description: "expired" }),
@@ -114,6 +184,33 @@ describe("token endpoint calls", () => {
       expect((error as Error).message).not.toContain("ya29.");
       expect((error as Error).message).toContain("500");
     }
+  });
+
+  it("never reflects an arbitrary upstream OAuth error string", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(400, {
+        error: "attacker-controlled-ya29.should-not-appear",
+        error_description: "1//refresh-should-not-appear",
+      }),
+    );
+    try {
+      await refreshAccessToken("1//stored-refresh");
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(TokenExchangeError);
+      expect((error as Error).message).toBe("Google token endpoint returned 400");
+      expect((error as Error).message).not.toContain("ya29.");
+      expect((error as Error).message).not.toContain("1//");
+    }
+  });
+
+  it("maps an aborted token request to a safe timeout error", async () => {
+    const timeout = new DOMException("upstream contained ya29.secret", "TimeoutError");
+    fetchMock.mockRejectedValueOnce(timeout);
+    await expect(exchangeCodeForTokens("secret-code")).rejects.toMatchObject({
+      name: "TokenExchangeError",
+      message: "Google token endpoint timed out.",
+    });
   });
 
   it("rejects a token response missing access_token", async () => {
