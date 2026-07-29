@@ -31,6 +31,7 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 - [x] Public/fail-closed consent UI passes 390/768/1440, focus, touch, reduced-motion, and overflow checks
 - [ ] Signed-in consent accept/deny redirects pass during the owner-approved connector reconnect
 - [x] CDN fonts return 200 with expected CORS and immutable caching
+- [x] MCP icon download serves the supplied PNG under a clean filename without responsive overflow
 
 ## Status
 
@@ -65,4 +66,9 @@ pass. The signed-in accept/deny redirects remain coupled to the owner-approved c
 - 2026-07-29 18:50 - Added Emmett's supplied 1254px MCP artwork byte-for-byte as the clean
   `shaughv-health-mcp-icon.png` public download, with a compact preview/action in Connector setup.
   The change passed all 147 tests, typecheck, and the production build before release.
+  (agent: codex)
+- 2026-07-29 19:03 - Production deployment `dpl_FatMUMj1mFQFYKLGPMUd3aCwguKK` reached READY
+  in `iad1`. The live asset returned 200 as `image/png`, 910,687 bytes, with the exact source hash;
+  the link advertised `shaughv-health-mcp-icon.png`. Signed-in Chrome QA passed at 1920x855 and
+  390x844 with a visible 58px-tall action, zero horizontal overflow, and no console messages.
   (agent: codex)
