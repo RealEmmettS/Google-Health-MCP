@@ -1,0 +1,194 @@
+"use client";
+
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { BrandLoader, BrandLockup } from "../components/brand-elements";
+
+interface PublicClient {
+  client_id?: string;
+  client_name?: string;
+  client_uri?: string;
+}
+
+function capabilityCopy(scopes: Set<string>) {
+  const capabilities = [
+    {
+      key: "read",
+      title: "Read Google Health",
+      detail:
+        "View activity, sleep, heart, nutrition, measurements, profile, and sync context through this private server.",
+      enabled: scopes.has("health:read"),
+    },
+    {
+      key: "write",
+      title: "Make limited updates",
+      detail:
+        "Create or change nutrition, hydration, and measurements, and acknowledge local update notices. Sleep and exercise cannot be written.",
+      enabled: scopes.has("health:write"),
+    },
+    {
+      key: "offline",
+      title: "Stay connected",
+      detail:
+        "Use a rotating refresh credential so the connector can return without asking you to sign in every hour.",
+      enabled: scopes.has("offline_access"),
+    },
+  ];
+  return capabilities.filter((capability) => capability.enabled);
+}
+
+function ConsentForm() {
+  const searchParams = useSearchParams();
+  const clientId = searchParams.get("client_id");
+  const scopes = useMemo(
+    () => new Set((searchParams.get("scope") ?? "").split(/\s+/).filter(Boolean)),
+    [searchParams],
+  );
+  const capabilities = capabilityCopy(scopes);
+  const [client, setClient] = useState<PublicClient | null>(null);
+  const [pending, setPending] = useState<"accept" | "deny" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!clientId) {
+      setError("The connector request is missing its client identity. Return to the connector and try again.");
+      return () => {
+        active = false;
+      };
+    }
+    fetch(`/api/auth/oauth2/public-client?client_id=${encodeURIComponent(clientId)}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error();
+        const value = (await response.json()) as PublicClient;
+        if (value.client_id !== clientId) throw new Error();
+        return value;
+      })
+      .then((value) => {
+        if (active) setClient(value);
+      })
+      .catch(() => {
+        if (active) {
+          setClient(null);
+          setError("The connector request could not be verified. Return to the connector and try again.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [clientId]);
+
+  async function decide(accept: boolean) {
+    if (!client || client.client_id !== clientId) return;
+    setPending(accept ? "accept" : "deny");
+    setError(null);
+    try {
+      const oauthQuery = window.location.search.replace(/^\?/, "");
+      const response = await fetch("/api/auth/oauth2/consent", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ accept, oauth_query: oauthQuery }),
+      });
+      const result = (await response.json()) as {
+        redirect_uri?: string;
+        url?: string;
+      };
+      const destination = result.url ?? result.redirect_uri;
+      if (!response.ok || !destination) throw new Error();
+      window.location.assign(destination);
+    } catch {
+      setError("The authorization could not be completed. Return to the connector and try again.");
+      setPending(null);
+    }
+  }
+
+  const clientName = client?.client_name?.trim() || "Verifying connector";
+
+  return (
+    <main className="site-shell public-page">
+      <div className="public-frame public-frame-narrow">
+        <BrandLockup label="Private / Consent" />
+        <section className="consent-panel reveal-stage reveal-stage-one">
+          <div className="index-line">
+            <span>OAuth / Private grant</span>
+            <span>Consent 001</span>
+          </div>
+          <div className="consent-copy">
+            <p className="eyebrow">Connector request</p>
+            <h1 className="sign-in-title">Allow private health access?</h1>
+            <p className="sign-in-description">
+              <strong>{clientName}</strong> is asking to use SHAUGHV Health MCP on your behalf.
+              No health values are shown on this screen.
+            </p>
+            <p className="consent-client-id">
+              Client / {client?.client_id ?? "Pending verification"}
+            </p>
+            <div className="consent-capabilities" aria-label="Requested capabilities">
+              {capabilities.map((capability, index) => (
+                <article className="consent-capability" key={capability.key}>
+                  <span className="consent-scope">0{index + 1} / {capability.key}</span>
+                  <h2>{capability.title}</h2>
+                  <p>{capability.detail}</p>
+                </article>
+              ))}
+            </div>
+            <p className="allowlist-note">
+              Access remains limited to the allowlisted Google identity. Removing or
+              revoking this connector stops future refreshes; an access token already
+              issued can remain valid for up to one hour.
+            </p>
+            <div className="consent-actions">
+              <button
+                className="button button-primary button-large"
+                type="button"
+                disabled={pending !== null || !client}
+                aria-busy={pending === "accept"}
+                onClick={() => decide(true)}
+              >
+                {pending === "accept" ? "Authorizing" : "Allow connector"}
+              </button>
+              <button
+                className="button button-danger button-large"
+                type="button"
+                disabled={pending !== null || !client}
+                aria-busy={pending === "deny"}
+                onClick={() => decide(false)}
+              >
+                {pending === "deny" ? "Denying" : "Deny"}
+              </button>
+              {error ? <p className="inline-error" role="alert">{error}</p> : null}
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function ConsentFallback() {
+  return (
+    <main className="site-shell public-page">
+      <div className="public-frame public-frame-narrow">
+        <BrandLockup label="Private / Consent" />
+        <section className="sign-in-panel sign-in-panel-loading">
+          <BrandLoader label="Preparing consent" />
+        </section>
+      </div>
+    </main>
+  );
+}
+
+export default function ConsentPage() {
+  return (
+    <Suspense fallback={<ConsentFallback />}>
+      <ConsentForm />
+    </Suspense>
+  );
+}

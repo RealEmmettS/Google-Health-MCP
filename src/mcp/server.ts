@@ -4,6 +4,7 @@ import {
   preloadSchemas,
   type AuthInfo,
 } from "@modelcontextprotocol/server";
+import type { VerifiedMcpPrincipal } from "../auth/auth";
 import { registerTools } from "./register-tools";
 
 preloadSchemas();
@@ -16,7 +17,7 @@ export const mcpHttpHandler = createMcpHandler(
     }
 
     const server = new McpServer(
-      { name: "shaughv-health-mcp", version: "0.2.1" },
+      { name: "shaughv-health-mcp", version: "0.3.0" },
       {
         cacheHints: {
           "tools/list": { ttlMs: 60 * 60 * 1000, cacheScope: "private" },
@@ -42,25 +43,16 @@ export const mcpHttpHandler = createMcpHandler(
   },
 );
 
-export function legacySessionAuthInfo(session: {
-  accessToken: string;
-  accessTokenExpiresAt: Date;
-  clientId: string;
-  scopes: string;
-  userId: string;
-}): AuthInfo {
+export function jwtPrincipalAuthInfo(
+  token: string,
+  principal: VerifiedMcpPrincipal,
+): AuthInfo {
   return {
-    token: session.accessToken,
-    clientId: session.clientId,
-    scopes: session.scopes.split(/\s+/).filter(Boolean),
-    expiresAt: Math.floor(session.accessTokenExpiresAt.getTime() / 1000),
-    resource: new URL(
-      `${
-        process.env.BETTER_AUTH_URL ??
-        process.env.NEXT_PUBLIC_APP_URL ??
-        "http://localhost:3000"
-      }/api/mcp`,
-    ),
-    extra: { userId: session.userId },
+    token,
+    clientId: principal.clientId,
+    scopes: principal.scopes,
+    expiresAt: principal.expiresAt,
+    resource: new URL(principal.payload.aud as string),
+    extra: { userId: principal.userId, email: principal.email },
   };
 }

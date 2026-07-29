@@ -140,13 +140,42 @@ Registry checks on 2026-07-29 show `better-auth` and `@better-auth/oauth-provide
 
 - OAuth/OIDC metadata and endpoints.
 - JWT access tokens for resource audiences via the JWT plugin.
-- public and confidential DCR, including unauthenticated public registration for MCP clients.
+- unauthenticated public DCR for MCP clients; this server normalizes connector registrations to
+  public/no-secret authorization-code + refresh clients.
 - OAuth 2.1 PKCE-by-default behavior.
 - required consent flow, UserInfo, revocation, scopes, claims, and token customization.
 - hashed secrets/tokens and storage/rate-limit options.
 - configurable expirations; access tokens default to one hour.
 
 The provider does not yet give a production-stable CIMD path on the chosen line. The 2026 spec recommends CIMD and retains DCR for backward compatibility. This project keeps DCR rather than implementing a security-sensitive prerelease protocol by hand.
+
+#### Stable-line security boundary
+
+`npm audit` reports [GHSA-p2fr-6hmx-4528](https://github.com/advisories/GHSA-p2fr-6hmx-4528), a moderate resource-indicator binding issue affecting the stable 1.6.25 provider; no stable fix is available as of 2026-07-29. The maintained fix exists only on the prerelease line, which this release deliberately does not adopt. The production containment is structural and regression-tested:
+
+- exactly one `validAudiences` value: the canonical `/api/mcp` resource;
+- exactly one canonical `resource` required at authorization-code and refresh-token requests;
+- DCR resource metadata, when supplied, must be one well-formed canonical value;
+- successful OpenID token responses are accepted only with the provider's exact known audience shape, then re-signed to one string audience;
+- `/api/mcp` rejects audience arrays, additional audiences, wrong issuer/resource, and missing scope;
+- no Google or other upstream token is accepted or forwarded.
+
+The same audit reports a moderate development-only esbuild chain under Drizzle Kit. The offered automated remediation is a breaking downgrade and does not affect the production dependency tree. Both findings remain documented; any stable provider release that fixes the audience advisory triggers immediate reevaluation.
+
+Stable 1.6.25 also does not make refresh-family rotation one transaction. It compare-and-set
+revokes the predecessor, inserts the successor separately, and performs replay-family cleanup as
+separate deletes. Sequential predecessor replay is rejected; concurrent replay rejects the losing
+request but does not necessarily invalidate the winning successor, and a successor-insert failure
+after revocation can strand the client. The private allowlist-only release records this upstream
+continuity/concurrency residual instead of hand-rolling token lineage or adopting a prerelease.
+
+The Vercel-linked Neon database is shared by local, preview, and production. JWKS tables are
+environment-specific, but provider clients, consent, code/refresh hashes, and rate-limit rows are
+shared; opaque credential hashes are not issuer-peppered. A valid code+verifier or refresh token
+is therefore portable across those trusted environments, though each environment issues only its
+own issuer/audience JWT. Preview remains Vercel-protected and only the allowlisted owner can grant,
+so this is tracked rather than release-blocking. Separate physical stores become mandatory if a
+preview is public or no longer equally trusted.
 
 ### Token/storage decision
 
@@ -228,6 +257,8 @@ GET/DELETE without a supported legacy stream/session return 405. Modern traffic 
 - Legacy Better Auth bridge and current endpoint metadata remain in place.
 - Production must pass a v2 client and every active connector before the next checkpoint.
 
+The checkpoint artifact `07a32db` deployed READY in `iad1`. Official modern and legacy clients passed 18-tool/6-resource discovery, structured `ping`, a static resource, and one non-mutating live Health read without a session header. Five warm legacy pings had a 105 ms median versus the 149–171 ms baseline; Codex app/plugin connectors passed. ChatGPT/Claude/Cursor UI qualification remains an explicit operator gate rather than an inferred result.
+
 ### Checkpoint 0.3.0
 
 - Additive provider and DPoP tables first.
@@ -236,6 +267,30 @@ GET/DELETE without a supported legacy stream/session return 405. Modern traffic 
 - One Google Health prompt-consent flow for the DPoP-bound replacement.
 - Legacy tables untouched for a seven-day rollback window.
 
+Migrations 0004–0006 were rehearsed on free Neon branches with no paid prompt. The final receipt
+created six empty additive tables and four generation/thumbprint columns while preserving 20
+legacy registrations, 184 legacy token rows, one Google connection, and one encrypted Google
+credential row. Five PostgreSQL tests proved initial/same-ID replacement, wrong-ID rejection,
+token/key write rollback, and a forced row-lock interleaving in which reconnect won and both stale
+refresh-save and lock-claim writes failed. Two real-provider tests proved v2-only public DCR,
+standards-correct 201, S256 enforcement, zero stored access tokens, and wrong-resource rejection.
+The reverse proof removed every table/column, reproduced all aggregates, removed rehearsal rows,
+and the branch was deleted.
+
+That proves schema and project-controlled concurrency behavior; it does not prove connector
+reauthorization or Google's live DPoP issuance. Raw 0.2.1 is a rollback target only before the
+Google refresh credential becomes DPoP-bound. Reconsent is blocked until a DPoP-capable rollback
+artifact is qualified, and the active key table must never be dropped while retaining its bound
+refresh token.
+
+The DPoP-capable legacy-auth recovery source is commit `9f99e9b` on
+`codex/dpop-rollback`. Its local legacy suite, typecheck, and production build pass. Production
+deployment `dpl_E8TFtPHHZ4SXh2FJLRcoTUGzfjqj` is READY with three Node functions in `iad1`; both
+independent Codex MCP connections passed authenticated `ping`, and a non-mutating sync-status read
+passed. It is the post-reconsent rollback target. Preview
+`dpl_AYwLr9CUSc6vK9Z4E9evWs8XFJrH` remains build evidence only because preview intentionally lacks
+the production Better Auth secret.
+
 Legacy protocol support remains until every active connector produces zero legacy requests for 30 consecutive days. Legacy OAuth tables are different: they may be removed after every connector passes and the seven-day rollback window closes, because the new provider uses distinct physical tables.
 
 ## Pricing
@@ -243,7 +298,7 @@ Legacy protocol support remains until every active connector produces zero legac
 - **Expected new fixed monthly cost:** `$0`.
 - SDK v2 and Better Auth OAuth Provider: open-source dependencies.
 - Vercel: existing metered Fluid Function usage; no new service. Current exact account tier/quotas are not exposed by the connector, so deployment must stop on any paid-plan prompt.
-- Neon: a handful of small additive rows/tables. No paid branch will be created. A local/available free-branch rehearsal is sufficient.
+- Neon: a handful of small additive rows/tables. The free-branch rehearsal completed and was deleted; no paid resource was created.
 - Railway: not selected; current production Hobby baseline would add at least `$5/month` before resource overage.
 - Cloudflare: not selected, so no new account/service cost.
 

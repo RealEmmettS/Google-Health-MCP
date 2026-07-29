@@ -1,6 +1,6 @@
 {
   "name": "shaughv-health-mcp",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "description": "Remote MCP server on Vercel exposing Google Health / Fitbit data to trusted LLM clients",
   "scripts": {
@@ -14,9 +14,10 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
+    "@better-auth/oauth-provider": "1.6.25",
     "@modelcontextprotocol/server": "2.0.0",
     "@neondatabase/serverless": "^1.1.0",
-    "better-auth": "1.6.23",
+    "better-auth": "1.6.25",
     "drizzle-orm": "^0.45.2",
     "jose": "^6.2.3",
     "luxon": "^3.7.2",

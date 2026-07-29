@@ -25,16 +25,22 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 
 ## Verification
 
-- [ ] Live `/agents` and `/tree.json` evidence captured immediately before editing
-- [ ] IBM Plex Mono references and requests are removed
-- [ ] Gail Rock Regular/Semibold preloads and narrowly scoped zero feature work
+- [x] Live `/agents` and `/tree.json` evidence captured immediately before editing
+- [x] Active IBM Plex Mono references/preloads are removed
+- [x] Gail Rock Regular/Semibold preloads and narrowly scoped zero feature work
 - [ ] Consent accept/deny flow is keyboard, touch, reduced-motion, and viewport qualified
-- [ ] CDN fonts return 200 with expected CORS and immutable caching
+- [x] CDN fonts return 200 with expected CORS and immutable caching
 
 ## Status
 
-TO-DO. Live CDN inventory was confirmed during planning; it will be refreshed again at the required edit boundary.
+ACTIVE. Makira/Gail Rock variables, preloads, technical selectors, feature isolation, and the
+private consent UI are implemented. Production viewport, keyboard/touch, redirect, layout-shift,
+and browser-network proof remains open.
 
 ## Activity
 
 - 2026-07-29 01:45 - Created under `#mcp2` from Emmett's explicit request to update the whole site typography alongside the new consent UI. (agent: codex)
+- 2026-07-29 03:58 - Re-read the live CDN guide/manifest; retained the combined stylesheet,
+  replaced IBM with Gail Rock Regular/Semibold preloads, scoped `"zero" 1` only to technical
+  content, and reused the site language on fail-closed consent UI. Live font assets returned 200
+  with wildcard CORS and immutable one-year caching. (agent: codex)

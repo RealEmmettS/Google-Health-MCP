@@ -1,7 +1,6 @@
 import { protectedResourceMetadataResponse } from "@/src/auth/protected-resource-metadata";
 
-// Compatibility alias for older connectors that do not derive the RFC 9728
-// path from the full protected-resource URL.
+// Canonical RFC 9728 metadata for https://health.emmetts.dev/api/mcp.
 export const runtime = "nodejs";
 export const preferredRegion = "iad1";
 

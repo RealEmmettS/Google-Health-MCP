@@ -42,7 +42,7 @@
 
   --font-heading: "Makira", "Inter", system-ui, -apple-system, sans-serif;
   --font-sans: "Makira", "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-mono: "Gail Rock", ui-monospace, "SF Mono", Menlo, monospace;
 
   --ease-brutalist: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
@@ -95,6 +95,38 @@ body::before {
     transparent 1.55px
   );
   background-size: 30px 30px;
+}
+
+/* The Gail Rock code preset is intentionally narrow. This declaration also
+   resets Makira's inherited ss01 setting so it cannot alter Gail's O/o forms. */
+code,
+pre,
+kbd,
+samp,
+.brand-lockup-copy,
+.index-line,
+.eyebrow,
+.account-label,
+.status-label,
+.signal-label,
+.copy-field-label,
+.setup-card-index,
+.brand-loader-label,
+.button,
+.allowlist-note,
+.account-email,
+.status-pill,
+.status-detail,
+.copy-field-description,
+.copy-button,
+.copy-field-value,
+.connector-footnote,
+.public-privacy-link,
+.privacy-policy-link,
+.consent-client-id,
+.consent-scope {
+  font-family: var(--font-mono);
+  font-feature-settings: "zero" 1;
 }
 
 ::selection {
@@ -935,6 +967,76 @@ a {
   min-height: 520px;
 }
 
+.consent-panel {
+  min-height: 620px;
+}
+
+.consent-copy {
+  max-width: 760px;
+  padding: clamp(2.5rem, 7vw, 5rem) clamp(1.3rem, 6vw, 4.5rem);
+}
+
+.consent-client-id {
+  margin: 0 0 1.5rem;
+  overflow-wrap: anywhere;
+  color: var(--fg-soft);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.consent-capabilities {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--border-medium);
+  border-left: 1px solid var(--border-medium);
+}
+
+.consent-capability {
+  min-width: 0;
+  padding: 1.15rem;
+  border-right: 1px solid var(--border-medium);
+  border-bottom: 1px solid var(--border-medium);
+  background: rgba(253, 253, 251, 0.64);
+}
+
+.consent-scope {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.consent-capability h2 {
+  margin: 0.85rem 0 0;
+  color: var(--fg);
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.consent-capability p {
+  margin: 0.7rem 0 0;
+  color: var(--fg-muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 1.5rem;
+}
+
+.consent-actions .inline-error {
+  flex-basis: 100%;
+}
+
 .sign-in-copy {
   max-width: 680px;
   padding: clamp(2.5rem, 7vw, 5rem) clamp(1.3rem, 6vw, 4.5rem);
@@ -1091,6 +1193,10 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .consent-capabilities {
+    grid-template-columns: 1fr;
+  }
+
   .signal-strip > div + div {
     border-top: 1px solid var(--border-hairline);
     border-left: 0;
@@ -1140,7 +1246,8 @@ a {
   }
 
   .hero-copy,
-  .sign-in-copy {
+  .sign-in-copy,
+  .consent-copy {
     padding-inline: 1.15rem;
   }
 

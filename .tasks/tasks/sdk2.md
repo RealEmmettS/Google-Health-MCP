@@ -35,7 +35,7 @@ The public `/api/mcp` URL remains stable. Modern clients gain the 2026 envelope 
 | Starting source baseline | `git status`; existing test/type/build gates | `main` clean and synchronized; prior 114/114, typecheck, build green | PASS |
 | Board/runtime baseline | task board identity; Vercel/Neon inspection | board 1.1.1 at repo-local port 4318; production Node functions and Neon both `iad1`/us-east | PASS |
 | Transport implementation | official v2 client; full source gates | modern + stateless legacy, 18 annotated/schema-complete tools, structured results, 6 cache-hinted resources, HTTP boundary; 126/126 tests, typecheck and build green | PASS |
-| Production 0.2.1 qualification | Pending | Pending | OPEN |
+| Production 0.2.1 qualification | Vercel `dpl_DDUDdZJmzYg4teo16eAQGr4b1ADS`; official v2 clients; Codex app/plugin connectors | READY in `iad1`; modern + legacy + live read pass; 18 tools/6 resources; no session header; warm legacy ping median 105 ms; two accessible connectors pass; no runtime errors | PARTIAL — external client UIs open |
 
 ## Verification
 
@@ -49,10 +49,11 @@ The public `/api/mcp` URL remains stable. Modern clients gain the 2026 envelope 
 
 ## Status
 
-ACTIVE. The 0.2.1 source artifact is green and ready for commit/deployment. The legacy compatibility bridge still performs its required token-table and allowlist lookups; the zero-Neon-auth-query gate belongs to the 0.3.0 JWT checkpoint, not this deliberately auth-preserving release.
+ACTIVE. Production 0.2.1 is healthy and substantially qualified. The official modern/legacy clients, canonical endpoint, one live non-mutating Health read, Codex app connector, and shaughv-code plugin connector pass. ChatGPT, Claude.ai, Claude Code, and Cursor UI-level checks remain operator-visible gates and must not be inferred from token-level success. The legacy bridge still performs its required token-table and allowlist lookups; the zero-Neon-auth-query gate belongs to 0.3.0.
 
 ## Activity
 
 - 2026-07-29 01:45 - Created as the first independently revertible checkpoint of `#mcp2`; recorded the clean baseline and compatibility-first release boundary. (agent: codex)
 - 2026-07-29 02:12 - Replaced `mcp-handler`/monolithic SDK with exact official server/client 2.0.0, added the request-scoped factory, stateless legacy fallback, typed structured tools/resources, cache policy, streamed body cap, exact Host/Origin policy, and safe telemetry. Full suite is 126/126; typecheck and production build pass. `npm audit --omit=dev --audit-level=high` reports no production vulnerability; four moderate findings remain in the development-only Drizzle CLI chain and the offered fix is breaking. (agent: codex)
 - 2026-07-29 02:15 - Added focused official-client proofs for `server/discover`, modern JSON, request-scoped SSE auto-upgrade, result projection, cache hints, header/body mismatch rejection, response-stream cancellation, and legacy sessionless operation. (agent: codex)
+- 2026-07-29 02:18 - Pushed checkpoint commit `07a32db`; Vercel Git deployment `dpl_DDUDdZJmzYg4teo16eAQGr4b1ADS` became READY in `iad1` with three Node functions and no paid-plan prompt. Canonical modern and legacy official clients both passed 18-tool/6-resource discovery, structured ping, static resource read, and no session headers; a real `get_today_steps` read passed without exposing values. Five warm legacy pings were 127/101/91/116/105 ms (median 105 ms), better than the 149–171 ms baseline. Codex app and plugin connector pings passed; Vercel reported no runtime errors. External connector UI gates remain open. (agent: codex)

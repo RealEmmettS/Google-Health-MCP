@@ -17,8 +17,18 @@ Includes native MCP SDK v2 with modern and stateless-legacy compatibility, struc
 
 ## Status
 
-ACTIVE. The board is upgraded to task plugin 1.1.1 and the 0.2.1 implementation checkpoint is underway. Existing Google Health data, auth tables, webhook state, and production deployment remain untouched at this point.
+ACTIVE. Checkpoint 0.2.1 and the DPoP-capable legacy-auth recovery artifact are
+production-qualified. The 0.3.0 candidate, production additive migrations, stable Provider/JWT,
+DPoP concurrency hardening, and Makira/Gail implementation pass their automated gates. The 0.3.0
+code deploy, owner reconnect/reconsent, and timed soak remain open.
 
 ## Activity
 
 - 2026-07-29 01:45 - Created from Emmett's approved full implementation plan; preserved the separate v1.1 physical webhook acceptance gate and split production work into two revertible releases. (agent: codex)
+- 2026-07-29 03:58 - Completed the 0.3.0 implementation/rehearsal stage without touching
+  production schema or replacing credentials. Independent OAuth, release/UI, and DPoP audits
+  drove the resource/redirect/no-store, refresh-race, lock-duration, consent, typography, and
+  rollback-epoch corrections. (agent: codex)
+- 2026-07-29 04:15 - Applied the additive production schema with all legacy/Google aggregates
+  preserved, then production-qualified DPoP-capable legacy-auth recovery deployment
+  `dpl_E8TFtPHHZ4SXh2FJLRcoTUGzfjqj` through two pings and a non-mutating live read. (agent: codex)

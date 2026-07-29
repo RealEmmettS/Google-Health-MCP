@@ -28,17 +28,18 @@
 | Google Health API | Successor to Fitbit Web API; REST at `health.googleapis.com/v4`; Google OAuth + `googlehealth.*` scopes |
 | Fitbit Air | Emmett's wearable; syncs to Fitbit app → Google Health cloud. Data is never live — only synced |
 | MCP | Model Context Protocol; this repo IS a remote MCP server on Vercel |
-| mcp-handler | Vercel's MCP adapter for Next.js (`createMcpHandler`, `withMcpAuth`) |
-| better-auth mcp plugin | Deprecated legacy authorization server retained temporarily so existing DCR/tokens survive. 0.1.2 wraps it with S256 PKCE, canonical-resource checks, encrypted persisted RS256 JWKS signing, and repaired ID-token/UserInfo responses. Successful refreshes receive a fresh 60-day token, but the prior token is not immediately revoked; full maintained-provider migration + coordinated connector re-auth is `#oap` |
+| MCP SDK v2 | Official split `@modelcontextprotocol/server`/`client` 2.0.0; request-scoped 2026 transport with stateless 2025 fallback |
+| Better Auth OAuth Provider | Stable 1.6.25 authorization server: `/api/auth/oauth2/*`, public DCR, S256 PKCE, consent, exact-audience RS256 JWTs, hashed rotating refresh tokens. Legacy 0.1.x OAuth tables are rollback-only during `#q2` |
+| DPoP | Per-Google-Health-connection P-256 key that sender-constrains the Google refresh token; private JWK is purpose-separated AES-256-GCM ciphertext |
 | DCR | Dynamic Client Registration (RFC 7591) — required by claude.ai + ChatGPT connectors |
 | freshness ledger | `data_freshness` table: latest webhook notification per (user, data type). Dormant until v1.1 — webhooks carry pointers, not values |
-| four auth layers | 1 Vercel login · 2 Neon Auth (disabled) · 3 Google Health consent (encrypted tokens) · 4 MCP client auth (better-auth). Never conflate |
+| four auth layers | 1 Vercel login · 2 Neon Auth (disabled) · 3 Google Health consent (encrypted token + DPoP key) · 4 MCP client auth (Better Auth OAuth Provider/JWT). Never conflate |
 
 ## Projects
 
 | Project | Status | Notes |
 |---|---|---|
-| shaughv-health-mcp (this repo) | v1 live | Source of truth: `docs/PLAN.md`; accepted audience decision: `docs/adr/0001-private-allowlist-only.md`. Webhooks = v1.1 (#w11) |
+| shaughv-health-mcp (this repo) | v1 live; 0.3.0 rollout active | Source of truth: `docs/PLAN.md`; audience = ADR-0002; hosting/runtime = ADR-0003; rollout/soak = `#mcp2`/`#q2`. Webhook physical gate remains separate under `#w11` |
 | shaughv-health-db | Connected | Provisioned and connected from the Vercel dashboard through its Storage/Marketplace integration, ID `divine-cloud-92550441`; Vercel injects the pooled runtime and unpooled migration URLs (Preview+Production, 2026-07-09). Neon Auth is disabled |
 | Vercel project | Live | `google-health-mcp` (prj_hZe49opI8FWMx8fWnGDbNI34zUzo, team realemmetts). Domains: **health.emmetts.dev** (canonical) + google-health-mcp-realemmetts.vercel.app. Deployment Protection = preview-only (prod must stay open; app brings its own auth) |
 
@@ -47,14 +48,20 @@
 - Plan (`docs/PLAN.md`) overrides the ChatGPT handoff spec where they conflict.
 - Subagents: Opus 4.8 `xhigh` (or `max`) / Sonnet 5 `max` (or `xhigh`) — never lower, never Haiku, never auto-map Fable.
 - Never send anything outward (email/posts/etc.) without fresh per-message approval.
+- Repo-specific change boundary (2026-07-29): merge/push/deploy to `main` is pre-authorized
+  because Vercel rollback is available. Before any action that invalidates or destroys the
+  previous working state—credential/key rotation, revocation, destructive table/data cleanup,
+  or a consent flow that may replace the working refresh token—pause and obtain fresh approval.
 - Cross-platform npm scripts only (Windows dev box).
 - No medical diagnosis language in tool outputs; always include freshness metadata.
 - Access is private and fixed to Emmett alone through `eshaughv@gmail.com` and its native
   alias `google@emmetts.dev`. Do not add another person, open signup, or pursue Google
   verification/CASA without a superseding ADR-0002.
-- `ALLOWED_GOOGLE_EMAILS` is rechecked on every MCP bearer request. Complete offboarding
-  still deletes Better Auth sessions/MCP grants and the Google Health connection.
+- `ALLOWED_GOOGLE_EMAILS` is rechecked locally on every MCP bearer request. Account removal
+  is immediate; client-specific revocation can lag at most the one-hour JWT lifetime.
 - Vercel env quirk: this project's env vars are SENSITIVE (write-only — `vercel env pull` returns them EMPTY; default came from the Neon connect dialog). Canonical secret copies live in `.env.development.local` + `.tasks/secure/` (both gitignored); never expect to read a secret back from Vercel.
 - TOKEN_ENCRYPTION_KEY is deliberately SHARED between local and prod (one shared Neon DB = one key — split keys poison each other's token rows). Rotated 2026-07-09; ROTATING IT ORPHANS ALL STORED GOOGLE TOKENS → every user must reconnect.
-- BETTER_AUTH_SECRET is SPLIT (local ≠ prod) and that's FINE — do NOT "fix"/align it. It signs each environment's login cookies and encrypts that environment's persisted MCP RS256 private key (separate Development/Preview/Production JWKS tables); legacy MCP access tokens are still validated by DB lookup. `scripts/live-verify-e2e.ts` intentionally has NO direct-token fallback: its forged-session full OAuth chain defaults to localhost and refuses non-local mutations without an explicit flag. Verify production with safe metadata/JWKS/401 probes plus a real client; do not try to align secrets or resurrect token insertion to make the headless script forge a prod login.
-- MCP stack decision (2026-07-09, Emmett + fable): mcp-handler + official MCP SDK on Vercel serverless — deliberately NOT FastMCP (FastMCP wants a long-running process and its own auth; ours is serverless + better-auth-integrated). Emmett may want to migrate to RAILWAY in the future (see Backlog #rlw) — that's the moment the FastMCP question reopens. Until then, build nothing Vercel-locked without noting it in #rlw's detail file.
+- BETTER_AUTH_SECRET is SPLIT (local ≠ prod) and that's correct. It signs cookies and encrypts each environment's persisted RS256 private key in separate Development/Preview/Production JWKS tables. MCP access JWTs are verified locally; they are never inserted into the legacy token table.
+- Stable-provider client/consent/code/refresh/rate-limit rows are shared across the trusted environments in the Vercel-linked Neon DB; JWKS remain environment-specific. Preview is Vercel-protected. Track environment-isolated OAuth storage if previews become public or stop being equally trusted.
+- Raw 0.2.1 is a valid rollback only before Google DPoP reconsent. After a bound refresh token commits, retain `google_health_dpop_key` and roll back only to a separately qualified DPoP-capable artifact or forward-fix. Reconsent requires fresh approval.
+- Current MCP host decision (2026-07-29): official SDK v2 on Vercel Node 24 + Fluid in `iad1`, deliberately not Edge/Railway/FastMCP. See ADR-0003 and closed task `#rlw`; reopen only on its measured triggers.

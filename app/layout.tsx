@@ -39,14 +39,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
-          href={SHAUGHV_ASSETS.fonts.ibmPlexMonoRegular}
+          href={SHAUGHV_ASSETS.fonts.gailRockRegular}
         />
         <link
           rel="preload"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"
-          href={SHAUGHV_ASSETS.fonts.ibmPlexMonoSemiBold}
+          href={SHAUGHV_ASSETS.fonts.gailRockSemiBold}
         />
       </head>
       <body>

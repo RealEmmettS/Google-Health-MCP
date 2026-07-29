@@ -28,8 +28,8 @@ alone (two approved aliases). It exposes his Google Health data to trusted LLM c
 activity/sleep/heart/nutrition, writes for nutrition/hydration/measurements only. A thin,
 typed, authenticated data adapter: the LLM reasons; the server returns accurate data with
 freshness metadata. No medical claims. Stack: Next.js 16 (App Router, Node runtime),
-TypeScript 5.9, official `@modelcontextprotocol/server` v2, better-auth (temporarily the built-in `mcp` plugin,
-OAuth 2.1 + Dynamic Client Registration), Drizzle ORM on Neon Postgres, Luxon, Zod, Vitest.
+  TypeScript 5.9, official `@modelcontextprotocol/server` v2, stable Better Auth OAuth Provider
+  (OAuth 2.1, DCR, S256 PKCE, exact-audience JWTs), Drizzle ORM on Neon Postgres, Luxon, Zod, Vitest.
 
 Current milestone: **`#mcp2`**. Phase status is on the board — read it there; don't trust any
 prose snapshot that may have gone stale.
@@ -37,12 +37,13 @@ prose snapshot that may have gone stale.
 ## Non-negotiables
 
 - **Four auth layers, never conflated:** (1) Vercel login · (2) Neon Auth — **disabled** ·
-  (3) Google Health consent (AES-256-GCM-encrypted tokens, under `/api/auth/google-health/*`)
+  (3) Google Health consent (AES-256-GCM-encrypted tokens and DPoP private key, under `/api/auth/google-health/*`)
   · (4) MCP client auth (better-auth OAuth 2.1 + DCR, Google sign-in restricted to
-  `ALLOWED_GOOGLE_EMAILS`, under `/api/auth/mcp/*` + `/.well-known/*`). Layers 3 and 4 share
+  `ALLOWED_GOOGLE_EMAILS`, under `/api/auth/oauth2/*` + `/.well-known/*`). Layers 3 and 4 share
   one Google client ID but use separate flows/scopes. See `README.md` for the full table.
-- **Tokens are AES-256-GCM encrypted at rest; never in logs or errors.** Run every error path
-  through the `redact()` helper. No plaintext tokens anywhere, ever.
+- **Credential storage models stay distinct.** Google Health tokens and DPoP private keys are
+  AES-256-GCM encrypted; MCP refresh tokens/client secrets are hashed; MCP access JWT values are
+  never stored. Run every error path through `redact()`. No plaintext secret in logs or errors.
 - **No sleep / exercise / settings write tools exist** — absent by design; do not scaffold
   them even though those data types support writes at the API level.
 - **No medical diagnosis language.** Every tool response carries freshness metadata
@@ -72,13 +73,14 @@ prose snapshot that may have gone stale.
   deliberately NOT Edge, Railway, or FastMCP.** The transport is request-scoped and serves
   modern 2026 plus stateless legacy 2025 traffic from one factory. Full reasoning:
   `docs/adr/0003-vercel-node-fluid-mcp-2026.md` and `.tasks/tasks/rlw.md`.
-- **Checkpoint 0.2.1 keeps better-auth 1.6.23's deprecated built-in `mcp` plugin** so existing
-  connector registrations/tokens survive. Release 0.1.2 adds a time-boxed compatibility boundary:
-  required S256 PKCE, exact supplied-resource validation, persisted encrypted RS256 keys through
-  Better Auth's `jwt()` plugin, and repaired JWKS/UserInfo/ID-token responses. Do not remove that
-  bridge or swap providers piecemeal. The maintained `@better-auth/oauth-provider` migration is
-  tracked as `#oap` and requires a coordinated connector re-auth. The token endpoint must keep
-  accepting **form-encoded POST** (a claude.ai connector quirk).
+- **0.3.0 MCP auth = exact stable `better-auth@1.6.25` +
+  `@better-auth/oauth-provider@1.6.25`.** Endpoints live under `/api/auth/oauth2/*`; token
+  grants stay form-encoded. Public DCR is S256-only, access JWTs have the one exact `/api/mcp`
+  audience and are locally verified, refresh tokens are hashed/rotating, and CIMD waits for a
+  maintained stable release. The known 1.6.x resource-indicator advisory is contained by one
+  configured audience plus exact authorize/token/refresh/resource-server checks. Legacy
+  0.1.x client/token/consent tables are rollback-only for seven days—do not query, translate,
+  export, or delete them before `#q2` accepts cleanup.
 - **TypeScript is pinned to `^5`** — Next 16's build-time type checker cannot load the TS 7
   native compiler; an unpinned install broke the build.
 - **REST API surface (`#api`) is a future idea**, feasible and additive. Its one present-day
@@ -87,9 +89,9 @@ prose snapshot that may have gone stale.
 
 ## Watchouts
 
-- **Allowlist removal is rechecked on every MCP bearer request.** Complete offboarding still
-  deletes Better Auth sessions/MCP tokens and the user's Google Health connection; see
-  ADR-0002.
+- **Allowlist removal is rechecked locally on every MCP bearer request.** Account removal is
+  immediate; client-specific revocation can leave an issued JWT valid for at most one hour,
+  while emergency signing-key rotation invalidates all access JWTs. See ADR-0002.
 - **Kebab vs snake** data-type names — registry only.
 - **Civil vs physical time:** `rollUp` takes a physical-time range; `dailyRollUp` takes a
   civil range with **non-zero-padded** month/day integers (leading zeros are rejected). Sleep

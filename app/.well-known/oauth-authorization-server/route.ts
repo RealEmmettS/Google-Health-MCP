@@ -1,13 +1,15 @@
-import { oAuthDiscoveryMetadata } from "better-auth/plugins";
+import { oauthProviderAuthServerMetadata } from "@better-auth/oauth-provider";
 import { auth } from "@/src/auth/auth";
-import { repairAuthorizationServerMetadata } from "@/src/auth/mcp-oauth-compat";
 
-// RFC 8414 authorization-server metadata. MCP clients (claude.ai, ChatGPT,
-// Claude Code) discover the authorize/token/register endpoints here.
 export const runtime = "nodejs";
+export const preferredRegion = "iad1";
 
-const discovery = oAuthDiscoveryMetadata(auth);
+const metadata = oauthProviderAuthServerMetadata(auth, {
+  headers: {
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+  },
+});
 
-export async function GET(request: Request): Promise<Response> {
-  return repairAuthorizationServerMetadata(await discovery(request));
-}
+export const GET = metadata;
+export const HEAD = metadata;

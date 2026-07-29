@@ -8,14 +8,19 @@ import { GoogleSignInButton } from "../components/google-sign-in-button";
 function SignInForm() {
   const searchParams = useSearchParams();
 
-  // When better-auth's MCP OAuth flow needs a login, it redirects here with
+  // When Better Auth's OAuth Provider needs a login, it redirects here with
   // the ORIGINAL authorize query params (client_id, redirect_uri, state,
   // code_challenge, ...). After Google sign-in we must send the user back to
   // the authorize endpoint with those exact params so the flow can resume and
   // issue the code to the MCP client. Plain visits fall back to redirect_to/"/".
+  const requestedRedirect = searchParams.get("redirect_to");
+  const safeLocalRedirect =
+    requestedRedirect?.startsWith("/") && !requestedRedirect.startsWith("//")
+      ? requestedRedirect
+      : "/";
   const callbackURL = searchParams.get("client_id")
-    ? `/api/auth/mcp/authorize?${searchParams.toString()}`
-    : (searchParams.get("redirect_to") ?? "/");
+    ? `/api/auth/oauth2/authorize?${searchParams.toString()}`
+    : safeLocalRedirect;
 
   return (
     <main className="site-shell public-page">

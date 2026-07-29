@@ -1,5 +1,5 @@
 /**
- * Resolved from https://cdn.shaughv.com/tree.json on 2026-07-10.
+ * Resolved from https://cdn.shaughv.com/tree.json on 2026-07-29.
  * Re-fetch the manifest before changing any SHAUGHV asset URL.
  */
 export const SHAUGHV_ASSETS = {
@@ -9,10 +9,10 @@ export const SHAUGHV_ASSETS = {
       "https://cdn.shaughv.com/fonts/makira/woff2/Makira-Regular.woff2",
     makiraExtraBold:
       "https://cdn.shaughv.com/fonts/makira/woff2/Makira-ExtraBold.woff2",
-    ibmPlexMonoRegular:
-      "https://cdn.shaughv.com/fonts/ibm-plex-mono/woff2/IBMPlexMono-Regular.woff2",
-    ibmPlexMonoSemiBold:
-      "https://cdn.shaughv.com/fonts/ibm-plex-mono/woff2/IBMPlexMono-SemiBold.woff2",
+    gailRockRegular:
+      "https://cdn.shaughv.com/fonts/gail-rock/woff2/Gail-Rock-Regular.woff2",
+    gailRockSemiBold:
+      "https://cdn.shaughv.com/fonts/gail-rock/woff2/Gail-Rock-Semibold.woff2",
   },
   wordmark:
     "https://cdn.shaughv.com/brand/shaughv/logos/SHAUGHV-Official.svg",

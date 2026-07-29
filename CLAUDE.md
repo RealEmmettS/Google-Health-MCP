@@ -23,7 +23,7 @@ with freshness metadata. No medical claims.
 - **The `.tasks/` board is the live status.** `docs/PLAN.md` defines the plan; the board
   tracks execution. Before starting work, read `.tasks/TASKS.md` (what's Active / next) and
   the relevant `.tasks/tasks/<id>.md` detail file — the decisions and carry-over notes live
-  there. Current milestone: **`#v1`**. Do not restate volatile phase status in docs that go
+  there. Current milestone: **`#mcp2`**. Do not restate volatile phase status in docs that go
   stale; point at the board.
 - **Accepted ADRs govern their specific scope.** Read
   `docs/adr/0002-single-user-private.md` before changing authentication, the approved
@@ -32,11 +32,13 @@ with freshness metadata. No medical claims.
 ## Non-negotiables (from the plan)
 
 - **Four auth layers, never conflated:** (1) Vercel login · (2) Neon Auth — **disabled** ·
-  (3) Google Health consent (AES-256-GCM-encrypted tokens) · (4) MCP client auth (better-auth
-  OAuth 2.1 + DCR, Google sign-in, `ALLOWED_GOOGLE_EMAILS` allowlist). Layers 3 and 4 share
+  (3) Google Health consent (AES-256-GCM-encrypted token + DPoP private key) · (4) MCP client
+  auth (stable Better Auth OAuth Provider, DCR, S256 PKCE, exact-audience JWTs, Google sign-in,
+  `ALLOWED_GOOGLE_EMAILS` allowlist). Layers 3 and 4 share
   one Google client ID but use separate flows/scopes.
-- **Tokens are AES-256-GCM encrypted at rest; never in logs or errors.** Use the `redact()`
-  helper on every error path. No plaintext tokens anywhere, ever.
+- **Credential storage models stay distinct.** Google Health tokens and DPoP private keys are
+  AES-256-GCM encrypted; MCP refresh tokens/client secrets are hashed; MCP access JWT values are
+  never stored. Use `redact()` on every error path. No plaintext secret in logs or errors.
 - **No sleep / exercise / settings write tools exist** — absent by design. Do not scaffold
   them, even though the registry knows those data types support writes at the API level.
 - **No medical diagnosis language.** Every tool response carries **freshness metadata**
@@ -66,14 +68,13 @@ with freshness metadata. No medical claims.
   deliberately NOT Edge, Railway, or FastMCP.** The transport is request-scoped and serves
   modern 2026 plus stateless legacy 2025 traffic from one factory. Full reasoning is in
   `docs/adr/0003-vercel-node-fluid-mcp-2026.md` and `.tasks/tasks/rlw.md`.
-- **Checkpoint 0.2.1 keeps better-auth 1.6.23's deprecated built-in `mcp` plugin**
-  (`better-auth/plugins`) so existing connector registrations/tokens survive. Release 0.1.2 adds
-  a time-boxed compatibility boundary: required S256 PKCE, exact supplied-resource validation,
-  persisted encrypted RS256 keys through Better Auth's `jwt()` plugin, and repaired
-  JWKS/UserInfo/ID-token responses. Do not remove that bridge or swap providers piecemeal. The
-  maintained `@better-auth/oauth-provider` migration is tracked as `#oap` and requires a
-  coordinated connector re-auth. Auth endpoints live under `/api/auth/mcp/*`; the token endpoint
-  must keep accepting **form-encoded POST** (a claude.ai connector quirk).
+- **0.3.0 MCP auth uses exact stable `better-auth@1.6.25` plus
+  `@better-auth/oauth-provider@1.6.25`.** Auth endpoints live under `/api/auth/oauth2/*`; the
+  token endpoint accepts **form-encoded POST**. Public DCR is S256-only, access JWTs have one
+  exact `/api/mcp` audience and are verified locally, refresh tokens are hashed/rotating, and
+  CIMD remains deferred. Retain the one-audience/exact-resource containment for the known
+  stable-line resource-indicator advisory. Legacy 0.1.x OAuth tables are rollback-only for the
+  seven-day `#q2` window; do not query or remove them prematurely.
 - **TypeScript is pinned to `^5`** (5.9.x). Next 16's build-time type checker cannot load the
   TS 7 native compiler; an unpinned install resolved TS 7 and broke the Vercel build.
 - **REST API surface (`#api`) is a future idea**, feasible and additive. Its one present-day
@@ -82,9 +83,9 @@ with freshness metadata. No medical claims.
 
 ## Watchouts (read before coding)
 
-- **Allowlist removal is rechecked on every MCP bearer request.** Complete offboarding still
-  deletes Better Auth sessions/MCP tokens and the user's Google Health connection; see
-  ADR-0002.
+- **Allowlist removal is rechecked locally on every MCP bearer request.** Account removal is
+  immediate; client-specific revocation is bounded by the one-hour access JWT. Emergency key
+  rotation invalidates all access JWTs; see ADR-0002.
 - **Kebab vs snake** data-type names — registry only (above).
 - **Civil vs physical time:** `rollUp` takes a physical-time range; `dailyRollUp` takes a
   civil range with **non-zero-padded** month/day integers (the API rejects leading zeros —
@@ -95,8 +96,8 @@ with freshness metadata. No medical claims.
 - **True zeros / on-wrist filtering:** some data types have real zeros (steps, distance,
   floors, altitude, total-calories); most gaps are missing data, not zero activity. Never
   phrase a gap as inactivity.
-- **Refresh tokens:** only issued with `access_type=offline` (+ usually `prompt=consent`);
-  don't assume one arrives on every exchange — keep the old refresh token unless replaced.
+- **Google refresh tokens:** only issued with `access_type=offline` + `prompt=consent`;
+  keep the old credential unless a DPoP-bound replacement exchange and atomic commit succeed.
   7-day expiry until the OAuth app is published to production.
 - **Serverless lifecycle:** nothing survives the response — no fire-and-forget background
   work. Durable writes must finish before returning.
@@ -122,8 +123,9 @@ This repo uses the SHAUGHV `tasks-*` system. The board source of truth is
 `.tasks/TASKS.md`; milestones (dated epics) live in `.tasks/MILESTONES.md` and tasks join
 one with an `(ms #id)` tag; each task's rich handoff lives at `.tasks/tasks/<id>.md` with
 its `## Verification` checklist, `## Status`, and `## Activity` kept current while work is
-in flight. Current milestone: **#v1** with phase tasks `#p0b`…`#p7d` (webhooks deferred as
-`#w11`; future ideas parked as `#api` / `#rlw`).
+in flight. Current milestone: **#mcp2**, with the integrated cutover/soak owned by `#q2`.
+The completed `#v1` history remains on the board; the separate physical webhook gate remains
+under `#w11`, and the future REST idea remains parked as `#api`. Hosting task `#rlw` is closed.
 
 Use proper subtasks for small required steps that should be visible and checkable in the
 dashboard modal: indented checkbox rows under the parent task in `.tasks/TASKS.md`,

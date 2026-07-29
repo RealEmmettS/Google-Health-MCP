@@ -88,8 +88,8 @@ an audit row.
 - **`#api`** — a plain REST API surface (bearer/PAT-authenticated) over the same health
   services, so Emmett's own scripts/apps can call the data without an OAuth dance.
   Feasibility analyzed: feasible and additive on the current stack.
-- **`#rlw`** — a possible future migration from Vercel serverless to **Railway** (long-lived
-  container); this is the moment the FastMCP question reopens.
+- **`#rlw`** — closed by [ADR-0003](docs/adr/0003-vercel-node-fluid-mcp-2026.md): retain
+  Vercel Node 24 + Fluid in `iad1`; reconsider Edge/Workers/Railway only on measured triggers.
 - **`#w11`** — **v1.1 webhooks**: implemented endpoint/signature/ledger/inbox; production
   subscriber registration and a real sync are the final live gates.
 
@@ -102,7 +102,7 @@ an audit row.
                     └─────────────┘                     └──────┬───────┘
                                                                │  Google Health API
                                                                │  health.googleapis.com/v4
-                                                               │  ▲ user OAuth token
+                                                               │  ▲ DPoP-bound refresh token
                                                                │  │  (AES-256-GCM
                                                                │  │   encrypted in Neon)
                                                                ▼  │
@@ -127,11 +127,11 @@ an audit row.
                                                              └──────────────────┘
 ```
 
-**Request path in one line:** an LLM client completes an OAuth 2.1 flow (with Dynamic Client
-Registration) against *this app's own* authorization server, gets a token, calls the MCP
-endpoint; a tool handler resolves the app user, fetches fresh data from Google Health using
-the decrypted-on-demand health token, bounds/normalizes the payload, and returns it with
-freshness metadata.
+**Request path in one line:** an LLM client completes OAuth 2.1 + S256 PKCE (with Dynamic
+Client Registration) against *this app's own* authorization server, gets a one-hour RS256 JWT
+bound to `/api/mcp`, and presents it on every request. The MCP route verifies that JWT locally,
+then a tool handler fetches Google Health with the decrypted-on-demand Google credential,
+bounds/normalizes the payload, and returns it with freshness metadata.
 
 ### The four auth layers (never conflate)
 
@@ -141,8 +141,8 @@ These are four **separate** things. Confusing them is the number-one source of b
 |---|---|---|---|
 | 1 | **Vercel account login** | Emmett's Vercel dashboard access | Irrelevant to runtime |
 | 2 | **Neon Auth** | Neon's own auth product | **Disabled** — Neon is only a database |
-| 3 | **Google Health consent** | Health-scope OAuth; tokens **AES-256-GCM encrypted** in Neon; done once per (re)connect | Custom routes under `/api/auth/google-health/*` |
-| 4 | **MCP client auth** | This app **is** an OAuth 2.1 authorization server (better-auth built-in `mcp` plugin, DCR on); the human login step is Google Sign-In restricted to `ALLOWED_GOOGLE_EMAILS` | Endpoints under `/api/auth/mcp/*` + `/.well-known/*` |
+| 3 | **Google Health consent** | Health-scope OAuth; refresh credentials and the per-connection DPoP private key are **AES-256-GCM encrypted** in Neon; done once per (re)connect | Custom routes under `/api/auth/google-health/*` |
+| 4 | **MCP client auth** | This app **is** an OAuth 2.1 authorization server (`@better-auth/oauth-provider`, public DCR, S256 PKCE, hashed rotating refresh tokens, audience-bound JWTs); Google Sign-In is identity only and is restricted to `ALLOWED_GOOGLE_EMAILS` | Endpoints under `/api/auth/oauth2/*` + `/.well-known/*` |
 
 Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and scopes. Layer
 4's login uses basic `openid email profile` scopes only; layer 3 requests the nine
@@ -155,7 +155,7 @@ Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and sc
 | Framework | **Next.js 16** (App Router) | Server-centric; all API routes on the **Node runtime** (never edge — needs `node:crypto` + the DB driver) |
 | Language | **TypeScript 5.9** | Pinned to `^5`: Next 16's build-time type checker cannot load the TS 7 native compiler (see [Troubleshooting](#troubleshooting)) |
 | MCP transport | **`@modelcontextprotocol/server` 2.0.0** | 2026 request-scoped HTTP plus stateless 2025 fallback; one server per request, no transport session. See [ADR-0003](docs/adr/0003-vercel-node-fluid-mcp-2026.md). |
-| Auth server | **better-auth 1.6.23**, built-in `mcp` plugin | The built-in `better-auth/plugins` `mcp`, **not** `@better-auth/mcp` (that package targets the unreleased 1.7) |
+| Auth server | **better-auth 1.6.25** + **`@better-auth/oauth-provider` 1.6.25** | Stable maintained provider, public DCR, S256 PKCE, consent, one-hour exact-audience RS256 JWTs, hashed rotating 60-day refresh tokens; no beta CIMD |
 | Database | **Neon Postgres** + **Drizzle ORM** (`@neondatabase/serverless`) | **Pooled** URL at runtime, **unpooled** URL for migrations |
 | Time | **Luxon** | Timezone-correct ranges (default `America/Chicago`), DST-safe, sleep-crosses-midnight logic |
 | Validation | **Zod 4** | Tool input schemas; write-tool validation |
@@ -164,18 +164,21 @@ Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and sc
 
 ## Current status
 
-Milestone **`#v1` is complete and live**. The `.tasks/` board remains the source of truth for
-future work.
+Milestone **`#v1` is complete and live**; the **`#mcp2` / 0.3.0** modernization milestone owns
+the current rollout and soak. The `.tasks/` board remains the source of truth.
 
-- Production is live at `health.emmetts.dev`; Vercel, Neon, Google OAuth, migrations, and all
-  auth layers are wired.
-- The MCP endpoint, 10 read/diagnostic tools, 5 write tools, and 5 resources are deployed.
+- The 0.2.1 transport checkpoint and DPoP-capable legacy-auth recovery artifact are production-
+  qualified at `health.emmetts.dev`; the additive 0.3.0 auth cutover is tracked separately so
+  deployment, reconnect, reconsent, and soak evidence are not conflated.
+- The MCP endpoint exposes 18 tools and 6 resources through request-scoped SDK v2 transport,
+  with a stateless 2025 fallback for older connectors.
 - Google Health consent, encrypted token storage/refresh, identity mapping, reads, writes,
   audit logging, and freshness behavior have been verified against real data.
-- The full DCR → PKCE authorize → token → bearer MCP chain is covered by the E2E harness;
-  the core prompt battery also passed through the real claude.ai connector.
-- The current suite contains 74 unit/integration tests. Google Health webhooks remain deferred
-  by design to **v1.1** (`#w11`).
+- The legacy DCR → S256 PKCE → token → bearer MCP chain is production-qualified. The new stable
+  provider has unit/security and isolated-database proof; its production connector reconnects
+  and time-based soak remain explicit on `#q2` rather than being inferred from those tests.
+- Google Health webhook implementation exists under **v1.1** (`#w11`), but its unrelated real
+  Fitbit delivery gate remains open.
 
 ## Repository structure
 
@@ -194,10 +197,11 @@ future work.
 │   ├── layout.tsx · page.tsx       ← landing / status dashboard
 │   ├── icon.svg                     ← local Google Health MCP favicon
 │   ├── sign-in/page.tsx            ← Google sign-in (resumes interrupted OAuth flows)
+│   ├── consent/page.tsx            ← private OAuth read/write consent
 │   ├── components/sign-out-button.tsx
 │   ├── api/
 │   │   ├── [transport]/route.ts              ← live MCP endpoint (`/api/mcp`)
-│   │   ├── auth/[...all]/route.ts           ← better-auth handler (sign-in, /mcp/authorize, /token, DCR /register)
+│   │   ├── auth/[...all]/route.ts           ← better-auth sign-in + /oauth2 authorize/token/register/userinfo/JWKS
 │   │   ├── auth/google-health/start/route.ts    ← health-consent redirect (session-gated)
 │   │   ├── auth/google-health/callback/route.ts ← code exchange → encrypt+store → identity map
 │   │   └── health/status/route.ts          ← healthcheck (no secrets)
@@ -208,8 +212,8 @@ future work.
 ├── src/
 │   ├── auth/           ← auth.ts (better-auth config), allowlist, app-user resolution,
 │   │                     state (health-consent CSRF state), token-service (single-flight
-│   │                     refresh), token-store, google-health-oauth, auth-client
-│   ├── db/             ← schema.ts (8 domain tables), auth-schema.ts (7 better-auth tables), client.ts
+│   │                     refresh), JWT bearer boundary, DPoP, token-store, google-health-oauth
+│   ├── db/             ← domain + legacy/new additive auth schemas, client.ts
 │   ├── security/       ← encryption.ts (AES-256-GCM), redact.ts
 │   ├── audit/          ← mutation-audit.ts (insert-only audit writer)
 │   ├── google-health/  ← typed API client, data-type registry, scopes, and errors
@@ -219,14 +223,15 @@ future work.
 │
 ├── drizzle/            ← generated SQL migrations + meta
 ├── scripts/db-inspect.mjs   ← utility: list/inspect Neon tables
-├── tests/unit/         ← Vitest: encryption, redact, allowlist, state, token-service, google-health-oauth
+├── tests/unit/         ← default Vitest security, protocol, service, and OAuth coverage
+├── tests/integration/  ← opt-in isolated-Postgres atomic credential-replacement proof
 └── .tasks/             ← the task board (see "Task board")
 ```
 
-Database tables (15 total): domain — `app_users`, `oauth_connections`, `oauth_tokens`,
-`oauth_states`, `mutation_audit_log`, `webhook_events` (dormant), `data_freshness` (dormant),
-`health_cache`; better-auth — `user`, `session`, `account`, `verification`,
-`oauthApplication`, `oauthAccessToken`, `oauthConsent`.
+The 0.3.0 migration adds isolated `mcp_oauth_*_v2` provider tables and
+`google_health_dpop_key`. Legacy OAuth client/token/consent tables remain untouched for the
+seven-day rollback window; health connections, encrypted tokens, caches, webhook data, and
+audit history are not migrated or deleted.
 
 ## Setup guide
 
@@ -327,10 +332,16 @@ unpooled Neon URL (`npm run db:migrate`), not in the build. Production env-var c
 take runtime effect on the **next deploy**. Note: an auto-deploy webhook has occasionally not
 fired on push — if a deploy doesn't appear, deploy manually via the Vercel CLI.
 
+For 0.3.0 sequencing, rollback epochs, fresh-approval boundaries, and cleanup rules, use the
+[0.3.0 cutover runbook](docs/operations/0.3.0-cutover.md).
+
 ## Connecting an MCP client
 
 > The production endpoint is live. Each client walks the OAuth flow and an approved person
 > signs in with their allowlisted Google account.
+
+Clients previously authorized against `/api/auth/mcp/*` must remove/re-add the connector once
+so discovery can use `/api/auth/oauth2/*`. The public MCP URL itself does not change.
 
 - **Claude Code:**
   `claude mcp add --transport http health https://health.emmetts.dev/api/mcp`
@@ -344,10 +355,12 @@ Defined in `docs/PLAN.md` §"MCP surface (v1)"; input schemas per the handoff sp
 read response carries `freshness` + units and is payload-bounded (default pageSize ≤ 100; HR
 series summarized via rollups; truncation notes when capped).
 
-**Read tools (9, + `ping`):** `get_today_steps`, `get_sleep_summary`, `get_latest_heart_rate`,
+**Read tools (11, + `ping`):** `get_today_steps`, `get_sleep_summary`, `get_latest_heart_rate`,
 `get_exercise_week`, `get_nutrition_log`, `get_health_context` (bundle: sleep + latest HR +
-resting HR/HRV + recent activity + nutrition — data only, no conclusions), `query_health_data`
-(generic list/reconcile, registry-allowlisted), `rollup_health_data`, `get_sync_status`.
+resting HR/HRV + recent activity + nutrition — data only, no conclusions),
+`get_health_trends` (bounded 7/30/90-day coverage-aware summaries), `get_health_updates`
+(durable local notification inbox), `query_health_data` (generic list/reconcile,
+registry-allowlisted), `rollup_health_data`, and `get_sync_status`.
 
 Notable behaviors: `query_health_data` auto-builds the right filter per record type — including
 the civil `date` field for `daily-*` aggregates, which carry no physical timestamp (a
@@ -358,9 +371,10 @@ device capture condition, surfaced via `stagesStatus`, e.g. `REJECTED_COVERAGE`,
 sleep). Staleness is cadence-aware: once-per-night metrics (sleep, `daily-*`) don't flag
 `isPossiblyStale` for a same-day value; live-ish samples use a 3-hour threshold.
 
-**Write tools (5):** `create_nutrition_log`, `update_nutrition_log` (replace semantics — the
+**Mutation/action tools (6):** `create_nutrition_log`, `update_nutrition_log` (replace semantics — the
 live PATCH endpoint 500s; a new data-point name is returned), `delete_nutrition_log`,
-`create_hydration_log`, `update_measurement` (weight | body-fat | height). `update_profile`
+`create_hydration_log`, `update_measurement` (weight | body-fat | height), and
+`acknowledge_health_updates` (local inbox state only). `update_profile`
 was **dropped**: the live endpoint 403s despite the granted scope (documented server-side
 bug); the service layer is kept for re-enablement.
 
@@ -372,14 +386,20 @@ bug); the service layer is kept for re-enablement.
 ## Security posture
 
 - **Four auth layers, never conflated** (table above). The MCP endpoint requires a valid
-  OAuth token; sign-in is allowlisted to `ALLOWED_GOOGLE_EMAILS`; DCR is open by design
+  exact-audience JWT with `health:read` (and `health:write` before mutations); signature,
+  issuer, audience, expiry, subject, scope, and current email allowlist are checked locally.
+  Sign-in is allowlisted to `ALLOWED_GOOGLE_EMAILS`; DCR is open by design
   (any client may *register* — safety comes from the allowlisted *login*, not registration).
   The approved identity and the prohibition on public signup are fixed by
   [ADR-0002](docs/adr/0002-single-user-private.md).
-- **Google tokens are AES-256-GCM encrypted at rest** (`TOKEN_ENCRYPTION_KEY`, with
+- **Google tokens and DPoP private keys are AES-256-GCM encrypted at rest**
+  (`TOKEN_ENCRYPTION_KEY`, with purpose-separated HKDF context and
   `key_version` for rotation). No plaintext tokens in the DB, logs, or error paths — a
   `redact()` helper strips token patterns (`ya29.`, `1//`, `GOCSPX-`, JWTs, `Bearer`/`Basic`,
   Neon `npg_`) before anything is logged.
+- **MCP credentials use a different storage model:** provider refresh tokens and public-client
+  secrets are hashed; MCP access JWT values are not persisted. A local JWKS cache verifies warm
+  requests without a token-table lookup.
 - **Token refresh is single-flight** through an atomic, expiring database claim on the token
   row (compatible with the stateless Neon HTTP driver); on refresh failure the connection is
   marked `reauth_required`.
@@ -392,6 +412,12 @@ bug); the service layer is kept for re-enablement.
 - **No medical diagnosis language** anywhere; freshness/limitation notes on every response.
 - Production stays open (no Vercel SSO wall) on purpose — the application's own auth is the
   perimeter.
+- Stable OAuth Provider 1.6.25 has three tracked residuals: its resource-indicator advisory is
+  contained by one configured audience plus exact resource/audience boundaries, and refresh
+  rotation uses predecessor compare-and-set followed by successor insertion rather than one
+  provider transaction. Local/preview auth storage also shares the Vercel-linked Neon database;
+  preview is Vercel-protected and only the allowlisted owner can grant. Re-evaluate all three when
+  a stable provider fix or environment-isolated auth store is adopted.
 
 ## Troubleshooting
 
@@ -446,6 +472,10 @@ request even though the server has already stored the access token. Version 0.1.
 boundary with an encrypted, persisted `RS256` signing key and live JWKS/UserInfo endpoints;
 the work-computer retry remains the final acceptance check. This is MCP client auth, not evidence
 that Google Health consent failed.
+
+That paragraph describes the **pre-0.3.0 legacy bridge** retained only as rollback data. New
+connections use the maintained OAuth Provider, persisted RS256 JWKS, exact `/api/mcp` audience,
+and locally verified JWT bearer requests.
 
 A fresh 2026-07-14 revalidation also completed native DCR, S256 PKCE, browser handoff, loopback
 callback, token exchange, MCP initialize/discovery, and a read-only tool call through **both**
@@ -504,7 +534,7 @@ Work is tracked on a self-contained board under **`.tasks/`** (the SHAUGHV tasks
 - **`.tasks/TASKS.md`** — the board (Backlog / To-Do / Active / Done). Source of truth for
   what's next.
 - **`.tasks/MILESTONES.md`** — dated epics; tasks join one with an `(ms #id)` tag. Current
-  milestone: **`#v1`**.
+  milestone: **`#mcp2`** (0.3.0 modernization and qualification).
 - **`.tasks/tasks/<id>.md`** — a rich detail file per task (TT;DR-led, with `## Verification`,
   `## Status`, `## Activity`). The decision history lives here — e.g. `rlw.md` (Railway/FastMCP),
   `api.md` (REST surface feasibility), `inf.md` (the infra session), `w11.md` (webhooks v1.1).
@@ -519,6 +549,9 @@ The live dashboard is a zero-dependency Node server; resolve its port from
 - **`docs/adr/0001-private-allowlist-only.md`** — accepted private-audience, OAuth
   verification, and access-control decision.
 - **`docs/PLAN.md`** — the authoritative build plan (read first).
+- **`docs/adr/0003-vercel-node-fluid-mcp-2026.md`** — current host/runtime decision.
+- **`docs/research/2026-07-29-mcp-sdk-v2-and-hosting.md`** — SDK v2, auth, hosting,
+  compatibility, and pricing research.
 - **`CLAUDE.md`** — instructions for Claude coding sessions.
 - **`AGENTS.md`** — the same operational guidance, tool-neutral, for any agent (Codex,
   Cursor, etc.).

@@ -31,7 +31,9 @@ Keep `health.emmetts.dev` on **Vercel Node.js Functions with Fluid Compute in `i
 - Verify MCP access JWTs locally, while keeping necessary authorization and Google credential state durable.
 - Set a 60-second MCP maximum and do not add background Tasks/subscriptions without a durable design.
 - Keep Neon pooled runtime access in the same region.
-- Preserve two rollback-safe production artifacts: 0.2.1 transport/runtime, then 0.3.0 auth/DPoP/UI.
+- Preserve 0.2.1 as the pre-reconsent rollback artifact and 0.3.0 as the auth/DPoP/UI release.
+  Before Google issues a DPoP-bound replacement credential, qualify a separate DPoP-capable
+  legacy-auth fallback; raw 0.2.1 is not a valid rollback after binding.
 
 ## Rationale
 

@@ -6,6 +6,73 @@ The `.tasks/` board tracks in-flight work; this file records what shipped.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-29
+
+### Added
+
+- Stable Better Auth OAuth Provider endpoints under `/api/auth/oauth2/*`, branded explicit
+  consent, `health:read` / `health:write` scopes, public connector registration normalized to
+  S256 PKCE, form-encoded token grants, and canonical authorization/OpenID/protected-resource
+  metadata.
+- One-hour, exact-audience RS256 MCP access JWTs verified locally from the persisted JWKS;
+  access-token values are not stored. Sixty-day OAuth refresh credentials and public client
+  secrets are hashed by the provider.
+- Optional Google Health refresh-token DPoP: one encrypted P-256 private key per connection,
+  fresh ES256 proofs, nonce persistence/retry, optimistic credential generations, and an atomic
+  token/key replacement statement that leaves the working credential untouched on failure.
+- A private consent UI and the SHAUGHV CDN two-family typography contract: Makira for
+  body/display and Gail Rock for code, status, and technical content.
+
+### Changed
+
+- Replaced Better Auth's deprecated built-in MCP bridge with exact stable
+  `better-auth@1.6.25` and `@better-auth/oauth-provider@1.6.25` on isolated additive tables.
+- MCP authorization now requires the canonical resource at authorize and token time, locally
+  rechecks the current email allowlist, and requires `health:write` centrally for mutations and
+  update acknowledgements.
+- Google token refresh is generation-bound and lock-reacquired so a stale refresh cannot
+  overwrite or invalidate a newly reconnected credential.
+
+### Security
+
+- Contained stable-provider advisory GHSA-p2fr-6hmx-4528 with one configured audience, exact
+  resource checks at every HTTP boundary, token-response audience normalization, and exact
+  single-string audience verification at `/api/mcp`. No stable fixed provider release exists.
+- Better Auth 1.6.25 performs a predecessor compare-and-set and sequential refresh-family replay
+  invalidation, but successor creation/family invalidation are not one transaction. The private,
+  allowlist-only deployment accepts and tracks this upstream concurrency limitation rather than
+  shipping a prerelease provider or custom security protocol.
+
+### Rollout notes
+
+- The code deploy and additive schema migration do not replace the current Google credential.
+  Google `prompt=consent`, post-binding rollback qualification, connector reconnects, the
+  seven-day soak, and legacy-table cleanup remain separately evidenced operator gates under
+  `#q2`; reconsent and destructive cleanup require fresh approval immediately beforehand.
+
+## [0.2.1] — 2026-07-29
+
+### Changed
+
+- Replaced `mcp-handler` and the monolithic SDK with exact
+  `@modelcontextprotocol/server@2.0.0` plus its matching test client.
+- Moved the canonical endpoint to one request-scoped server factory supporting the 2026
+  sessionless protocol and stateless 2025 compatibility without `Mcp-Session-Id`.
+- Kept Vercel Node 24 Functions with Fluid Compute in `iad1`; Edge, Cloudflare, Railway,
+  FastMCP, Tasks, subscriptions, and MRTR remain deliberately out of scope.
+
+### Added
+
+- Typed structured tool results with legacy JSON-text fallbacks, complete annotations and
+  schemas, resource/list cache hints, exact Host/Origin and 256 KiB body boundaries, and
+  payload-free protocol telemetry.
+
+### Verified
+
+- Production deployment `dpl_DDUDdZJmzYg4teo16eAQGr4b1ADS` became READY in `iad1` and passed
+  official modern/stateless-legacy clients, 18-tool/6-resource discovery, a non-mutating live
+  Health read, Codex connector checks, and warm ping latency without a regression.
+
 ## [0.2.0] — 2026-07-25
 
 ### Added

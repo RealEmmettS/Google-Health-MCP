@@ -1,74 +1,60 @@
 import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/src/auth/auth";
 import {
-  boundMcpTokenRequest,
-  isMcpAuthPath,
-  repairAuthorizationServerMetadata,
-  repairMcpTokenResponse,
-  repairProtectedResourceMetadata,
-  preflightMcpTokenSigning,
-  validateMcpAuthorizeRequest,
-  validateMcpTokenResource,
-  validateMcpTokenMediaType,
-  withNoStore,
-  type McpIdTokenSigner,
-} from "@/src/auth/mcp-oauth-compat";
+  normalizeRegistrationResponse,
+  normalizeOAuthTokenResponse,
+  prepareOAuthRegistrationRequest,
+  prepareOAuthTokenRequest,
+  validateAuthorizeResource,
+  withOAuthNoStore,
+} from "@/src/auth/oauth-provider-boundary";
 
-// better-auth handler: Google sign-in, session management, and the MCP
-// plugin's OAuth 2.1 authorization-server endpoints (authorize, token,
-// dynamic client registration).
+// Better Auth handles Google sign-in/session routes plus the stable OAuth 2.1
+// Provider endpoints under /api/auth/oauth2/*. Security-sensitive DCR and
+// token normalization stays at this small, testable HTTP boundary.
 export const runtime = "nodejs";
+export const preferredRegion = "iad1";
 
 const handlers = toNextJsHandler(auth);
 
-const signMcpIdToken: McpIdTokenSigner = async (payload) => {
-  const signed = await auth.api.signJWT({ body: { payload } });
-  return signed.token;
-};
-
 export async function GET(request: Request): Promise<Response> {
   const pathname = new URL(request.url).pathname;
-  if (isMcpAuthPath(pathname, "authorize")) {
-    const invalidRequest = validateMcpAuthorizeRequest(request);
-    if (invalidRequest) return invalidRequest;
+  if (pathname === "/api/auth/oauth2/authorize") {
+    const invalidResource = validateAuthorizeResource(request);
+    if (invalidResource) return invalidResource;
   }
-
   const response = await handlers.GET(request);
-  if (isMcpAuthPath(pathname, "authorizationMetadata")) {
-    return repairAuthorizationServerMetadata(response);
-  }
-  if (isMcpAuthPath(pathname, "protectedResourceMetadata")) {
-    return repairProtectedResourceMetadata(response);
-  }
-  return response;
+  return pathname.startsWith("/api/auth/oauth2/")
+    ? withOAuthNoStore(response)
+    : response;
 }
 
 export async function POST(request: Request): Promise<Response> {
   const pathname = new URL(request.url).pathname;
-  const isMcpTokenRequest = isMcpAuthPath(pathname, "token");
-  const isMcpRegistration = isMcpAuthPath(pathname, "register");
-  let handledRequest = request;
-  let requestCopy: Request | undefined;
-  if (isMcpTokenRequest) {
-    const invalidMediaType = validateMcpTokenMediaType(request);
-    if (invalidMediaType) return invalidMediaType;
-    const bounded = await boundMcpTokenRequest(request);
-    if ("response" in bounded) return bounded.response;
-    handledRequest = bounded.request;
-    requestCopy = handledRequest.clone();
 
-    const invalidResource = await validateMcpTokenResource(handledRequest.clone());
-    if (invalidResource) return invalidResource;
-    const signingUnavailable = await preflightMcpTokenSigning(
-      handledRequest.clone(),
-      signMcpIdToken,
+  if (pathname === "/api/auth/oauth2/token") {
+    const prepared = await prepareOAuthTokenRequest(request);
+    if ("response" in prepared) return prepared.response;
+    return normalizeOAuthTokenResponse(
+      await handlers.POST(prepared.request),
+      async (payload) => {
+        const result = await auth.api.signJWT({ body: { payload } });
+        return result.token;
+      },
     );
-    if (signingUnavailable) return signingUnavailable;
   }
 
-  const response = await handlers.POST(handledRequest);
-  if (requestCopy) {
-    return repairMcpTokenResponse(requestCopy, response, signMcpIdToken);
+  if (pathname === "/api/auth/oauth2/register") {
+    const prepared = await prepareOAuthRegistrationRequest(request);
+    if ("response" in prepared) return prepared.response;
+    return normalizeRegistrationResponse(
+      await handlers.POST(prepared.request),
+      prepared.applicationType,
+    );
   }
-  return isMcpRegistration ? withNoStore(response) : response;
+
+  const response = await handlers.POST(request);
+  return pathname.startsWith("/api/auth/oauth2/")
+    ? withOAuthNoStore(response)
+    : response;
 }

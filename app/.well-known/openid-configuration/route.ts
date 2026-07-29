@@ -1,13 +1,15 @@
-import { oAuthDiscoveryMetadata } from "better-auth/plugins";
+import { oauthProviderOpenIdConfigMetadata } from "@better-auth/oauth-provider";
 import { auth } from "@/src/auth/auth";
-import { repairAuthorizationServerMetadata } from "@/src/auth/mcp-oauth-compat";
 
-// OIDC discovery for strict clients that validate the ID token separately
-// from the RFC 8414 metadata used by MCP authorization discovery.
 export const runtime = "nodejs";
+export const preferredRegion = "iad1";
 
-const discovery = oAuthDiscoveryMetadata(auth);
+const metadata = oauthProviderOpenIdConfigMetadata(auth, {
+  headers: {
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+  },
+});
 
-export async function GET(request: Request): Promise<Response> {
-  return repairAuthorizationServerMetadata(await discovery(request));
-}
+export const GET = metadata;
+export const HEAD = metadata;

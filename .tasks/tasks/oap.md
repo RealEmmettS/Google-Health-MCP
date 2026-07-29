@@ -35,24 +35,36 @@ MCP authorization URLs move from `/api/auth/mcp/*` to `/api/auth/oauth2/*`, requ
 
 ## Verification
 
-- [ ] Exact stable Better Auth/provider version and open security advisories are documented
-- [ ] Authorization grant, token, and refresh are bound to the one canonical resource/audience
-- [ ] Public and confidential DCR + PKCE paths pass with form-encoded token exchange
-- [ ] Public refresh-token rotation atomically invalidates the predecessor and rejects family replay
-- [ ] Missing/expired/wrong issuer, audience, resource, scope, subject, email, malformed, and passthrough tokens fail
-- [ ] JWT access verification performs no Neon token lookup and rechecks the current allowlist locally
+- [x] Exact stable Better Auth/provider version and open security advisories are documented
+- [x] Authorization grant, token, and refresh are bound to the one canonical resource/audience
+- [x] Public DCR persists only in v2 tables, requires S256 PKCE, and the token boundary requires form encoding
+- [x] Stable refresh rotation behavior is characterized: predecessor CAS + sequential replay rejection; the non-atomic successor/family concurrency residual is explicitly accepted and tracked
+- [x] Missing/expired/wrong issuer, audience, resource, scope, subject, email, malformed, and passthrough tokens fail
+- [x] JWT access verification performs no Neon token lookup and rechecks the current allowlist locally
 - [ ] Consent denial, endpoint rate limits, UserInfo, JWKS cache, and metadata aliases pass
-- [ ] Existing users and Google Health connections/tokens remain unchanged
-- [ ] DPoP proof, nonce retry, key mismatch, and atomic replacement/preservation tests pass
+- [x] Existing users and Google Health connections/tokens remain unchanged in apply/rollback rehearsal
+- [x] DPoP proof, nonce retry, key mismatch, atomic preservation, and forced reconnect/refresh race tests pass
 - [ ] Emmett reconnects successfully across every intended client
 - [ ] Legacy MCP registrations/tokens and the 0.1.2 bridge are retired after the rollback window
 
 ## Status
 
-ACTIVE. Emmett explicitly authorized the coordinated migration as the second checkpoint of `#mcp2`. Implementation follows the production-qualified 0.2.1 transport artifact; no auth schema or production auth mutation has occurred yet.
+ACTIVE. The 0.3.0 candidate uses exact stable 1.6.25, and the source/security plus isolated
+PostgreSQL gates are green. Migrations 0004–0006 have not touched production. Live metadata,
+consent/UserInfo/rate-limit, connector reconnect, Google reconsent, and soak gates remain open;
+Google reconsent and destructive cleanup require fresh approval.
 
 ## Activity
 
 - 2026-07-13 — Created from the 0.1.2 OAuth incident review so the compatibility bridge remains explicitly time-boxed and the broader auth migration is not lost. (agent: codex)
 - 2026-07-14 — A controlled public/confidential refresh replay proved the legacy plugin returns a fresh token pair but still accepts the predecessor again. Current clients can refresh, but this does not meet the current public-client rotation/replay contract. A response-wrapper delete would be non-atomic and would lose token-family lineage, so the durable fix stays in this coordinated provider migration. All probe rows were cleaned up. (agent: codex)
 - 2026-07-29 01:45 - Moved Backlog to Active under `#mcp2`; updated the contract for stable 1.6.25 JWT/DCR/consent support, Emmett-only reconnects, additive tables, local allowlist verification, and Google Health DPoP with atomic fallback. (agent: codex)
+- 2026-07-29 03:58 - Replaced the legacy provider bridge with stable Provider/JWT, exact
+  resource/audience and no-store boundaries, public S256 DCR, explicit consent, local allowlist
+  JWT verification, and isolated v2 models. Recorded GHSA-p2fr-6hmx-4528 containment, the stable
+  provider refresh-family concurrency limitation, and trusted-environment table sharing rather
+  than claiming stronger guarantees. (agent: codex)
+- 2026-07-29 03:58 - Added encrypted per-connection Google DPoP, nonce retry, DB-clock single
+  flight, row-local credential generations, and a five-second post-commit identity timeout.
+  Isolated Neon passed 5/5 atomic/race/failure tests; provider DCR passed 2/2 and all rehearsal
+  rows/branches were removed. Aggregate legacy/Google counts were unchanged. (agent: codex)
