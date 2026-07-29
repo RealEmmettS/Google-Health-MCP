@@ -41,7 +41,8 @@ MCP authorization URLs move from `/api/auth/mcp/*` to `/api/auth/oauth2/*`, requ
 - [x] Stable refresh rotation behavior is characterized: predecessor CAS + sequential replay rejection; the non-atomic successor/family concurrency residual is explicitly accepted and tracked
 - [x] Missing/expired/wrong issuer, audience, resource, scope, subject, email, malformed, and passthrough tokens fail
 - [x] JWT access verification performs no Neon token lookup and rechecks the current allowlist locally
-- [ ] Consent denial, endpoint rate limits, UserInfo, JWKS cache, and metadata aliases pass
+- [x] Production DCR, exact resource, form token boundary, RS256 JWKS, metadata aliases, 401/403, and no-store gates pass
+- [ ] Signed-in consent denial, UserInfo/JWT use, JWKS warm-cache, refresh, and endpoint limit thresholds pass during reconnect
 - [x] Existing users and Google Health connections/tokens remain unchanged in apply/rollback rehearsal
 - [x] DPoP proof, nonce retry, key mismatch, atomic preservation, and forced reconnect/refresh race tests pass
 - [ ] Emmett reconnects successfully across every intended client
@@ -49,10 +50,11 @@ MCP authorization URLs move from `/api/auth/mcp/*` to `/api/auth/oauth2/*`, requ
 
 ## Status
 
-ACTIVE. The 0.3.0 candidate uses exact stable 1.6.25, and the source/security plus isolated
-PostgreSQL gates are green. Migrations 0004–0006 have not touched production. Live metadata,
-consent/UserInfo/rate-limit, connector reconnect, Google reconsent, and soak gates remain open;
-Google reconsent and destructive cleanup require fresh approval.
+ACTIVE. Exact stable 1.6.25 and migrations 0004–0006 are live in production. Anonymous metadata,
+RS256 JWKS, public DCR, exact-resource/form boundaries, scoped 401/403, body limits, and no-store
+responses pass with no runtime errors; the synthetic client was removed. Signed-in consent,
+UserInfo/JWT, refresh/cache/limit thresholds, connector reconnect, Google reconsent, and soak gates
+remain open. Google reconsent and destructive cleanup require fresh approval.
 
 ## Activity
 
@@ -68,3 +70,9 @@ Google reconsent and destructive cleanup require fresh approval.
   flight, row-local credential generations, and a five-second post-commit identity timeout.
   Isolated Neon passed 5/5 atomic/race/failure tests; provider DCR passed 2/2 and all rehearsal
   rows/branches were removed. Aggregate legacy/Google counts were unchanged. (agent: codex)
+- 2026-07-29 04:25 - Deployed commit `0dda866` as production
+  `dpl_5h11asJsx4hRJkrebvANHqRrkdTZ` in `iad1`. Canonical auth/OpenID/protected-resource metadata,
+  one RS256 JWKS key, public native DCR 201 with no secret, wrong-resource 400, JSON-token 415,
+  form-token `invalid_grant`, scoped 401, wrong-Origin 403, oversized 413, and no-store responses
+  passed. The exact synthetic client was removed; v2 token/consent rows remain zero, DPoP remains
+  unactivated, and Vercel reported no runtime errors. (agent: codex)

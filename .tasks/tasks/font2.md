@@ -28,14 +28,16 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 - [x] Live `/agents` and `/tree.json` evidence captured immediately before editing
 - [x] Active IBM Plex Mono references/preloads are removed
 - [x] Gail Rock Regular/Semibold preloads and narrowly scoped zero feature work
-- [ ] Consent accept/deny flow is keyboard, touch, reduced-motion, and viewport qualified
+- [x] Public/fail-closed consent UI passes 390/768/1440, focus, touch, reduced-motion, and overflow checks
+- [ ] Signed-in consent accept/deny redirects pass during the owner-approved connector reconnect
 - [x] CDN fonts return 200 with expected CORS and immutable caching
 
 ## Status
 
 ACTIVE. Makira/Gail Rock variables, preloads, technical selectors, feature isolation, and the
-private consent UI are implemented. Production viewport, keyboard/touch, redirect, layout-shift,
-and browser-network proof remains open.
+private consent UI are live. Production 390/768/1440, overflow, visible keyboard focus, 54 px tap
+targets, reduced-motion, fail-closed consent, browser asset inventory, and CDN CORS/cache checks
+pass. The signed-in accept/deny redirects remain coupled to the owner-approved connector reconnect.
 
 ## Activity
 
@@ -44,3 +46,9 @@ and browser-network proof remains open.
   replaced IBM with Gail Rock Regular/Semibold preloads, scoped `"zero" 1` only to technical
   content, and reused the site language on fail-closed consent UI. Live font assets returned 200
   with wildcard CORS and immutable one-year caching. (agent: codex)
+- 2026-07-29 04:25 - Production browser QA passed at 390/768/1440 with no horizontal overflow;
+  Makira body/display and Gail Rock technical computed styles loaded, IBM had zero asset references,
+  focus outlines were visible, primary/consent tap targets were 54 px, reduced-motion collapsed
+  reveal timing to 0.01 ms, and the console was clean. The unauthenticated consent state failed
+  closed with disabled actions and no health values. Signed-in redirects stay open for reconnect.
+  (agent: codex)

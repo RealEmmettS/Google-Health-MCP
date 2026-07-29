@@ -17,10 +17,10 @@ Includes native MCP SDK v2 with modern and stateless-legacy compatibility, struc
 
 ## Status
 
-ACTIVE. Checkpoint 0.2.1 and the DPoP-capable legacy-auth recovery artifact are
-production-qualified. The 0.3.0 candidate, production additive migrations, stable Provider/JWT,
-DPoP concurrency hardening, and Makira/Gail implementation pass their automated gates. The 0.3.0
-code deploy, owner reconnect/reconsent, and timed soak remain open.
+ACTIVE. Checkpoint 0.2.1, the DPoP-capable legacy-auth recovery artifact, and production 0.3.0 are
+deployed/recorded. The production additive schema, anonymous Provider/JWT boundaries, and public
+Makira/Gail UI gates pass. Owner reconnect/signed-in auth, Google DPoP reconsent/refresh, and the
+timed soak remain open.
 
 ## Activity
 
@@ -32,3 +32,7 @@ code deploy, owner reconnect/reconsent, and timed soak remain open.
 - 2026-07-29 04:15 - Applied the additive production schema with all legacy/Google aggregates
   preserved, then production-qualified DPoP-capable legacy-auth recovery deployment
   `dpl_E8TFtPHHZ4SXh2FJLRcoTUGzfjqj` through two pings and a non-mutating live read. (agent: codex)
+- 2026-07-29 04:25 - Deployed 0.3.0 as `dpl_5h11asJsx4hRJkrebvANHqRrkdTZ`; anonymous OAuth/MCP
+  security gates, synthetic DCR cleanup, public responsive/font/accessibility QA, clean build logs,
+  and zero clustered runtime errors passed. Approval-gated identity/credential steps remain open.
+  (agent: codex)

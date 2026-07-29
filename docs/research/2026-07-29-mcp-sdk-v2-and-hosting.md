@@ -291,6 +291,16 @@ passed. It is the post-reconsent rollback target. Preview
 `dpl_AYwLr9CUSc6vK9Z4E9evWs8XFJrH` remains build evidence only because preview intentionally lacks
 the production Better Auth secret.
 
+Production 0.3.0 is commit `0dda866`, Vercel deployment
+`dpl_5h11asJsx4hRJkrebvANHqRrkdTZ`, READY with three Node functions in `iad1`. Canonical
+authorization/OpenID/protected-resource metadata, an RS256 production JWKS, public native DCR
+without a secret, exact resource and form-token boundaries, scoped MCP 401, Origin 403, body 413,
+JSON-token 415, and private no-store responses passed. The synthetic registration was removed;
+v2 access/refresh/consent rows and the DPoP key table remain empty. Browser QA passed the public
+390/768/1440, focus, touch-size, reduced-motion, CDN-font, console, and overflow gates. Signed-in
+connector authorization, UserInfo/JWT use, refresh, Google reconsent, and soak remain explicit
+operator/time gates.
+
 Legacy protocol support remains until every active connector produces zero legacy requests for 30 consecutive days. Legacy OAuth tables are different: they may be removed after every connector passes and the seven-day rollback window closes, because the new provider uses distinct physical tables.
 
 ## Pricing

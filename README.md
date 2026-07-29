@@ -167,16 +167,17 @@ Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and sc
 Milestone **`#v1` is complete and live**; the **`#mcp2` / 0.3.0** modernization milestone owns
 the current rollout and soak. The `.tasks/` board remains the source of truth.
 
-- The 0.2.1 transport checkpoint and DPoP-capable legacy-auth recovery artifact are production-
-  qualified at `health.emmetts.dev`; the additive 0.3.0 auth cutover is tracked separately so
-  deployment, reconnect, reconsent, and soak evidence are not conflated.
+- **0.3.0 is deployed at `health.emmetts.dev`** on Vercel Node 24 + Fluid in `iad1`. The
+  DPoP-capable legacy-auth recovery deployment is retained separately so connector reconnect,
+  Google reconsent, and soak evidence are not conflated with deployment success.
 - The MCP endpoint exposes 18 tools and 6 resources through request-scoped SDK v2 transport,
   with a stateless 2025 fallback for older connectors.
 - Google Health consent, encrypted token storage/refresh, identity mapping, reads, writes,
   audit logging, and freshness behavior have been verified against real data.
-- The legacy DCR → S256 PKCE → token → bearer MCP chain is production-qualified. The new stable
-  provider has unit/security and isolated-database proof; its production connector reconnects
-  and time-based soak remain explicit on `#q2` rather than being inferred from those tests.
+- The stable provider's production metadata, RS256 JWKS, public DCR, exact resource/form boundary,
+  scoped MCP challenges, and no-store behavior pass. Existing clients must reconnect once for the
+  new `/api/auth/oauth2/*` endpoints/scopes; signed-in connector and time-based soak gates remain
+  explicit on `#q2` rather than being inferred from anonymous tests.
 - Google Health webhook implementation exists under **v1.1** (`#w11`), but its unrelated real
   Fitbit delivery gate remains open.
 
