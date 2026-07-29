@@ -62,16 +62,11 @@ with freshness metadata. No medical claims.
   open only for connector compatibility; authorization still requires an allowlisted login.
   Any additional person or public-access proposal requires an amended/superseding ADR. Full
   reasoning and current implementation: `docs/adr/0002-single-user-private.md`.
-- **MCP stack = `mcp-handler` + official MCP SDK on Vercel serverless — deliberately NOT
-  FastMCP.** FastMCP wants a long-running process with its own HTTP server, sessions, and auth;
-  Vercel is request-scoped and our OAuth story (better-auth) already lives in the same Next.js
-  app and is verified on prod. FastMCP would mean rebuilding a solved auth layer. Full
-  reasoning in `.tasks/tasks/rlw.md`.
-- **Railway migration is a *maybe*, not a plan** (`#rlw`). It runs long-lived containers, so it
-  reopens the FastMCP question — but only if/when Emmett green-lights an evaluation. Until then,
-  don't build anything gratuitously Vercel-locked; if you must, add a line to `rlw.md`'s
-  migration-surface inventory.
-- **Auth currently stays on better-auth 1.6.23's deprecated built-in `mcp` plugin**
+- **MCP stack = official SDK v2 on Vercel Node 24 Functions with Fluid Compute in `iad1` —
+  deliberately NOT Edge, Railway, or FastMCP.** The transport is request-scoped and serves
+  modern 2026 plus stateless legacy 2025 traffic from one factory. Full reasoning is in
+  `docs/adr/0003-vercel-node-fluid-mcp-2026.md` and `.tasks/tasks/rlw.md`.
+- **Checkpoint 0.2.1 keeps better-auth 1.6.23's deprecated built-in `mcp` plugin**
   (`better-auth/plugins`) so existing connector registrations/tokens survive. Release 0.1.2 adds
   a time-boxed compatibility boundary: required S256 PKCE, exact supplied-resource validation,
   persisted encrypted RS256 keys through Better Auth's `jwt()` plugin, and repaired

@@ -1,4 +1,8 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type {
+  CallToolResult,
+  McpServer,
+  ToolAnnotations,
+} from "@modelcontextprotocol/server";
 import { z } from "zod";
 import type { AppUser } from "../auth/app-user";
 import { getConnection } from "../auth/token-store";
@@ -50,13 +54,154 @@ interface ResolvedContext {
   client: GoogleHealthClient;
 }
 
-type ToolResult = {
-  content: Array<{ type: "text"; text: string }>;
-  isError?: boolean;
+type ToolResult = CallToolResult;
+
+type ToolName =
+  | "ping"
+  | "get_sync_status"
+  | "get_today_steps"
+  | "get_exercise_week"
+  | "get_sleep_summary"
+  | "get_latest_heart_rate"
+  | "get_nutrition_log"
+  | "get_health_context"
+  | "get_health_trends"
+  | "get_health_updates"
+  | "acknowledge_health_updates"
+  | "query_health_data"
+  | "rollup_health_data"
+  | "create_nutrition_log"
+  | "update_nutrition_log"
+  | "delete_nutrition_log"
+  | "create_hydration_log"
+  | "update_measurement";
+
+const readExternal: ToolAnnotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: true,
+};
+const readLocal: ToolAnnotations = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  idempotentHint: true,
+  openWorldHint: false,
+};
+const createExternal: ToolAnnotations = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: true,
 };
 
+const jsonObjectSchema = z.looseObject({});
+const healthReadOutputSchema = z.looseObject({
+  dataProvenance: z.looseObject({}),
+});
+const updatesOutputSchema = z.object({
+  updates: z.array(
+    z.object({
+      id: z.string().uuid(),
+      dataType: z.string(),
+      operation: z.string(),
+      intervals: z.json(),
+      status: z.string(),
+      notifiedAt: z.string(),
+      expiresAt: z.string(),
+    }),
+  ),
+  pendingCount: z.number().int().nonnegative(),
+  note: z.string(),
+});
+
+const toolMetadata: Record<
+  ToolName,
+  { outputSchema: z.ZodType; annotations: ToolAnnotations }
+> = {
+  ping: {
+    outputSchema: z.object({
+      pong: z.literal(true),
+      server: z.literal("shaughv-health-mcp"),
+      authenticatedUserId: z.string(),
+      echo: z.string().nullable(),
+      time: z.string(),
+    }),
+    annotations: readLocal,
+  },
+  get_sync_status: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  get_today_steps: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  get_exercise_week: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  get_sleep_summary: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  get_latest_heart_rate: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  get_nutrition_log: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  get_health_context: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  get_health_trends: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  get_health_updates: { outputSchema: updatesOutputSchema, annotations: readLocal },
+  acknowledge_health_updates: {
+    outputSchema: z.object({
+      acknowledged: z.number().int().nonnegative(),
+      acknowledgedAt: z.string(),
+    }),
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  query_health_data: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  rollup_health_data: { outputSchema: healthReadOutputSchema, annotations: readExternal },
+  create_nutrition_log: {
+    outputSchema: z.looseObject({ name: z.string().optional(), logged: z.json() }),
+    annotations: createExternal,
+  },
+  update_nutrition_log: {
+    outputSchema: z.looseObject({
+      name: z.string().optional(),
+      replacedName: z.string(),
+      updated: z.json(),
+      warning: z.string().optional(),
+    }),
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  delete_nutrition_log: {
+    outputSchema: z.object({ deleted: z.array(z.string()) }),
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  create_hydration_log: {
+    outputSchema: z.looseObject({ name: z.string().optional(), logged: z.json() }),
+    annotations: createExternal,
+  },
+  update_measurement: {
+    outputSchema: z.looseObject({ name: z.string().optional(), recorded: z.json() }),
+    annotations: createExternal,
+  },
+};
+
+function structuredObject(data: unknown): Record<string, unknown> {
+  const serialized = JSON.stringify(data);
+  const parsed = serialized === undefined ? null : (JSON.parse(serialized) as unknown);
+  return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : { data: parsed };
+}
+
 function ok(data: unknown): ToolResult {
-  return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+  return {
+    content: [{ type: "text", text: JSON.stringify(data, null, 2) ?? "null" }],
+    structuredContent: structuredObject(data),
+  };
 }
 
 function fail(payload: unknown): ToolResult {
@@ -130,8 +275,32 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       return { user, client: new GoogleHealthClient(user.id) };
     })());
 
+  const registerTool = <Input extends z.ZodRawShape>(
+    name: ToolName,
+    config: {
+      title: string;
+      description: string;
+      inputSchema: Input;
+    },
+    callback: (
+      args: z.infer<z.ZodObject<Input>>,
+    ) => ToolResult | Promise<ToolResult>,
+  ): void => {
+    const metadata = toolMetadata[name];
+    server.registerTool(
+      name,
+      {
+        ...config,
+        inputSchema: z.object(config.inputSchema),
+        outputSchema: metadata.outputSchema,
+        annotations: metadata.annotations,
+      },
+      callback,
+    );
+  };
+
   // ── diagnostics ───────────────────────────────────────────────────────────
-  server.registerTool(
+  registerTool(
     "ping",
     {
       title: "Ping",
@@ -151,7 +320,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "get_sync_status",
     {
       title: "Get sync status",
@@ -167,7 +336,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   );
 
   // ── activity ──────────────────────────────────────────────────────────────
-  server.registerTool(
+  registerTool(
     "get_today_steps",
     {
       title: "Get steps for a day",
@@ -193,7 +362,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "get_exercise_week",
     {
       title: "Get exercise for a week",
@@ -215,7 +384,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   );
 
   // ── sleep ─────────────────────────────────────────────────────────────────
-  server.registerTool(
+  registerTool(
     "get_sleep_summary",
     {
       title: "Get sleep summary",
@@ -240,7 +409,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   );
 
   // ── heart ─────────────────────────────────────────────────────────────────
-  server.registerTool(
+  registerTool(
     "get_latest_heart_rate",
     {
       title: "Get latest heart rate",
@@ -260,7 +429,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   );
 
   // ── nutrition ─────────────────────────────────────────────────────────────
-  server.registerTool(
+  registerTool(
     "get_nutrition_log",
     {
       title: "Get nutrition log for a day",
@@ -280,7 +449,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   );
 
   // ── context bundle ────────────────────────────────────────────────────────
-  server.registerTool(
+  registerTool(
     "get_health_context",
     {
       title: "Get health context bundle",
@@ -299,7 +468,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "get_health_trends",
     {
       title: "Get bounded health trends",
@@ -329,7 +498,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "get_health_updates",
     {
       title: "Get new health-data notifications",
@@ -347,7 +516,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "acknowledge_health_updates",
     {
       title: "Acknowledge health-data notifications",
@@ -366,7 +535,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   );
 
   // ── generic escape hatches ────────────────────────────────────────────────
-  server.registerTool(
+  registerTool(
     "query_health_data",
     {
       title: "Query raw health data",
@@ -401,7 +570,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "rollup_health_data",
     {
       title: "Aggregate health data",
@@ -448,7 +617,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     .optional()
     .describe("When it happened (ISO; naive values use the user's timezone). Defaults to now.");
 
-  server.registerTool(
+  registerTool(
     "create_nutrition_log",
     {
       title: "Log a meal or snack",
@@ -475,7 +644,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "update_nutrition_log",
     {
       title: "Edit a nutrition entry",
@@ -503,7 +672,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "delete_nutrition_log",
     {
       title: "Delete nutrition/hydration entries",
@@ -520,7 +689,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "create_hydration_log",
     {
       title: "Log water/hydration",
@@ -539,7 +708,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       }),
   );
 
-  server.registerTool(
+  registerTool(
     "update_measurement",
     {
       title: "Record a body measurement",
@@ -585,6 +754,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       title: "Google Health profile",
       description: "Age, membership start, stride lengths (cached ~1h)",
       mimeType: "application/json",
+      cacheHint: { ttlMs: 60 * 60 * 1000, cacheScope: "private" },
     },
     async (uri) => {
       const { user, client } = await getCtx();
@@ -602,6 +772,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       title: "Google Health settings",
       description: "Units, locale, timezone (cached ~1h). No step goal exists in the API.",
       mimeType: "application/json",
+      cacheHint: { ttlMs: 60 * 60 * 1000, cacheScope: "private" },
     },
     async (uri) => {
       const { user, client } = await getCtx();
@@ -619,6 +790,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       title: "Connected user",
       description: "App user, identity mapping, and connection status",
       mimeType: "application/json",
+      cacheHint: { ttlMs: 0, cacheScope: "private" },
     },
     async (uri) => {
       const { user } = await getCtx();
@@ -647,6 +819,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       description:
         "The 41 Google Health data types this server can query, with record types, operations, and scope groups",
       mimeType: "application/json",
+      cacheHint: { ttlMs: 24 * 60 * 60 * 1000, cacheScope: "private" },
     },
     async (uri) => jsonResource(uri.href, listDataTypes()),
   );
@@ -658,6 +831,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       title: "Data freshness semantics",
       description: "How to interpret freshness metadata and data gaps",
       mimeType: "application/json",
+      cacheHint: { ttlMs: 24 * 60 * 60 * 1000, cacheScope: "private" },
     },
     async (uri) =>
       jsonResource(uri.href, {
@@ -687,6 +861,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
       description:
         "Short-lived pointer-only notifications that new Google Health data may be available",
       mimeType: "application/json",
+      cacheHint: { ttlMs: 0, cacheScope: "private" },
     },
     async (uri) => {
       const { user } = await getCtx();

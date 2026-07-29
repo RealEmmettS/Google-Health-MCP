@@ -8,10 +8,8 @@
   <link rel="icon" type="image/svg+xml" href="https://cdn.shaughv.com/brand/shaughv/favicons/SHAUGHV-Favicon-Dark.svg" media="(prefers-color-scheme: light)">
   <link rel="icon" type="image/svg+xml" href="https://cdn.shaughv.com/brand/shaughv/favicons/SHAUGHV-Favicon-Light.svg" media="(prefers-color-scheme: dark)">
   <link rel="preconnect" href="https://cdn.shaughv.com" crossorigin>
-  <!-- SHAUGHV fonts: Makira (display/body), IBM Plex Mono (labels/metadata), Unbounded (headlines) -->
-  <link rel="stylesheet" href="https://cdn.shaughv.com/fonts/makira/makira.css">
-  <link rel="stylesheet" href="https://cdn.shaughv.com/fonts/ibm-plex-mono/ibm-plex-mono.css">
-  <link rel="stylesheet" href="https://cdn.shaughv.com/fonts/unbounded/unbounded.css">
+  <!-- SHAUGHV fonts: bundled Makira (reading/action) + Gail Rock (state/metadata). -->
+  <link rel="stylesheet" href="./vendor/fonts.css">
   <!-- SHAUGHV animated brand mark + canonical loader (vanilla drop-ins, inherit currentColor) -->
   <script defer src="https://cdn.shaughv.com/js/animated-brand-mark.js"></script>
   <script defer src="https://cdn.shaughv.com/js/shaughv-loader.js"></script>
@@ -27,23 +25,15 @@
     })();
   </script>
   <!-- Tiered asset loader (progressive enhancement; see references/board-server.md "Tiered dependencies").
-       The static CDN stylesheet + script tags above are the file:// + online path. When the board is served
-       over http (SERVER_MODE), this prefers the locally-provisioned /vendor/* copies first so the board
-       renders fully offline, self-healing to the CDN, and finally to system fonts / the built-in motion
-       engine. Behaviour is IDENTICAL at every tier — only the byte source changes. -->
+       The static CDN script tags above are the file:// + online path for optional motion/brand assets;
+       the linked vendor/fonts.css owns the local-first type system in both modes. When served over http
+       (SERVER_MODE), motion and the mark prefer /vendor/*, then CDN, then their built-in fallbacks. -->
   <script>
     (function () {
       try {
         var SERVER = location.protocol === 'http:' || location.protocol === 'https:';
         var head = document.head || document.getElementsByTagName('head')[0];
-        function css(href) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = href; head.appendChild(l); }
         function js(src, onerror) { var s = document.createElement('script'); s.src = src; if (onerror) s.onerror = onerror; head.appendChild(s); }
-
-        // Fonts — inject the locally-vendored stylesheet AFTER the CDN <link>s already in <head>.
-        // fonts.css is itself local-first → CDN-fallback per @font-face, so the vendored weights win
-        // when present and self-heal to the CDN otherwise; Makira (never bundled) + the system stack
-        // still cover the rest. file:// keeps the CDN links only.
-        if (SERVER) css('/vendor/fonts.css');
 
         // anime.js — optional alternate driver for the Slot Roll. Local → CDN → leave window.anime
         // undefined (the built-in CSS driver then runs, with identical motion). Loaded async; the
@@ -101,9 +91,9 @@
       --shadow: rgba(92, 84, 70, 0.06);
       --shadow-hover: rgba(92, 84, 70, 0.12);
       --overlay: rgba(76, 68, 54, 0.42);
-      --font-display: "Unbounded", "Makira", system-ui, sans-serif;
+      --font-display: "Makira", system-ui, sans-serif;
       --font-body: "Makira", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+      --font-mono: "Gail Rock", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       /* SHAUGHV design tokens (brand: square-first, hairline borders, no springs) */
       --hairline: rgba(92, 84, 70, 0.18);
       --radius-none: 0;
@@ -1059,7 +1049,7 @@
       font-size: 13px;
       line-height: 1.6;
       white-space: pre-wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family: var(--font-mono);
       overflow-y: auto;
       display: none;
       color: var(--text-secondary);
@@ -1158,7 +1148,7 @@
       background: var(--bg-secondary);
       padding: 2px 6px;
       border-radius: 4px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family: var(--font-mono);
       color: var(--text-primary);
     }
     .markdown-content pre {
@@ -1261,16 +1251,37 @@
 
     /* ===== Task modal (rich view + edit) ===== */
     .modal.task-modal { max-width: 960px; max-height: 88vh; width: 92%; }
-    @media (max-width: 640px) { .modal.task-modal { width: 96%; max-height: 94vh; } }
+    @media (max-width: 640px) {
+      body { padding: 14px 16px; }
+      header { flex-direction: column; align-items: stretch; gap: 10px; }
+      .header-left {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: 12px;
+        row-gap: 10px;
+      }
+      .header-left .brand-mark { grid-column: 1; grid-row: 1; margin-right: 0 !important; }
+      .header-left > div:nth-child(2) { grid-column: 2 / 4; grid-row: 1; min-width: 0; }
+      #mainTabToggle { grid-column: 1 / 3; grid-row: 2; justify-self: start; }
+      #taskViewToggle { grid-column: 3; grid-row: 2; justify-self: end; }
+      .view-toggle { margin-left: 0; }
+      .view-toggle button { padding: 6px 12px; }
+      header > .buttons { justify-content: flex-end; }
+      .modal.task-modal { width: 96%; max-height: 94vh; }
+      .modal.task-modal .modal-header { padding: 16px; }
+      .modal.task-modal .modal-header > div:last-child { gap: 8px !important; }
+      .modal.task-modal .tm-id { font-size: 10.5px; }
+    }
     .tm-id { font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--text-muted); }
-    .tm-title-input { width: 100%; font-size: 19px; font-weight: 600; font-family: var(--font-display, inherit); background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-primary); outline: none; padding: 2px 0; }
+    .tm-title-input { width: 100%; min-width: 0; text-overflow: ellipsis; font-size: 19px; font-weight: 600; font-family: var(--font-display, inherit); background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--text-primary); outline: none; padding: 2px 0; }
     .tm-title-input:focus { border-bottom-color: var(--accent); }
     .tm-section-label { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 18px 0 6px; }
     .tm-section-label:first-child { margin-top: 0; }
     .tm-note-input { width: 100%; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text-primary); font-family: inherit; font-size: 14px; outline: none; }
     .tm-note-input:focus { border-color: var(--accent); }
     .tm-row-between { display: flex; align-items: center; justify-content: space-between; }
-    .tm-btn { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px; padding: 4px 12px; cursor: pointer; font-family: inherit; }
+    .tm-btn { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px; padding: 4px 12px; cursor: pointer; font-family: var(--font-body); font-weight: 500; }
     .tm-btn:hover { border-color: var(--accent); }
     .tm-desc-rendered { background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; font-size: 14px; }
     /* Read-only description: collapse when tall (Show more/less), expand into a capped, scrollable region. */
@@ -1284,12 +1295,12 @@
     .tm-desc-rendered p { margin: 6px 0; line-height: 1.55; }
     .tm-desc-rendered ul, .tm-desc-rendered ol { margin: 6px 0 6px 22px; }
     .tm-desc-rendered li { margin: 3px 0; line-height: 1.5; }
-    .tm-desc-rendered code { font-family: ui-monospace, monospace; font-size: 12px; background: var(--bg-card); padding: 1px 5px; border-radius: 4px; }
+    .tm-desc-rendered code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-card); padding: 1px 5px; border-radius: 4px; }
     .tm-desc-rendered pre { background: var(--bg-card); padding: 10px 12px; border-radius: 6px; overflow-x: auto; }
     .tm-desc-rendered pre code { background: none; padding: 0; }
     .tm-desc-rendered a { color: var(--accent); }
     .tm-ttdr { border-left: 3px solid var(--accent); background: var(--bg-card); padding: 8px 12px; border-radius: 0 6px 6px 0; margin: 0 0 10px; line-height: 1.5; }
-    .tm-desc-edit { width: 100%; min-height: 260px; resize: vertical; background: var(--bg-card); border: 1px solid var(--accent); border-radius: 8px; padding: 12px; color: var(--text-primary); font-family: ui-monospace, monospace; font-size: 13px; line-height: 1.55; outline: none; box-sizing: border-box; }
+    .tm-desc-edit { width: 100%; min-height: 260px; resize: vertical; background: var(--bg-card); border: 1px solid var(--accent); border-radius: 8px; padding: 12px; color: var(--text-primary); font-family: var(--font-mono); font-size: 13px; line-height: 1.55; outline: none; box-sizing: border-box; }
     .tm-sub { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; row-gap: 6px; align-items: start; padding: 8px 0; }
     .tm-sub .tm-sub-text { flex: 1; background: transparent; border: none; border-bottom: 1px solid transparent; color: var(--text-primary); font-family: inherit; font-size: 14px; outline: none; padding: 2px 0; }
     .tm-sub .tm-sub-text:focus { border-bottom-color: var(--accent); }
@@ -1301,10 +1312,10 @@
     .tm-add { color: var(--text-muted); cursor: pointer; font-style: italic; font-size: 13px; padding: 6px 0; }
     .tm-add:hover { color: var(--accent); }
     .tm-activity { list-style: none; padding: 0; margin: 0; }
-    .tm-activity li { font-size: 12.5px; color: var(--text-muted); padding: 5px 0; border-bottom: 1px dashed var(--border); font-family: ui-monospace, monospace; }
+    .tm-activity li { font-size: 12.5px; color: var(--text-muted); padding: 5px 0; border-bottom: 1px dashed var(--border); font-family: var(--font-mono); }
     .tm-activity li:last-child { border-bottom: none; }
     .tm-activity .tm-empty { font-style: italic; }
-    .tm-blocked { color: var(--accent); font-size: 13px; margin-top: 6px; font-family: ui-monospace, monospace; }
+    .tm-blocked { color: var(--accent); font-size: 13px; margin-top: 6px; font-family: var(--font-mono); }
     .task-card { cursor: pointer; }
 
     /* ===== MILESTONE RAIL (new components follow the brand primitives: square,
@@ -1316,7 +1327,7 @@
     .ms-rail-toggle svg { transition: transform var(--dur-1) var(--ease-out-cubic); }
     .ms-rail-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
     .ms-rail-count { color: var(--accent); }
-    .ms-new-btn { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--hairline); border-radius: var(--radius-none); padding: 4px 12px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-secondary); transition: border-color var(--dur-1) var(--ease-out-cubic), color var(--dur-1) var(--ease-out-cubic); }
+    .ms-new-btn { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid var(--hairline); border-radius: var(--radius-none); padding: 4px 12px; font-family: var(--font-body); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); transition: border-color var(--dur-1) var(--ease-out-cubic), color var(--dur-1) var(--ease-out-cubic); }
     .ms-new-btn:hover { border-color: var(--text-primary); color: var(--text-primary); background: transparent; }
     .ms-rail-body { display: flex; gap: 10px; overflow-x: auto; padding: 0 10px 10px; }
     .ms-rail-body.collapsed { display: none; }
@@ -1334,7 +1345,7 @@
     .ms-filter-btn { position: absolute; top: 8px; right: 8px; background: transparent; border: none; padding: 2px; color: var(--text-muted); cursor: pointer; line-height: 0; border-radius: var(--radius-none); }
     .ms-filter-btn:hover { color: var(--accent); background: transparent; }
     .ms-card.filtering .ms-filter-btn { color: var(--accent); }
-    .ms-new-card { min-width: 200px; flex-shrink: 0; border: 1px dashed var(--hairline); border-radius: var(--radius-none); background: transparent; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--text-muted); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer; padding: 10px 12px; transition: border-color var(--dur-1) var(--ease-out-cubic), color var(--dur-1) var(--ease-out-cubic); }
+    .ms-new-card { min-width: 200px; flex-shrink: 0; border: 1px dashed var(--hairline); border-radius: var(--radius-none); background: transparent; display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--text-muted); font-family: var(--font-body); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; padding: 10px 12px; transition: border-color var(--dur-1) var(--ease-out-cubic), color var(--dur-1) var(--ease-out-cubic); }
     .ms-new-card:hover { border-color: var(--accent); color: var(--accent); background: transparent; }
     .ms-new-input { background: var(--bg-card); border: 1px solid var(--accent); border-radius: var(--radius-none); padding: 8px 10px; color: var(--text-primary); font-family: inherit; font-size: 13px; outline: none; min-width: 200px; }
 
@@ -1350,7 +1361,7 @@
     .tm-verify-text:focus { border-bottom-color: var(--accent); }
     .tm-verify-row.passed .tm-verify-text { text-decoration: line-through; color: var(--text-muted); }
     .tm-verify-row.waived .tm-verify-text { text-decoration: line-through; color: var(--text-muted); font-style: italic; }
-    .tm-waive-btn { background: transparent; border: 1px solid var(--hairline); border-radius: var(--radius-none); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 8px; color: var(--text-muted); cursor: pointer; transition: border-color var(--dur-1) var(--ease-out-cubic), color var(--dur-1) var(--ease-out-cubic); }
+    .tm-waive-btn { background: transparent; border: 1px solid var(--hairline); border-radius: var(--radius-none); font-family: var(--font-body); font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 3px 8px; color: var(--text-muted); cursor: pointer; transition: border-color var(--dur-1) var(--ease-out-cubic), color var(--dur-1) var(--ease-out-cubic); }
     .tm-waive-btn:hover { border-color: var(--accent); color: var(--accent); background: transparent; }
     .tm-verify-row.waived .tm-waive-btn { border-color: var(--accent); color: var(--accent); }
     .tm-waive-stamp { grid-column: 2 / 5; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-muted); letter-spacing: 0.02em; padding-bottom: 2px; }
@@ -1370,7 +1381,7 @@
     @media (prefers-reduced-motion: reduce) { .deny-shake { animation: none; } .ms-progress-fill { transition: none; } }
 
     /* ===== Freshness / staleness indicator ===== */
-    #freshness { font-family: ui-monospace, monospace; font-size: 11px; padding: 2px 9px; border-radius: 999px; white-space: nowrap; letter-spacing: 0.02em; }
+    #freshness { font-family: var(--font-mono); font-size: 11px; padding: 2px 9px; border-radius: 999px; white-space: nowrap; letter-spacing: 0.02em; }
     #freshness.fresh { color: #fff; background: var(--accent); }
     #freshness.aging { color: var(--text-muted); background: var(--bg-primary); border: 1px solid var(--border); }
     #freshness.stale { color: #fff; background: #b3261e; }
@@ -1410,7 +1421,7 @@
       padding: 12px;
       color: var(--text-primary);
       font-size: 13px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-family: var(--font-mono);
       line-height: 1.5;
       min-height: 300px;
       resize: vertical;
@@ -1493,10 +1504,11 @@
     /* ===== SHAUGHV TYPOGRAPHY LAYER ===== */
     h1, .app-title { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.005em; }
     .app-title { font-size: 1.35rem; }
-    .stat-value { font-family: var(--font-display); font-weight: 700; }
-    .column-header, .list-section-header, .memory-tab, .view-toggle button,
-    .memory-flat-table th, .form-group label, .stat-label, .file-path,
-    .quick-add-section, .list-item-section, .count, .markdown-content th {
+    .stat-value { font-family: var(--font-mono); font-weight: 700; }
+    .column-header, .list-section-header, #taskViewToggle button, #themeToggle, #openTaskBtn,
+    .memory-flat-table th, .form-group label, .stat-label, .file-path, .file-card-title,
+    .memory-card-field-label, .quick-add-section, .list-item-section, .status-bar,
+    .count, .markdown-content th {
       font-family: var(--font-mono);
     }
     button { letter-spacing: 0.01em; }
@@ -2277,7 +2289,7 @@
         <div style="display: flex; align-items: flex-start; gap: 10px;">
           <span class="checkbox ${task.checked ? 'checked' : ''}" style="pointer-events: none; flex-shrink: 0; margin-top: 1px;"></span>
           <div class="card-title" style="flex: 1; min-width: 0; ${task.checked ? 'text-decoration: line-through; opacity: 0.55;' : ''}">${escapeHtml(task.title)}</div>
-          <span title="task id" style="font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-muted); opacity: 0.75; white-space: nowrap;">#${task.id}</span>
+          <span title="task id" style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); opacity: 0.75; white-space: nowrap;">#${task.id}</span>
         </div>
       `;
 

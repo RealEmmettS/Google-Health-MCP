@@ -33,8 +33,10 @@ Background that produced this note: Emmett asked whether the project should use 
 Dormant until Emmett green-lights an evaluation; then: motive statement, lift-and-shift vs re-platform comparison (incl. FastMCP re-evaluation), cost/latency numbers, migration checklist from the inventory, and a go/no-go decision recorded here.
 
 ## Status
-Dormant. Not part of milestone #v1. No action for agents except keeping the inventory current.
+
+DONE. Emmett explicitly reopened the long-term hosting decision for MCP 2026 and approved the full evaluation. ADR-0003 retains Vercel Node 24 Functions with Fluid Compute in `iad1`: the modern transport is request-scoped, but Node compatibility and US-East Neon locality make Edge/Workers worse for this application today, while Railway adds a production cost/cutover without a resident-process need. The ADR records measurable triggers that can reopen the choice later.
 
 ## Activity
 - 2026-07-09 01:20 — created from Emmett's note; inventory seeded (agent: fable)
 - 2026-07-09 01:25 — description expanded per Emmett's request: full FastMCP context, evaluation framework, migration shapes, v1.1 interaction (agent: fable)
+- 2026-07-29 01:50 - Completed the live architecture/cost review across Vercel Node+Fluid, Vercel Edge, Cloudflare Workers, Railway/FastMCP, and a split edge gateway. Published `docs/research/2026-07-29-mcp-sdk-v2-and-hosting.md` and accepted ADR-0003 with Vercel `iad1` plus explicit reevaluation triggers. (agent: codex)

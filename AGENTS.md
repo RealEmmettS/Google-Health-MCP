@@ -28,10 +28,10 @@ alone (two approved aliases). It exposes his Google Health data to trusted LLM c
 activity/sleep/heart/nutrition, writes for nutrition/hydration/measurements only. A thin,
 typed, authenticated data adapter: the LLM reasons; the server returns accurate data with
 freshness metadata. No medical claims. Stack: Next.js 16 (App Router, Node runtime),
-TypeScript 5.9, `mcp-handler` + the official MCP SDK, better-auth (built-in `mcp` plugin,
+TypeScript 5.9, official `@modelcontextprotocol/server` v2, better-auth (temporarily the built-in `mcp` plugin,
 OAuth 2.1 + Dynamic Client Registration), Drizzle ORM on Neon Postgres, Luxon, Zod, Vitest.
 
-Current milestone: **`#v1`**. Phase status is on the board — read it there; don't trust any
+Current milestone: **`#mcp2`**. Phase status is on the board — read it there; don't trust any
 prose snapshot that may have gone stale.
 
 ## Non-negotiables
@@ -68,14 +68,11 @@ prose snapshot that may have gone stale.
   open only for connector compatibility; authorization still requires an allowlisted login.
   Any additional person or public-access proposal requires an amended/superseding ADR. Full
   reasoning and current implementation: `docs/adr/0002-single-user-private.md`.
-- **MCP stack = `mcp-handler` + official MCP SDK on Vercel serverless — deliberately NOT
-  FastMCP.** FastMCP wants a long-running process with its own server/sessions/auth; this app
-  is request-scoped and its OAuth story (better-auth) already lives in the same Next.js app.
-  Full reasoning: `.tasks/tasks/rlw.md`.
-- **A Railway migration is a *maybe*, not a plan** (`#rlw`) — it would reopen the FastMCP
-  question, but only on Emmett's say-so. Don't build gratuitously Vercel-locked; if you must,
-  record it in `rlw.md`'s migration-surface inventory.
-- **Auth currently stays on better-auth 1.6.23's deprecated built-in `mcp` plugin** so existing
+- **MCP stack = official SDK v2 on Vercel Node 24 Functions with Fluid Compute in `iad1` —
+  deliberately NOT Edge, Railway, or FastMCP.** The transport is request-scoped and serves
+  modern 2026 plus stateless legacy 2025 traffic from one factory. Full reasoning:
+  `docs/adr/0003-vercel-node-fluid-mcp-2026.md` and `.tasks/tasks/rlw.md`.
+- **Checkpoint 0.2.1 keeps better-auth 1.6.23's deprecated built-in `mcp` plugin** so existing
   connector registrations/tokens survive. Release 0.1.2 adds a time-boxed compatibility boundary:
   required S256 PKCE, exact supplied-resource validation, persisted encrypted RS256 keys through
   Better Auth's `jwt()` plugin, and repaired JWKS/UserInfo/ID-token responses. Do not remove that

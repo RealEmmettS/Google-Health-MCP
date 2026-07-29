@@ -111,7 +111,7 @@ an audit row.
    │  Claude Code / Desktop    │                       │  (health.emmetts.dev)         │
    │  claude.ai web + mobile   │ ◀─────────────────── │                               │
    │  ChatGPT connector        │   MCP tools/resources │  ┌─────────────────────────┐  │
-   └───────────────────────────┘                       │  │ mcp-handler  → /api/mcp │  │
+   └───────────────────────────┘                       │  │ MCP SDK v2   → /api/mcp │  │
                                                         │  │ better-auth  → OAuth AS │  │
                                                         │  │ Google Health client    │  │
                                                         │  └───────────┬─────────────┘  │
@@ -154,13 +154,13 @@ Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and sc
 |---|---|---|
 | Framework | **Next.js 16** (App Router) | Server-centric; all API routes on the **Node runtime** (never edge — needs `node:crypto` + the DB driver) |
 | Language | **TypeScript 5.9** | Pinned to `^5`: Next 16's build-time type checker cannot load the TS 7 native compiler (see [Troubleshooting](#troubleshooting)) |
-| MCP transport | **`mcp-handler`** + `@modelcontextprotocol/sdk` | Streamable HTTP, per-request. Deliberately **not FastMCP** (a decision — see [`CLAUDE.md`](CLAUDE.md) / `.tasks/tasks/rlw.md`) |
+| MCP transport | **`@modelcontextprotocol/server` 2.0.0** | 2026 request-scoped HTTP plus stateless 2025 fallback; one server per request, no transport session. See [ADR-0003](docs/adr/0003-vercel-node-fluid-mcp-2026.md). |
 | Auth server | **better-auth 1.6.23**, built-in `mcp` plugin | The built-in `better-auth/plugins` `mcp`, **not** `@better-auth/mcp` (that package targets the unreleased 1.7) |
 | Database | **Neon Postgres** + **Drizzle ORM** (`@neondatabase/serverless`) | **Pooled** URL at runtime, **unpooled** URL for migrations |
 | Time | **Luxon** | Timezone-correct ranges (default `America/Chicago`), DST-safe, sleep-crosses-midnight logic |
 | Validation | **Zod 4** | Tool input schemas; write-tool validation |
 | Tests | **Vitest** (+ MSW / undici mocks) | Unit + mocked-API integration |
-| Host | **Vercel** | Canonical domain **`health.emmetts.dev`**; Deployment Protection is preview-only (production must stay open — the app brings its own auth) |
+| Host | **Vercel Node 24 + Fluid Compute in `iad1`** | Canonical domain **`health.emmetts.dev`**; Deployment Protection is preview-only (production must stay open — the app brings its own auth) |
 
 ## Current status
 

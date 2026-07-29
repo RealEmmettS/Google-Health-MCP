@@ -34,16 +34,16 @@ private, unverified posture and decision not to pursue public OAuth verification
 ```
 Fitbit Air → Fitbit app sync → Google Health cloud → Google Health API (health.googleapis.com/v4)
                                                             ↑ user OAuth token (encrypted in Neon)
-LLM client (claude.ai / ChatGPT / Claude Code) ──OAuth 2.1 DCR──> Next.js on Vercel (mcp-handler) ──> tools/resources
+LLM client (claude.ai / ChatGPT / Claude Code) ──OAuth 2.1 DCR──> Vercel Node/Fluid (`iad1`) ──> SDK v2 tools/resources
 ```
 
-**Stack:** Next.js App Router, TypeScript, **Node runtime** (never edge — needs `node:crypto`, DB driver), `mcp-handler` (streamable HTTP only, no SSE/Redis), `better-auth` with its built-in `mcp` plugin, Drizzle ORM + `@neondatabase/serverless`, Zod, Luxon (timezones), Vitest + MSW/undici-mocks for tests.
+**Stack:** Next.js App Router, TypeScript, **Node 24 runtime** (not Edge — needs `node:crypto`, DB driver), official `@modelcontextprotocol/server` 2.0.0 (`legacy: "stateless"`, `responseMode: "auto"`), Vercel Fluid Compute in `iad1`, checkpoint-0.2.1 `better-auth` built-in `mcp` auth bridge, Drizzle ORM + `@neondatabase/serverless`, Zod, Luxon (timezones), Vitest + MSW/undici-mocks for tests. The coordinated stable OAuth Provider/JWT cutover is `#oap`; see [ADR-0003](adr/0003-vercel-node-fluid-mcp-2026.md).
 
 ### Four auth layers — never conflate (handoff §3)
 1. Vercel account login — Emmett's, irrelevant to runtime.
 2. Neon Auth — **disabled**. Neon is only a database.
 3. **Google Health consent** (health scopes): custom routes `/api/auth/google-health/start` + `/callback`. `access_type=offline`, `prompt=consent`. Tokens AES-256-GCM-encrypted in Neon. Done ONCE (per reconnect), independent of how many MCP clients connect.
-4. **MCP client auth**: better-auth OAuth 2.1 AS with `allowDynamicClientRegistration: true`; login = Google Sign-In (basic `openid email profile` only); **reject any Google account not in `ALLOWED_GOOGLE_EMAILS`**. `mcp-handler`'s `withMcpAuth` verifies better-auth-issued tokens (via the MCP plugin's session/token verification API). Serve `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server` (better-auth MCP plugin provides handlers/metadata).
+4. **MCP client auth**: better-auth OAuth 2.1 AS with `allowDynamicClientRegistration: true`; login = Google Sign-In (basic `openid email profile` only); **reject any Google account not in `ALLOWED_GOOGLE_EMAILS`**. In checkpoint 0.2.1, Better Auth's `withMcpAuth` verifies its opaque token before passing typed auth context to the official SDK handler. Serve `/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`. `#oap` replaces the compatibility bridge with local audience-bound JWT verification.
 
 Layers 3 and 4 use the SAME Google OAuth client ID but separate flows/scopes — Google supports this; the health-flow refresh token is the one that matters for data access.
 
@@ -87,7 +87,7 @@ Runtime DB access via pooled URL; `drizzle-kit` migrations run from dev machine 
 
 ## Routes
 ```
-app/api/[transport]/route.ts               MCP endpoint (basePath /api → serves /api/mcp), withMcpAuth, maxDuration ≥60s
+app/api/[transport]/route.ts               MCP endpoint: official v2 handler, legacy stateless fallback, HTTP boundary, Node/iad1, maxDuration 60s
 app/api/auth/[...all]/route.ts             better-auth handler (Google sign-in, /authorize, /token, DCR /register)
 app/.well-known/oauth-authorization-server/route.ts
 app/.well-known/oauth-protected-resource/route.ts
@@ -123,7 +123,7 @@ Input schemas exactly per handoff §11 (they're good). Payload bounds: default p
 
 **Phase 4 — Google Health client:** registry + client + time utils + error normalization + pagination + 429 backoff. Integration tests against mocked v4 API (fixtures modeled on the real response shapes in the docs: steps list, sleep reconcile, exercise list, rollup, nutrition CRUD, expired-token, 429).
 
-**Phase 5 — MCP endpoint + read tools + resources:** `createMcpHandler` + `withMcpAuth` wiring (tool handlers resolve app_user from authInfo), all read tools + resources, freshness metadata, payload bounding. Test with **MCP Inspector** (`npx @modelcontextprotocol/inspector`) through the full OAuth dance locally.
+**Phase 5 — MCP endpoint + read tools + resources:** official SDK v2 `createMcpHandler` + Better Auth checkpoint bridge (tool handlers resolve app_user from authInfo), modern 2026 and stateless legacy 2025 transport, all read tools + resources, freshness metadata, payload bounding. Test with the matching official client and **MCP Inspector** through the full OAuth dance locally.
 
 **Phase 6 — Write tools:** nutrition CRUD, hydration, measurements (+profile if API supports), audit logging, tests. Verify created/updated/deleted dataPoint names round-trip via `get_nutrition_log`.
 
