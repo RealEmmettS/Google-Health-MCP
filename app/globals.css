@@ -767,6 +767,20 @@ a {
   padding: 0 clamp(1.25rem, 4vw, 2.75rem);
 }
 
+.connector-client-grid {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.connector-client-group {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+  min-width: 0;
+}
+
 .copy-field,
 .setup-card {
   min-width: 0;
@@ -1216,6 +1230,11 @@ a {
   }
 
   .connector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .connector-client-grid {
+    grid-column: auto;
     grid-template-columns: 1fr;
   }
 

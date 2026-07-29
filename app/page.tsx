@@ -254,32 +254,37 @@ export default async function Home({
               description="Streamable HTTP / OAuth 2.1"
               wide
             />
-            <CopyField
-              label="Codex CLI"
-              value={codexCommand}
-              description="Add the server, then complete OAuth"
-            />
-            <CopyField
-              label="Claude Code"
-              value={claudeCommand}
-              description="Remote HTTP transport"
-            />
-
-            <div className="setup-card">
-              <span className="setup-card-index">01 / Claude.ai</span>
-              <h3>Custom connector</h3>
-              <p>
-                Open Settings / Connectors / Add custom connector, paste the raw
-                MCP endpoint, then complete OAuth.
-              </p>
-            </div>
-            <div className="setup-card">
-              <span className="setup-card-index">02 / ChatGPT</span>
-              <h3>Custom connector</h3>
-              <p>
-                Create a custom connector with the raw endpoint. Dynamic Client
-                Registration and OAuth are handled by this server.
-              </p>
+            <div className="connector-client-grid">
+              <div className="connector-client-group">
+                <CopyField
+                  label="Codex CLI"
+                  value={codexCommand}
+                  description="Add the server, then complete OAuth"
+                />
+                <div className="setup-card">
+                  <span className="setup-card-index">ChatGPT / Web</span>
+                  <h3>Create from the endpoint</h3>
+                  <p>
+                    Use the raw URL above as the MCP server address. Registration and
+                    OAuth continue automatically in ChatGPT.
+                  </p>
+                </div>
+              </div>
+              <div className="connector-client-group">
+                <CopyField
+                  label="Claude Code"
+                  value={claudeCommand}
+                  description="Remote HTTP transport"
+                />
+                <div className="setup-card">
+                  <span className="setup-card-index">Claude.ai / Web</span>
+                  <h3>Add from settings</h3>
+                  <p>
+                    Open Settings / Connectors / Add custom connector, paste the raw
+                    URL above, then complete OAuth.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
