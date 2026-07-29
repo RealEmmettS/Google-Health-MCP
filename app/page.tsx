@@ -245,6 +245,21 @@ export default async function Home({
                 Authentication continues in the browser.
               </p>
             </div>
+            <a
+              className="mcp-icon-download"
+              href="/shaughv-health-mcp-icon.png"
+              download="shaughv-health-mcp-icon.png"
+              aria-label="Download the SHAUGHV Health MCP icon as a PNG"
+            >
+              <span className="mcp-icon-download-preview" aria-hidden="true" />
+              <span className="mcp-icon-download-copy">
+                <span className="mcp-icon-download-label">Download MCP icon</span>
+                <span className="mcp-icon-download-meta">PNG / 1254 × 1254</span>
+              </span>
+              <span className="mcp-icon-download-arrow" aria-hidden="true">
+                ↓
+              </span>
+            </a>
           </div>
 
           <div className="connector-grid">

@@ -62,3 +62,7 @@ pass. The signed-in accept/deny redirects remain coupled to the owner-approved c
   than a clipped page: Chrome measured exact document-to-viewport dimensions with no overflow at
   1920x911, 390x844, and short-mobile 390x667 while retaining every control and service label.
   (agent: codex)
+- 2026-07-29 18:50 - Added Emmett's supplied 1254px MCP artwork byte-for-byte as the clean
+  `shaughv-health-mcp-icon.png` public download, with a compact preview/action in Connector setup.
+  The change passed all 147 tests, typecheck, and the production build before release.
+  (agent: codex)
