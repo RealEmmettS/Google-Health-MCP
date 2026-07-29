@@ -9,8 +9,8 @@ export function BrandLockup({ label }: { label: string }) {
       "aria-label": "SHAUGHV",
       style: {
         display: "block",
-        width: "96px",
-        height: "96px",
+        width: "var(--brand-mark-size, 96px)",
+        height: "var(--brand-mark-size, 96px)",
         color: "var(--fg)",
       },
     },

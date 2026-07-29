@@ -158,7 +158,7 @@ export default async function Home({
           </div>
         ) : null}
 
-        <section className="surface-panel reveal-stage reveal-stage-two">
+        <section className="surface-panel health-panel reveal-stage reveal-stage-two">
           <div className="index-line">
             <span>§ 01 / Google Health</span>
             <span>Connection control</span>
@@ -254,38 +254,16 @@ export default async function Home({
               description="Streamable HTTP / OAuth 2.1"
               wide
             />
-            <div className="connector-client-grid">
-              <div className="connector-client-group">
-                <CopyField
-                  label="Codex CLI"
-                  value={codexCommand}
-                  description="Add the server, then complete OAuth"
-                />
-                <div className="setup-card">
-                  <span className="setup-card-index">ChatGPT / Web</span>
-                  <h3>Create from the endpoint</h3>
-                  <p>
-                    Use the raw URL above as the MCP server address. Registration and
-                    OAuth continue automatically in ChatGPT.
-                  </p>
-                </div>
-              </div>
-              <div className="connector-client-group">
-                <CopyField
-                  label="Claude Code"
-                  value={claudeCommand}
-                  description="Remote HTTP transport"
-                />
-                <div className="setup-card">
-                  <span className="setup-card-index">Claude.ai / Web</span>
-                  <h3>Add from settings</h3>
-                  <p>
-                    Open Settings / Connectors / Add custom connector, paste the raw
-                    URL above, then complete OAuth.
-                  </p>
-                </div>
-              </div>
-            </div>
+            <CopyField
+              label="Codex CLI"
+              value={codexCommand}
+              description="Add the server, then complete OAuth"
+            />
+            <CopyField
+              label="Claude Code"
+              value={claudeCommand}
+              description="Remote HTTP transport"
+            />
           </div>
 
           <p className="connector-footnote">

@@ -52,8 +52,13 @@ pass. The signed-in accept/deny redirects remain coupled to the owner-approved c
   reveal timing to 0.01 ms, and the console was clean. The unauthenticated consent state failed
   closed with disabled actions and no health values. Signed-in redirects stay open for reconnect.
   (agent: codex)
-- 2026-07-29 18:12 - Corrected the signed-in connector guide after Emmett's visual review: the
-  OpenAI column now keeps Codex CLI with ChatGPT, the Anthropic column keeps Claude Code with
-  Claude.ai, and each pair stays together in the mobile reading order. Replaced the duplicated
-  numbered `Custom connector` cards with quieter platform labels and distinct action copy. All
-  147 tests, typecheck, production build, and the responsive DOM/layout check pass. (agent: codex)
+- 2026-07-29 18:12 - Corrected the signed-in connector guide after Emmett's visual review, then
+  removed the two redundant web-client instruction cards entirely on follow-up. The section now
+  contains only the raw endpoint plus Codex CLI and Claude Code commands, eliminating the crossed
+  pairings and duplicated `Custom connector` treatment while reducing its vertical footprint.
+  (agent: codex)
+- 2026-07-29 18:25 - Tightened brand/header, panel, status, and copy-card proportions with
+  height-aware spacing. The signed-out home is now a fixed dynamic-viewport composition rather
+  than a clipped page: Chrome measured exact document-to-viewport dimensions with no overflow at
+  1920x911, 390x844, and short-mobile 390x667 while retaining every control and service label.
+  (agent: codex)

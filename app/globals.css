@@ -47,6 +47,7 @@
   --ease-brutalist: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
   --container-pad: clamp(1.25rem, 5vw, 3.25rem);
+  --brand-mark-size: 96px;
 }
 
 *,
@@ -110,7 +111,6 @@ samp,
 .status-label,
 .signal-label,
 .copy-field-label,
-.setup-card-index,
 .brand-loader-label,
 .button,
 .allowlist-note,
@@ -157,7 +157,7 @@ a {
   z-index: 1;
   min-height: 100dvh;
   overflow: hidden;
-  padding: clamp(1.5rem, 4vw, 3rem) var(--container-pad);
+  padding: clamp(1.25rem, 3vw, 2.5rem) var(--container-pad);
 }
 
 .site-shell::before {
@@ -192,6 +192,12 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  padding-block: clamp(0.75rem, 2.5dvh, 1.5rem);
+  overflow: hidden;
+  --brand-mark-size: 84px;
 }
 
 .public-frame,
@@ -203,7 +209,10 @@ a {
 }
 
 .public-frame {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   max-width: 980px;
+  max-height: 100%;
 }
 
 .public-frame-narrow {
@@ -217,8 +226,8 @@ a {
 .brand-lockup {
   display: inline-flex;
   align-items: center;
-  gap: 1.15rem;
-  margin-bottom: clamp(1.5rem, 4vw, 2.75rem);
+  gap: 1rem;
+  margin-bottom: clamp(0.9rem, 2.5dvh, 1.75rem);
   color: var(--fg);
   animation: reveal-up 700ms var(--ease-brutalist) both;
 }
@@ -238,7 +247,7 @@ a {
 .brand-lockup-copy {
   display: grid;
   gap: 0.2rem;
-  padding-left: 1.15rem;
+  padding-left: 1rem;
   border-left: 1px solid var(--border-medium);
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -263,6 +272,15 @@ a {
   border: 1px solid var(--border-strong);
   background: rgba(250, 250, 248, 0.88);
   box-shadow: var(--shadow-card);
+}
+
+.public-page .hero-panel,
+.public-page .sign-in-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
 }
 
 .hero-panel::before,
@@ -294,8 +312,8 @@ a {
 
 .hero-copy {
   max-width: 790px;
-  padding: clamp(2.4rem, 7vw, 5.75rem) clamp(1.3rem, 6vw, 5.25rem)
-    clamp(2.25rem, 5vw, 4.25rem);
+  padding: clamp(1.5rem, 5dvh, 3.25rem) clamp(1.3rem, 6vw, 5.25rem)
+    clamp(1.25rem, 4dvh, 2.5rem);
 }
 
 .eyebrow,
@@ -303,7 +321,6 @@ a {
 .status-label,
 .signal-label,
 .copy-field-label,
-.setup-card-index,
 .brand-loader-label {
   margin: 0;
   color: var(--accent);
@@ -329,8 +346,8 @@ a {
 
 .hero-title {
   max-width: 880px;
-  margin-top: 1.15rem;
-  font-size: clamp(3.7rem, 9vw, 7.5rem);
+  margin-top: clamp(0.65rem, 2dvh, 1rem);
+  font-size: clamp(3.4rem, min(8vw, 13dvh), 6.75rem);
   line-height: 0.86;
 }
 
@@ -341,7 +358,6 @@ a {
 .hero-description,
 .section-description,
 .sign-in-description,
-.setup-card p,
 .connector-footnote {
   color: var(--fg-muted);
   font-family: var(--font-sans);
@@ -350,9 +366,9 @@ a {
 
 .hero-description {
   max-width: 610px;
-  margin: 2rem 0 1.75rem;
+  margin: clamp(1rem, 2.5dvh, 1.5rem) 0 clamp(0.9rem, 2.25dvh, 1.25rem);
   font-size: clamp(1.05rem, 2vw, 1.23rem);
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
 .button {
@@ -447,7 +463,7 @@ a {
 }
 
 .allowlist-note {
-  margin: 1.25rem 0 0;
+  margin: clamp(0.75rem, 2dvh, 1rem) 0 0;
   color: var(--fg-soft);
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -465,9 +481,9 @@ a {
 
 .signal-strip > div {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.25rem;
   min-width: 0;
-  padding: 1rem clamp(1rem, 3vw, 1.75rem);
+  padding: clamp(0.65rem, 1.8dvh, 0.85rem) clamp(0.75rem, 2vw, 1.35rem);
 }
 
 .signal-strip > div + div {
@@ -491,7 +507,8 @@ a {
 }
 
 .profile-page {
-  padding-block: clamp(1.5rem, 4vw, 3.5rem) clamp(3rem, 8vw, 6rem);
+  padding-block: clamp(1.25rem, 3dvh, 2rem) clamp(2.5rem, 7vw, 5rem);
+  --brand-mark-size: 84px;
 }
 
 .profile-header {
@@ -499,7 +516,7 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 2rem;
-  margin-bottom: clamp(1.5rem, 4vw, 2.75rem);
+  margin-bottom: clamp(1rem, 2.5dvh, 1.75rem);
 }
 
 .profile-header .brand-lockup {
@@ -511,7 +528,7 @@ a {
   align-items: center;
   justify-content: flex-end;
   gap: 1.25rem;
-  padding-top: 0.6rem;
+  padding-top: 0.35rem;
   text-align: right;
 }
 
@@ -564,11 +581,11 @@ a {
 }
 
 .surface-panel + .surface-panel {
-  margin-top: clamp(1.5rem, 4vw, 2.5rem);
+  margin-top: clamp(1.25rem, 3vw, 2rem);
 }
 
 .surface-panel {
-  padding-bottom: clamp(1.25rem, 4vw, 2.25rem);
+  padding-bottom: clamp(1.15rem, 3dvh, 2rem);
 }
 
 .section-heading {
@@ -576,7 +593,7 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 2rem;
-  padding: clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 4vw, 2.75rem);
+  padding: clamp(1.75rem, 5dvh, 3rem) clamp(1.25rem, 4vw, 2.5rem);
 }
 
 .section-heading > div {
@@ -584,12 +601,12 @@ a {
 }
 
 .section-heading-compact {
-  padding-bottom: clamp(1.5rem, 3vw, 2.25rem);
+  padding-bottom: clamp(1.25rem, 3dvh, 2rem);
 }
 
 .profile-title {
-  margin-top: 0.65rem;
-  font-size: clamp(2.7rem, 7vw, 6.3rem);
+  margin-top: 0.55rem;
+  font-size: clamp(2.7rem, 7vw, 5.9rem);
   line-height: 0.9;
 }
 
@@ -601,9 +618,9 @@ a {
 
 .section-description {
   max-width: 650px;
-  margin: 1.35rem 0 0;
+  margin: 1.05rem 0 0;
   font-size: 1rem;
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
 .status-pill {
@@ -650,7 +667,7 @@ a {
 .status-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-inline: clamp(1.25rem, 4vw, 2.75rem);
+  margin-inline: clamp(1.25rem, 4vw, 2.5rem);
   border-top: 1px solid var(--border-medium);
   border-left: 1px solid var(--border-medium);
 }
@@ -659,10 +676,10 @@ a {
   position: relative;
   display: grid;
   align-content: start;
-  gap: 0.6rem;
+  gap: 0.5rem;
   min-width: 0;
-  min-height: 132px;
-  padding: 1.15rem;
+  min-height: 124px;
+  padding: 1rem;
   overflow: hidden;
   border-right: 1px solid var(--border-medium);
   border-bottom: 1px solid var(--border-medium);
@@ -731,8 +748,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 66px;
-  margin: clamp(1.25rem, 4vw, 2rem) clamp(1.25rem, 4vw, 2.75rem) 0;
+  min-height: 62px;
+  margin: clamp(1.15rem, 3dvh, 1.75rem) clamp(1.25rem, 4vw, 2.5rem) 0;
   padding-inline: clamp(1rem, 3vw, 1.6rem);
 }
 
@@ -764,25 +781,10 @@ a {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  padding: 0 clamp(1.25rem, 4vw, 2.75rem);
+  padding: 0 clamp(1.25rem, 4vw, 2.5rem);
 }
 
-.connector-client-grid {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.connector-client-group {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 1rem;
-  min-width: 0;
-}
-
-.copy-field,
-.setup-card {
+.copy-field {
   min-width: 0;
   border: 1px solid var(--border-medium);
   background: rgba(253, 253, 251, 0.72);
@@ -792,8 +794,7 @@ a {
     box-shadow 180ms var(--ease-out-cubic);
 }
 
-.copy-field:hover,
-.setup-card:hover {
+.copy-field:hover {
   border-color: var(--accent);
   box-shadow: 4px 4px 0 rgba(91, 138, 91, 0.12);
   transform: translateY(-2px);
@@ -808,8 +809,8 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  min-height: 78px;
-  padding: 1rem;
+  min-height: 72px;
+  padding: 0.9rem;
   border-bottom: 1px solid var(--border-hairline);
 }
 
@@ -854,9 +855,9 @@ a {
 }
 
 .copy-field-value {
-  min-height: 80px;
+  min-height: 72px;
   margin: 0;
-  padding: 1rem;
+  padding: 0.9rem;
   overflow: auto;
   background: var(--bg-sunken);
   color: var(--sv-olive-dark);
@@ -874,45 +875,6 @@ a {
   font: inherit;
 }
 
-.setup-card {
-  position: relative;
-  min-height: 190px;
-  padding: 1.25rem;
-  overflow: hidden;
-}
-
-.setup-card::before {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  content: "";
-  background: var(--warm);
-}
-
-.setup-card-index {
-  color: var(--fg-soft);
-  font-size: 0.58rem;
-}
-
-.setup-card h3 {
-  margin: 1rem 0 0;
-  color: var(--fg);
-  font-family: var(--font-heading);
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1.1;
-  text-transform: uppercase;
-}
-
-.setup-card p {
-  margin: 0.9rem 0 0;
-  font-size: 0.93rem;
-  line-height: 1.6;
-}
-
 .connector-footnote {
   margin: 1.5rem clamp(1.25rem, 4vw, 2.75rem) 0;
   padding-top: 1.25rem;
@@ -926,7 +888,7 @@ a {
 
 .public-privacy-link,
 .privacy-policy-link {
-  margin: 1rem 0 0;
+  margin: clamp(0.55rem, 1.5dvh, 0.8rem) 0 0;
   color: var(--fg-soft);
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -978,7 +940,7 @@ a {
 }
 
 .sign-in-panel {
-  min-height: 520px;
+  min-height: min(480px, 100%);
 }
 
 .consent-panel {
@@ -1053,7 +1015,7 @@ a {
 
 .sign-in-copy {
   max-width: 680px;
-  padding: clamp(2.5rem, 7vw, 5rem) clamp(1.3rem, 6vw, 4.5rem);
+  padding: clamp(1.75rem, 5dvh, 3.75rem) clamp(1.3rem, 6vw, 4.5rem);
 }
 
 .sign-in-title {
@@ -1065,7 +1027,7 @@ a {
 
 .sign-in-description {
   max-width: 520px;
-  margin: 1.5rem 0 1.75rem;
+  margin: 1.2rem 0 1.35rem;
   font-size: 1.05rem;
   line-height: 1.65;
 }
@@ -1199,21 +1161,31 @@ a {
     gap: 0.25rem;
   }
 
-  .hero-title {
-    font-size: clamp(3.15rem, 14vw, 5.4rem);
+  .public-page .index-line {
+    align-items: center;
+    flex-direction: row;
+    gap: 0.5rem;
+    padding-block: 0.65rem;
   }
 
-  .signal-strip {
-    grid-template-columns: 1fr;
+  .hero-title {
+    font-size: clamp(2.8rem, min(13vw, 10dvh), 4.75rem);
   }
 
   .consent-capabilities {
     grid-template-columns: 1fr;
   }
 
-  .signal-strip > div + div {
-    border-top: 1px solid var(--border-hairline);
-    border-left: 0;
+  .public-page .signal-strip > div {
+    padding-inline: 0.45rem;
+  }
+
+  .public-page .signal-strip strong {
+    font-size: 0.72rem;
+  }
+
+  .public-page .signal-label {
+    font-size: 0.5rem;
   }
 
   .section-heading {
@@ -1230,11 +1202,6 @@ a {
   }
 
   .connector-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .connector-client-grid {
-    grid-column: auto;
     grid-template-columns: 1fr;
   }
 
@@ -1260,6 +1227,10 @@ a {
 }
 
 @media (max-width: 420px) {
+  .public-page {
+    --brand-mark-size: 72px;
+  }
+
   .brand-lockup-copy {
     display: none;
   }
@@ -1271,12 +1242,62 @@ a {
   }
 
   .hero-title {
-    font-size: clamp(2rem, 9.6vw, 3.25rem);
+    font-size: clamp(2.35rem, min(11vw, 8.5dvh), 3.6rem);
     line-height: 0.92;
   }
 
   .button-large {
     width: 100%;
+  }
+}
+
+@media (max-height: 700px) {
+  .public-page {
+    padding-block: 0.5rem;
+    --brand-mark-size: 64px;
+  }
+
+  .public-page .brand-lockup {
+    margin-bottom: 0.5rem;
+  }
+
+  .public-page .index-line {
+    padding-block: 0.45rem;
+  }
+
+  .public-page .hero-copy,
+  .public-page .sign-in-copy {
+    padding-block: 0.85rem;
+  }
+
+  .public-page .hero-title {
+    margin-top: 0.4rem;
+    font-size: clamp(2.15rem, min(7vw, 8dvh), 4.5rem);
+  }
+
+  .public-page .hero-description {
+    margin-block: 0.6rem;
+    font-size: 0.92rem;
+    line-height: 1.4;
+  }
+
+  .public-page .button-large {
+    min-height: 46px;
+  }
+
+  .public-page .allowlist-note {
+    margin-top: 0.55rem;
+    font-size: 0.58rem;
+    line-height: 1.35;
+  }
+
+  .public-page .public-privacy-link {
+    margin-top: 0.35rem;
+    font-size: 0.6rem;
+  }
+
+  .public-page .signal-strip > div {
+    padding-block: 0.4rem;
   }
 }
 
