@@ -32,7 +32,7 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 - [ ] Signed-in consent accept/deny redirects pass during the owner-approved connector reconnect
 - [x] CDN fonts return 200 with expected CORS and immutable caching
 - [x] MCP icon download serves the supplied PNG under a clean filename without responsive overflow
-- [ ] Enlarged utility and consent typography preserves signed-out no-scroll and signed-in first-card framing
+- [x] Enlarged utility and consent typography preserves signed-out no-scroll and signed-in first-card framing
 
 ## Status
 
@@ -92,3 +92,10 @@ coupled to the owner reconnect.
   1920x855, 768x900, 390x844, and 390x667. Fail-closed consent fits 1920x855 and 1280x720, retains
   54px actions, and intentionally scrolls vertically without horizontal overflow at 390x844.
   Production signed-in first-card proof remains pending deployment. (agent: codex)
+- 2026-07-31 02:04 - Production deployment `dpl_74z3BNq9bU9tJcZyiJtSftMhDs3x` proved the
+  enlarged type and revised depth treatment live. Signed-out Chrome/Playwright remains exact-height
+  and overflow-free at 1920x855 and 390x844; its accent pseudo-element resolves to `none`, the
+  primary button retains a 54px target with a neutral shadow, and the desktop panel ends at 819px.
+  Signed-in Chrome has no horizontal overflow and the complete first card ends at 822px in its
+  1282px CSS viewport. Production fail-closed consent ends at 778px in 855px, shows all three larger
+  capabilities, and keeps both 54px actions in frame. (agent: codex)

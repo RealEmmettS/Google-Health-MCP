@@ -103,3 +103,11 @@ reconsent and destructive cleanup require fresh approval.
   protected-resource documentation, and per-tool OAuth scope metadata; both protocol eras pass the
   official v2 client conformance tests. No client, token, consent, or database row changed.
   (agent: codex)
+- 2026-07-31 02:04 - Commit `a41f4c4` deployed READY as
+  `dpl_74z3BNq9bU9tJcZyiJtSftMhDs3x` with three Node functions in `iad1`. Canonical protected-resource
+  metadata now advertises the documentation URL, the existing Codex MCP connection completed an
+  authenticated production `ping`, and the 401 challenge remains exact and no-store. Reopening the
+  ChatGPT personal-plugin detail still showed `Install plugin`, confirming that ChatGPT did not
+  derive or update that separate bundle-install flag from the healthy MCP connector deployment.
+  No install, disconnect, registration, token, consent, or database mutation was attempted.
+  (agent: codex)
