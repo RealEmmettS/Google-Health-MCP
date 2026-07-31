@@ -18,10 +18,12 @@ Includes the stable 1.0.0 product/server identity; native MCP SDK v2 with modern
 
 ## Status
 
-ACTIVE. Emmett approved the stable 1.0.0 designation after the SDK v2 upgrade and accumulated
-production testing. Checkpoint 0.2.1, the DPoP-capable legacy-auth recovery artifact, and the
-production 0.3.0 cutover are deployed/recorded. The 1.0.0 source promotion is in progress; owner
-reconnect/signed-in auth, Google DPoP reconsent/refresh, and the timed soak remain open.
+ACTIVE. Stable 1.0.0 is live from exact release commit `7ae1846` as production deployment
+`dpl_GDMnWWd37UB1FwZ6sWoJtiyuTGe5` in `iad1`. Local modern/legacy identity tests, all 149 tests,
+typecheck/build, canonical health/OAuth/MCP boundaries, an existing authenticated MCP ping, exact
+live icon identity, and error/fatal log scans pass. Checkpoint 0.2.1, the DPoP-capable legacy-auth
+recovery artifact, and the production 0.3.0 cutover remain recorded. Owner reconnect/signed-in
+auth, Google DPoP reconsent/refresh, and the timed soak remain open.
 
 ## Activity
 
@@ -41,3 +43,10 @@ reconnect/signed-in auth, Google DPoP reconsent/refresh, and the timed soak rema
   release. Began the metadata/docs/board promotion while preserving every historical cutover
   receipt and keeping webhook, reconsent, connector, soak, and destructive-cleanup gates open.
   (agent: codex)
+- 2026-07-31 09:43 - Committed the 1.0.0 source promotion as `7ae1846`; the focused 7-test
+  protocol identity suite, full 149-test suite, typecheck, production build, diff checks, and
+  exact 1254px icon identity all pass. Production deployment proof is next. (agent: codex)
+- 2026-07-31 09:47 - Production deployment `dpl_GDMnWWd37UB1FwZ6sWoJtiyuTGe5` reached READY
+  in `iad1` on exact commit `7ae1846` with the canonical alias. Health/OAuth/401 no-store,
+  authenticated MCP ping, exact live icon, and error/fatal log checks pass; remaining owner and
+  soak gates stay open. (agent: codex)

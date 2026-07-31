@@ -18,6 +18,7 @@
   - [x] Remove the decorative green rail from every public, signed-in, and consent panel
   - [x] Lock the consent sheet to a no-scroll 100vw × 100dvh composition across portrait and landscape
 - [ ] **Qualify and release Google Health MCP 1.0.0** - promote the proven SDK v2 line to stable, reconnect every active connector, prove Google DPoP refresh, and complete the 24-hour/seven-day soak without closing unrelated physical gates (needs #sdk2, #oap, #font2) (ms #mcp2) (owner agent+emmett) #q2
+  - [x] Promote package and MCP server identity to 1.0.0 and prove the exact production artifact plus icon metadata
   - [ ] Reauthenticate affected desktop clients once and prove rotating refresh issuance (owner emmett+agent)
 - [ ] **v1.1 — Google Health webhooks** - authenticated subscriber, signature verification, durable freshness ledger, and encrypted-cache invalidation (needs #fsp) (ms #v11) (owner agent+emmett) #w11
 - [ ] **Add proactive health update inbox** - turn webhook signals into deduplicated MCP-readable updates without claiming outbound push (needs #w11, #qry) (ms #v11) (owner agent) #upd
