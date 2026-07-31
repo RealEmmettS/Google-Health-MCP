@@ -164,10 +164,13 @@ Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and sc
 
 ## Current status
 
-Milestone **`#v1` is complete and live**; the **`#mcp2` / 0.3.0** modernization milestone owns
-the current rollout and soak. The `.tasks/` board remains the source of truth.
+Milestone **`#v1` is complete and live**; the **`#mcp2` / 1.0.0** stable-release milestone owns
+the remaining rollout qualification and soak. The `.tasks/` board remains the source of truth.
 
-- **0.3.0 is deployed at `health.emmetts.dev`** on Vercel Node 24 + Fluid in `iad1`. The
+- **1.0.0 is the stable release at `health.emmetts.dev`** on Vercel Node 24 + Fluid in `iad1`.
+  The implementation identity reports 1.0.0 while the MCP protocol SDK remains independently
+  pinned to 2.0.0. The existing SEP-973 icon metadata references the canonical hosted PNG;
+  clients decide whether to render it. The
   DPoP-capable legacy-auth recovery deployment is retained separately so connector reconnect,
   Google reconsent, and soak evidence are not conflated with deployment success.
 - The MCP endpoint exposes 18 tools and 6 resources through request-scoped SDK v2 transport,
@@ -551,7 +554,7 @@ Work is tracked on a self-contained board under **`.tasks/`** (the SHAUGHV tasks
 - **`.tasks/TASKS.md`** — the board (Backlog / To-Do / Active / Done). Source of truth for
   what's next.
 - **`.tasks/MILESTONES.md`** — dated epics; tasks join one with an `(ms #id)` tag. Current
-  milestone: **`#mcp2`** (0.3.0 modernization and qualification).
+  milestone: **`#mcp2`** (1.0.0 stable release and remaining qualification).
 - **`.tasks/tasks/<id>.md`** — a rich detail file per task (TT;DR-led, with `## Verification`,
   `## Status`, `## Activity`). The decision history lives here — e.g. `rlw.md` (Railway/FastMCP),
   `api.md` (REST surface feasibility), `inf.md` (the infra session), `w11.md` (webhooks v1.1).

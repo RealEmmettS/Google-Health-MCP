@@ -23,8 +23,8 @@ with freshness metadata. No medical claims.
 - **The `.tasks/` board is the live status.** `docs/PLAN.md` defines the plan; the board
   tracks execution. Before starting work, read `.tasks/TASKS.md` (what's Active / next) and
   the relevant `.tasks/tasks/<id>.md` detail file — the decisions and carry-over notes live
-  there. Current milestone: **`#mcp2`**. Do not restate volatile phase status in docs that go
-  stale; point at the board.
+  there. Current milestone: **`#mcp2`**, the 1.0.0 stable release and remaining qualification.
+  Do not restate volatile phase status in docs that go stale; point at the board.
 - **Accepted ADRs govern their specific scope.** Read
   `docs/adr/0002-single-user-private.md` before changing authentication, the approved
   audience, Google OAuth publication/verification, or offboarding behavior.
@@ -68,7 +68,7 @@ with freshness metadata. No medical claims.
   deliberately NOT Edge, Railway, or FastMCP.** The transport is request-scoped and serves
   modern 2026 plus stateless legacy 2025 traffic from one factory. Full reasoning is in
   `docs/adr/0003-vercel-node-fluid-mcp-2026.md` and `.tasks/tasks/rlw.md`.
-- **0.3.0 MCP auth uses exact stable `better-auth@1.6.25` plus
+- **1.0.0 MCP auth (introduced in 0.3.0) uses exact stable `better-auth@1.6.25` plus
   `@better-auth/oauth-provider@1.6.25`.** Auth endpoints live under `/api/auth/oauth2/*`; the
   token endpoint accepts **form-encoded POST**. Public DCR is S256-only, access JWTs have one
   exact `/api/mcp` audience and are verified locally, refresh tokens are hashed/rotating, and
@@ -123,7 +123,8 @@ This repo uses the SHAUGHV `tasks-*` system. The board source of truth is
 `.tasks/TASKS.md`; milestones (dated epics) live in `.tasks/MILESTONES.md` and tasks join
 one with an `(ms #id)` tag; each task's rich handoff lives at `.tasks/tasks/<id>.md` with
 its `## Verification` checklist, `## Status`, and `## Activity` kept current while work is
-in flight. Current milestone: **#mcp2**, with the integrated cutover/soak owned by `#q2`.
+in flight. Current milestone: **#mcp2**, with the 1.0.0 release and remaining integrated
+qualification/soak owned by `#q2`.
 The completed `#v1` history remains on the board; the separate physical webhook gate remains
 under `#w11`, and the future REST idea remains parked as `#api`. Hosting task `#rlw` is closed.
 

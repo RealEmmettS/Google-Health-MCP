@@ -6,6 +6,26 @@ The `.tasks/` board tracks in-flight work; this file records what shipped.
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-07-31
+
+### Changed
+
+- Promoted the private Google Health MCP from the 0.x rollout line to its first stable
+  release after the SDK v2 transport, OAuth/JWT migration, production deployment, and
+  accumulated real-client testing.
+- The MCP implementation identity now reports `1.0.0`. The protocol dependency remains
+  independently pinned to `@modelcontextprotocol/server@2.0.0`.
+
+### Unchanged
+
+- Tool names, resources, schemas, OAuth behavior, endpoint URLs, and health-data behavior are
+  unchanged from 0.3.0.
+- The existing SEP-973 server icon metadata continues to reference the same canonical
+  `image/png` asset. Rendering remains a client capability.
+- The 0.3.0 migration, cutover, rollback, and deployment receipts remain historical evidence;
+  the separate Fitbit webhook, Google reconsent, connector, soak, and legacy-cleanup gates stay
+  open on the task board.
+
 ## [0.3.0] — 2026-07-29
 
 ### Added

@@ -1,4 +1,4 @@
-TT;DR: Upgrade the private Google Health MCP to the 2026 request-scoped protocol and stable stateless JWT authorization while keeping Node.js Functions on Vercel Fluid beside Neon in `iad1`.
+TT;DR: Promote the private Google Health MCP to stable 1.0.0 after upgrading it to the 2026 request-scoped protocol and stateless JWT authorization on Vercel Fluid beside Neon in `iad1`.
 
 ## Why
 
@@ -6,21 +6,22 @@ The 2026-07-28 MCP protocol and official TypeScript SDK v2 remove transport sess
 
 ## Scope
 
-Includes native MCP SDK v2 with modern and stateless-legacy compatibility, structured tool contracts, cache hints and safe telemetry, Node 24/Fluid/`iad1`, stable Better Auth OAuth Provider with audience-bound RS256 JWTs, additive OAuth and Google DPoP tables, branded private consent UI, Makira/Gail Rock typography, connector qualification, and a rollback/soak window. Excludes MCP Tasks, subscriptions, MRTR, public access, medical reasoning, Railway, Edge Functions, and closure of the independent physical Fitbit webhook gate.
+Includes the stable 1.0.0 product/server identity; native MCP SDK v2 with modern and stateless-legacy compatibility; structured tool contracts, cache hints, and safe telemetry; Node 24/Fluid/`iad1`; stable Better Auth OAuth Provider with audience-bound RS256 JWTs; additive OAuth and Google DPoP tables; branded private consent UI; Makira/Gail Rock typography; connector qualification; and a rollback/soak window. Excludes MCP Tasks, subscriptions, MRTR, public access, medical reasoning, Railway, Edge Functions, and closure of the independent physical Fitbit webhook gate.
 
 ## Plan
 
 1. Ship 0.2.1 as a transport/runtime-only checkpoint with legacy OAuth preserved.
 2. Prove modern and existing connector compatibility in production.
-3. Rehearse and apply additive auth/DPoP migrations, then ship 0.3.0.
-4. Reconnect active connectors and Google Health consent once, monitor for 24 hours and seven days, then retire legacy OAuth data only after acceptance.
+3. Rehearse and apply additive auth/DPoP migrations, then ship the historical 0.3.0 cutover.
+4. Promote the proven 0.3.0 line to stable 1.0.0 without changing protocol or product behavior.
+5. Reconnect active connectors and Google Health consent once, monitor for 24 hours and seven days, then retire legacy OAuth data only after acceptance.
 
 ## Status
 
-ACTIVE. Checkpoint 0.2.1, the DPoP-capable legacy-auth recovery artifact, and production 0.3.0 are
-deployed/recorded. The production additive schema, anonymous Provider/JWT boundaries, and public
-Makira/Gail UI gates pass. Owner reconnect/signed-in auth, Google DPoP reconsent/refresh, and the
-timed soak remain open.
+ACTIVE. Emmett approved the stable 1.0.0 designation after the SDK v2 upgrade and accumulated
+production testing. Checkpoint 0.2.1, the DPoP-capable legacy-auth recovery artifact, and the
+production 0.3.0 cutover are deployed/recorded. The 1.0.0 source promotion is in progress; owner
+reconnect/signed-in auth, Google DPoP reconsent/refresh, and the timed soak remain open.
 
 ## Activity
 
@@ -35,4 +36,8 @@ timed soak remain open.
 - 2026-07-29 04:25 - Deployed 0.3.0 as `dpl_5h11asJsx4hRJkrebvANHqRrkdTZ`; anonymous OAuth/MCP
   security gates, synthetic DCR cleanup, public responsive/font/accessibility QA, clean build logs,
   and zero clustered runtime errors passed. Approval-gated identity/credential steps remain open.
+  (agent: codex)
+- 2026-07-31 09:40 - Emmett designated the proven SDK v2/0.3.0 line as the full stable 1.0.0
+  release. Began the metadata/docs/board promotion while preserving every historical cutover
+  receipt and keeping webhook, reconsent, connector, soak, and destructive-cleanup gates open.
   (agent: codex)

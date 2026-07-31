@@ -31,8 +31,9 @@ freshness metadata. No medical claims. Stack: Next.js 16 (App Router, Node runti
   TypeScript 5.9, official `@modelcontextprotocol/server` v2, stable Better Auth OAuth Provider
   (OAuth 2.1, DCR, S256 PKCE, exact-audience JWTs), Drizzle ORM on Neon Postgres, Luxon, Zod, Vitest.
 
-Current milestone: **`#mcp2`**. Phase status is on the board — read it there; don't trust any
-prose snapshot that may have gone stale.
+Current milestone: **`#mcp2`**, the Google Health MCP 1.0.0 stable release and remaining
+qualification. Phase status is on the board — read it there; don't trust any prose snapshot
+that may have gone stale.
 
 ## Non-negotiables
 
@@ -73,7 +74,7 @@ prose snapshot that may have gone stale.
   deliberately NOT Edge, Railway, or FastMCP.** The transport is request-scoped and serves
   modern 2026 plus stateless legacy 2025 traffic from one factory. Full reasoning:
   `docs/adr/0003-vercel-node-fluid-mcp-2026.md` and `.tasks/tasks/rlw.md`.
-- **0.3.0 MCP auth = exact stable `better-auth@1.6.25` +
+- **1.0.0 MCP auth (introduced in 0.3.0) = exact stable `better-auth@1.6.25` +
   `@better-auth/oauth-provider@1.6.25`.** Endpoints live under `/api/auth/oauth2/*`; token
   grants stay form-encoded. Public DCR is S256-only, access JWTs have the one exact `/api/mcp`
   audience and are locally verified, refresh tokens are hashed/rotating, and CIMD waits for a

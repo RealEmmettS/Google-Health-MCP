@@ -148,7 +148,7 @@ Input schemas exactly per handoff §11 (they're good). Payload bounds: default p
 
 **Phase 1 — DB + security foundation:** Drizzle schema (all tables above) + better-auth codegen tables; migrations applied to Neon; `src/security/encryption.ts` (AES-256-GCM + key_version), redaction helper, audit-log service. Unit tests: encrypt/decrypt roundtrip, tamper detection, redaction.
 
-**Phase 2 — MCP auth (current 0.3.0):** stable Better Auth OAuth Provider + JWT plugin, public DCR, S256 PKCE, exact resource binding, form-encoded token grants, email allowlist, consent, well-known metadata, and local JWT verification. The 0.1.2 deprecated-plugin repair remains historical rollback evidence only; its physical tables are retained for seven days and never queried by the new MCP route.
+**Phase 2 — MCP auth (stable 1.0.0; introduced in 0.3.0):** stable Better Auth OAuth Provider + JWT plugin, public DCR, S256 PKCE, exact resource binding, form-encoded token grants, email allowlist, consent, well-known metadata, and local JWT verification. The 0.1.2 deprecated-plugin repair remains historical rollback evidence only; its physical tables are retained for seven days and never queried by the new MCP route.
 
 **Phase 3 — Google Health consent + tokens:** start/callback routes, DB-backed state (hashed, 10-min expiry, single-use), token encrypt+store, `users/me/identity` fetch → store `healthUserId` + `legacyUserId`, reconnect path (update-not-duplicate, detect scope changes), `getValidAccessToken` with single-flight refresh. Tests: state lifecycle, refresh path, reauth_required on refresh failure (mocked token endpoint).
 
@@ -166,6 +166,10 @@ are already live. Do not repeat bootstrap steps or rotate credentials as part of
 [cutover/rollback runbook](operations/0.3.0-cutover.md). Apply and verify migrations 0004–0006,
 deploy the stable-provider candidate, prove safe metadata/DCR boundaries, then stop for fresh
 approval before connector revocation/reconnect, Google DPoP reconsent, or legacy cleanup.
+
+**Stable 1.0.0 release:** the product and MCP implementation identity promote the proven 0.3.0
+line to 1.0.0 without changing the protocol SDK pin, tools, resources, schemas, endpoints, auth
+behavior, or Health behavior. Historical 0.3.0 cutover and rollback receipts remain authoritative.
 
 **Phase 8 = v1.1 (separate, later):** webhooks — GCP service account + Google Health IAM role + project NUMBER, subscriber registration (AUTOMATIC policy for granted-scope data types), endpoint auth secret + two-part verification handshake (200/201 authed, 401/403 unauthed), `GOOGLE-HEALTH-API-SIGNATURE` verification against Google's public keyset (Tink prefix parsing → ECDSA P-256), idempotent event insert (hash), populate `data_freshness`, respond 204 fast. Store event + ledger BEFORE responding; `waitUntil` only for non-critical work.
 
@@ -214,4 +218,4 @@ removal/revocation immediately before it happens; complete ChatGPT, Claude.ai, C
 Codex, and Cursor reconnects; approve Google `prompt=consent` only after a DPoP-capable rollback
 artifact exists; and approve legacy-table deletion after the seven-day soak. The independent
 real Fitbit webhook delivery gate remains under `#w11/#q11`. Neon credential rotation is not a
-0.3.0 requirement and must not be attempted without a separate fresh request.
+1.0.0 requirement and must not be attempted without a separate fresh request.

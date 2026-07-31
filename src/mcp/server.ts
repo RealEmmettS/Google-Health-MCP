@@ -14,7 +14,7 @@ export const MCP_SERVER_INFO = {
   title: "SHAUGHV Health",
   description:
     "Private Google Health connector with read insights and explicit nutrition, hydration, and measurement writes.",
-  version: "0.3.0",
+  version: "1.0.0",
   websiteUrl: "https://health.emmetts.dev",
   icons: [
     {
