@@ -28,7 +28,8 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 - [x] Live `/agents` and `/tree.json` evidence captured immediately before editing
 - [x] Active IBM Plex Mono references/preloads are removed
 - [x] Gail Rock Regular/Semibold preloads and narrowly scoped zero feature work
-- [x] Public/fail-closed consent UI passes 390/768/1440, focus, touch, reduced-motion, and overflow checks
+- [x] Consent UI passes the 320–1920 px portrait/landscape viewport matrix with exact
+      100vw × 100dvh framing, no document or internal clipping, and 44 px-or-larger controls
 - [ ] Signed-in consent accept/deny redirects pass during the owner-approved connector reconnect
 - [x] CDN fonts return 200 with expected CORS and immutable caching
 - [x] MCP icon download serves the supplied PNG under a clean filename without responsive overflow
@@ -39,10 +40,13 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 
 ACTIVE. Makira/Gail Rock variables, preloads, technical selectors, feature isolation, and the
 private consent UI are live. The larger responsive scale passes local and production viewport
-qualification, including a fully framed signed-in first card and short-desktop consent card plus
-intentional mobile consent scroll instead of clipping. The apparent follow-up scale regression was
-isolated to a persisted 67% Chrome site zoom and corrected to 100%; no compensating production CSS
-change was warranted. The signed-in accept/deny redirect remains coupled to the owner reconnect.
+qualification, including a fully framed signed-in first card. The apparent follow-up scale
+regression was isolated to a persisted 67% Chrome site zoom and corrected to 100%; no compensating
+production CSS change was warranted. The decorative panel rail is now removed globally. The
+consent surface has been rebuilt as a fixed, no-scroll 100vw × 100dvh sheet whose normal controls
+and fail-closed state pass phone portrait, phone landscape, tablet, and desktop qualification.
+Release verification is in progress; the signed-in accept/deny redirect remains coupled to the
+owner reconnect.
 
 ## Activity
 
@@ -107,3 +111,14 @@ change was warranted. The signed-in accept/deny redirect remains coupled to the 
   complete first card ends at 800px in a 911px viewport, the next section begins at 836px, horizontal
   overflow is zero, and the console is clean. Vercel independently reports production deployment
   `dpl_75KAgLanzmeXu9GUuyRnb1wYCvcE` READY on exact main commit `9055bf1`. (agent: codex)
+- 2026-07-31 02:32 - Reopened visual acceptance after Emmett showed the remaining green rail on the
+  signed-in Google Health panel. The rail came from the separate `.surface-panel::before` selector;
+  removing the entire decorative pseudo-element family so it cannot recur across public, signed-in,
+  consent, or privacy panels. (agent: codex)
+- 2026-07-31 02:52 - Removed the complete panel-rail pseudo-element family and rebuilt consent as
+  an exact viewport sheet. Chrome box-level qualification passed both normal Allow/Deny controls
+  and fail-closed errors at 320x568, 360x640, 390x667, 390x844, 430x932, 568x320, 667x375,
+  844x390, 768x1024, 1024x768, 1280x720, 1366x768, 1440x900, and 1920x1080: every document and
+  main box exactly matched the viewport, every consent child remained visible, no internal content
+  overflowed, and controls stayed 49.7-54 px tall. All 149 tests, typecheck, and production build
+  pass. Production release proof remains. (agent: codex)

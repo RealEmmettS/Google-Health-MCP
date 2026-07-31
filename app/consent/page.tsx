@@ -16,21 +16,21 @@ function capabilityCopy(scopes: Set<string>) {
       key: "read",
       title: "Read Google Health",
       detail:
-        "View activity, sleep, heart, nutrition, measurements, profile, and sync context through this private server.",
+        "View health data and sync status.",
       enabled: scopes.has("health:read"),
     },
     {
       key: "write",
       title: "Make limited updates",
       detail:
-        "Create or change nutrition, hydration, and measurements, and acknowledge local update notices. Sleep and exercise cannot be written.",
+        "Update nutrition, hydration, and measurements only.",
       enabled: scopes.has("health:write"),
     },
     {
       key: "offline",
       title: "Stay connected",
       detail:
-        "Use a rotating refresh credential so the connector can return without asking you to sign in every hour.",
+        "Stay signed in with a rotating refresh token.",
       enabled: scopes.has("offline_access"),
     },
   ];
@@ -52,7 +52,7 @@ function ConsentForm() {
   useEffect(() => {
     let active = true;
     if (!clientId) {
-      setError("The connector request is missing its client identity. Return to the connector and try again.");
+      setError("Missing connector identity. Return to the connector and try again.");
       return () => {
         active = false;
       };
@@ -73,7 +73,7 @@ function ConsentForm() {
       .catch(() => {
         if (active) {
           setClient(null);
-          setError("The connector request could not be verified. Return to the connector and try again.");
+          setError("Connector verification failed. Return to the connector and try again.");
         }
       });
     return () => {
@@ -104,7 +104,7 @@ function ConsentForm() {
       if (!response.ok || !destination) throw new Error();
       window.location.assign(destination);
     } catch {
-      setError("The authorization could not be completed. Return to the connector and try again.");
+      setError("Authorization failed. Return to the connector and try again.");
       setPending(null);
     }
   }
@@ -117,15 +117,15 @@ function ConsentForm() {
         <BrandLockup label="Private / Consent" />
         <section className="consent-panel reveal-stage reveal-stage-one">
           <div className="index-line">
-            <span>OAuth / Private grant</span>
-            <span>Consent 001</span>
+            <span>OAuth grant</span>
+            <span>001 / Private</span>
           </div>
           <div className="consent-copy">
             <p className="eyebrow">Connector request</p>
-            <h1 className="sign-in-title">Allow private health access?</h1>
+            <h1 className="sign-in-title">Allow health access?</h1>
             <p className="sign-in-description">
-              <strong>{clientName}</strong> is asking to use SHAUGHV Health MCP on your behalf.
-              No health values are shown on this screen.
+              <strong>{clientName}</strong> wants to use SHAUGHV Health MCP for you.
+              No health values are shown here.
             </p>
             <p className="consent-client-id">
               Client / {client?.client_id ?? "Pending verification"}
@@ -139,31 +139,36 @@ function ConsentForm() {
                 </article>
               ))}
             </div>
-            <p className="allowlist-note">
-              Access remains limited to the allowlisted Google identity. Removing or
-              revoking this connector stops future refreshes; an access token already
-              issued can remain valid for up to one hour.
-            </p>
-            <div className="consent-actions">
-              <button
-                className="button button-primary button-large"
-                type="button"
-                disabled={pending !== null || !client}
-                aria-busy={pending === "accept"}
-                onClick={() => decide(true)}
-              >
-                {pending === "accept" ? "Authorizing" : "Allow connector"}
-              </button>
-              <button
-                className="button button-danger button-large"
-                type="button"
-                disabled={pending !== null || !client}
-                aria-busy={pending === "deny"}
-                onClick={() => decide(false)}
-              >
-                {pending === "deny" ? "Denying" : "Deny"}
-              </button>
-              {error ? <p className="inline-error" role="alert">{error}</p> : null}
+            <div className="consent-footer">
+              <p className="allowlist-note">
+                Allowlisted accounts only. Revocation stops refresh; active access may
+                last one hour.
+              </p>
+              <div className="consent-actions">
+                {!error ? (
+                  <>
+                    <button
+                      className="button button-primary button-large"
+                      type="button"
+                      disabled={pending !== null || !client}
+                      aria-busy={pending === "accept"}
+                      onClick={() => decide(true)}
+                    >
+                      {pending === "accept" ? "Authorizing" : "Allow connector"}
+                    </button>
+                    <button
+                      className="button button-danger button-large"
+                      type="button"
+                      disabled={pending !== null || !client}
+                      aria-busy={pending === "deny"}
+                      onClick={() => decide(false)}
+                    >
+                      {pending === "deny" ? "Denying" : "Deny"}
+                    </button>
+                  </>
+                ) : null}
+                {error ? <p className="inline-error" role="alert">{error}</p> : null}
+              </div>
             </div>
           </div>
         </section>
