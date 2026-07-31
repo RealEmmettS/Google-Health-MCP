@@ -234,13 +234,14 @@ describe("stable OAuth provider HTTP boundary", () => {
     });
   });
 
-  it("accepts HTTPS and HTTP loopback connector redirects", async () => {
-    for (const redirectUri of [
-      "https://claude.ai/api/mcp/auth_callback",
-      "http://localhost:43123/callback",
-      "http://127.0.0.2:43123/callback/server-id",
-      "http://[::1]:43123/callback",
-    ]) {
+  it("accepts hosted, Hermes, Claude Code, and Codex callback profiles", async () => {
+    for (const [client, redirectUri] of [
+      ["Claude hosted", "https://claude.ai/api/mcp/auth_callback"],
+      ["Hermes Desktop", "http://127.0.0.1:56824/callback"],
+      ["Claude Code", "http://localhost:3118/callback"],
+      ["Codex", "http://127.0.0.1:43123/callback/server-id"],
+      ["IPv6 loopback", "http://[::1]:43123/callback"],
+    ] as const) {
       const prepared = await prepareOAuthRegistrationRequest(
         new Request(`${MCP_ISSUER}/api/auth/oauth2/register`, {
           method: "POST",
@@ -248,7 +249,7 @@ describe("stable OAuth provider HTTP boundary", () => {
           body: JSON.stringify({ redirect_uris: [redirectUri] }),
         }),
       );
-      expect("request" in prepared, redirectUri).toBe(true);
+      expect("request" in prepared, `${client}: ${redirectUri}`).toBe(true);
     }
   });
 

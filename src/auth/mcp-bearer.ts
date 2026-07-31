@@ -56,11 +56,11 @@ export async function authenticateMcpRequest(
   const token = extractBearerToken(request);
   if (!token) {
     return {
-      response: bearerResponse(
-        401,
-        "invalid_token",
-        "health:read health:write",
-      ),
+      // Omitting the optional scope parameter lets current desktop clients
+      // use authorization-server metadata, which includes `offline_access`.
+      // Supplying only resource scopes here can strand otherwise successful
+      // loopback callbacks with a one-hour access token and no refresh token.
+      response: bearerResponse(401, "invalid_token"),
     };
   }
   try {
@@ -72,11 +72,7 @@ export async function authenticateMcpRequest(
       };
     }
     return {
-      response: bearerResponse(
-        401,
-        "invalid_token",
-        "health:read health:write",
-      ),
+      response: bearerResponse(401, "invalid_token"),
     };
   }
 }

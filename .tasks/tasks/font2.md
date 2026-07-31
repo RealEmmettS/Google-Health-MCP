@@ -36,9 +36,10 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 ## Status
 
 ACTIVE. Makira/Gail Rock variables, preloads, technical selectors, feature isolation, and the
-private consent UI are live. Production 390/768/1440, overflow, visible keyboard focus, 54 px tap
-targets, reduced-motion, fail-closed consent, browser asset inventory, and CDN CORS/cache checks
-pass. The signed-in accept/deny redirects remain coupled to the owner-approved connector reconnect.
+private consent UI are live. A larger responsive scale now passes local desktop/mobile viewport
+qualification, including a fully framed short-desktop consent card and intentional mobile consent
+scroll instead of clipping. Production confirmation and signed-in accept/deny redirects remain
+coupled to this release and the owner reconnect.
 
 ## Activity
 
@@ -72,3 +73,8 @@ pass. The signed-in accept/deny redirects remain coupled to the owner-approved c
   the link advertised `shaughv-health-mcp-icon.png`. Signed-in Chrome QA passed at 1920x855 and
   390x844 with a visible 58px-tall action, zero horizontal overflow, and no console messages.
   (agent: codex)
+- 2026-07-31 00:56 - Re-enlarged the public and signed-in design after Emmett's live sizing
+  feedback, then brought the consent surface into the same scale and card language. Chrome proved
+  exact no-scroll/no-overflow public layouts at 1920x911, 390x844, and 390x667; consent fully fits
+  1440x900, 1920x855, 1366x768, and 1280x720, while 390px consent uses vertical scroll with no
+  horizontal overflow. All consent controls retain at least 46px short-screen targets. (agent: codex)

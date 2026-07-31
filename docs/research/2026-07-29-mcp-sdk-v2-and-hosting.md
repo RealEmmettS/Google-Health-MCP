@@ -191,7 +191,18 @@ preview is public or no longer equally trusted.
 
 Access JWTs last one hour and use the exact issuer `https://health.emmetts.dev` and audience `https://health.emmetts.dev/api/mcp`. Claims include the verified email. Every request verifies signature, issuer, audience, expiry, required scope, subject, and current `ALLOWED_GOOGLE_EMAILS` membership without a Neon token lookup.
 
-Scopes are `openid`, `profile`, `email`, `offline_access`, `health:read`, and `health:write`. Initial connector challenge requests both health scopes for backward connector ergonomics. The server centrally requires write scope for nutrition/hydration/measurement mutation, update/delete, and acknowledgement operations. A wrong scope gets the MCP-required 403 challenge rather than a generic tool error.
+Scopes are `openid`, `profile`, `email`, `offline_access`, `health:read`, and `health:write`. A
+2026-07-31 connector replay found that several current desktop clients prioritize the initial
+challenge or protected-resource scope list over authorization-server metadata. Advertising only
+the two resource scopes completed their loopback callback but omitted `offline_access`, so Better
+Auth correctly issued no refresh token and the connection expired after one hour. The
+protected-resource document and initial 401 now omit their optional scope field, causing these
+clients to use the authorization server's complete six-scope list without misclassifying
+`offline_access` as a resource scope. Existing public DCR rows are additively expanded so a
+one-time reauthentication can succeed without deleting the connector. The server still centrally
+requires write scope for nutrition/hydration/measurement mutation, update/delete, and
+acknowledgement operations; a real missing write scope gets the explicit MCP-required 403
+challenge rather than a generic tool error.
 
 ### Revocation tradeoff
 

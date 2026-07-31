@@ -44,14 +44,14 @@ describe("MCP bearer boundary", () => {
     ).toBeUndefined();
   });
 
-  it("advertises both health scopes on the initial bearer challenge", async () => {
+  it("lets clients discover the full authorization-server scope set", async () => {
     const result = await authenticateMcpRequest(new Request(MCP_RESOURCE));
     expect("response" in result).toBe(true);
     if ("response" in result) {
       expect(result.response.status).toBe(401);
-      expect(result.response.headers.get("www-authenticate")).toContain(
-        'scope="health:read health:write"',
-      );
+      const challenge = result.response.headers.get("www-authenticate");
+      expect(challenge).toContain("resource_metadata=");
+      expect(challenge).not.toContain("scope=");
     }
   });
 

@@ -50,11 +50,12 @@ MCP authorization URLs move from `/api/auth/mcp/*` to `/api/auth/oauth2/*`, requ
 
 ## Status
 
-ACTIVE. Exact stable 1.6.25 and migrations 0004–0006 are live in production. Anonymous metadata,
-RS256 JWKS, public DCR, exact-resource/form boundaries, scoped 401/403, body limits, and no-store
-responses pass with no runtime errors; the synthetic client was removed. Signed-in consent,
-UserInfo/JWT, refresh/cache/limit thresholds, connector reconnect, Google reconsent, and soak gates
-remain open. Google reconsent and destructive cleanup require fresh approval.
+ACTIVE. Exact stable 1.6.25 and migrations 0004–0007 are applied. The 2026-07-31 compatibility
+replay proved Hermes' loopback callback completed but its health-only registration received no
+refresh token. The resource/challenge metadata patch and additive public-registration expansion
+are locally green and awaiting production code deployment. Signed-in consent, UserInfo/JWT,
+connector refresh, Google reconsent, and soak gates remain open. Google reconsent and destructive
+cleanup require fresh approval.
 
 ## Activity
 
@@ -76,3 +77,11 @@ remain open. Google reconsent and destructive cleanup require fresh approval.
   form-token `invalid_grant`, scoped 401, wrong-Origin 403, oversized 413, and no-store responses
   passed. The exact synthetic client was removed; v2 token/consent rows remain zero, DPoP remains
   unactivated, and Vercel reported no runtime errors. (agent: codex)
+- 2026-07-31 00:56 - Correlated Hermes' successful `127.0.0.1` callback and one-hour access JWT
+  with a missing refresh token. Current desktop clients can prioritize challenge/protected-resource
+  scopes and omit `offline_access`; stable Better Auth then correctly withholds refresh issuance.
+  Removed optional initial scope narrowing, retained explicit write-scope 403 step-up, added exact
+  Hermes/Claude Code/Codex callback profiles, and applied data-only migration `0007`. It expanded
+  exactly two active public registrations; all five now allow the six-scope request, while five
+  refresh rows, two consent rows, zero access-token rows, and the one Google credential row were
+  untouched. The real provider integration, 149 tests, typecheck, and build pass. (agent: codex)

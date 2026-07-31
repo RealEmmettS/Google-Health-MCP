@@ -112,7 +112,7 @@ function ConsentForm() {
   const clientName = client?.client_name?.trim() || "Verifying connector";
 
   return (
-    <main className="site-shell public-page">
+    <main className="site-shell public-page consent-page">
       <div className="public-frame public-frame-narrow">
         <BrandLockup label="Private / Consent" />
         <section className="consent-panel reveal-stage reveal-stage-one">
@@ -174,7 +174,7 @@ function ConsentForm() {
 
 function ConsentFallback() {
   return (
-    <main className="site-shell public-page">
+    <main className="site-shell public-page consent-page">
       <div className="public-frame public-frame-narrow">
         <BrandLockup label="Private / Consent" />
         <section className="sign-in-panel sign-in-panel-loading">

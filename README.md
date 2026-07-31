@@ -430,6 +430,7 @@ bug); the service layer is kept for re-enablement.
 | **`reauth_required` on the dashboard or in tool errors** | The health refresh token failed or expired (often the 7-day Testing cap). Re-run the Google Health consent flow (Connect/Reconnect). |
 | **Data looks stale / a workout is missing** | The device path is not live: Fitbit Air → Fitbit app → Google Health has real sync latency. `freshness.isPossiblyStale` + `latestDataTime` flag this; missing data ≠ zero activity. |
 | **MCP endpoint returns 401** | No/invalid OAuth token. The `WWW-Authenticate` header points at the protected-resource metadata; the client should walk the OAuth flow. |
+| **Hermes, Claude Code, or Codex reconnects every hour** | The loopback callback may have succeeded while an older registration requested only the two health scopes, which cannot receive a refresh token. Re-authenticate the one affected connector once on 0.3.0 or newer; do not disconnect Google Health or rotate shared secrets. |
 | **New env var isn't taking effect** | Production env changes apply on the **next deploy**. Redeploy. |
 | **Build fails on TypeScript** | Keep `typescript` pinned to `^5`. Next 16's build-time type checker cannot load the TS 7 native compiler. |
 | **No deploy after `git push`** | The auto-deploy webhook has occasionally not fired; deploy manually via the Vercel CLI. |
@@ -527,6 +528,21 @@ owns a randomized `127.0.0.1` callback, so no fixed Codex callback belongs in Go
 Codex run fails before the server receives DCR or an unauthenticated MCP discovery probe, update
 Codex and correct the local model/client configuration first. See OpenAI's
 [Codex MCP guide](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+
+Hermes Desktop, direct Claude Code, and Codex use different local callback shapes, all supported by
+this server: Hermes uses an ephemeral `127.0.0.1:<port>/callback`, Claude Code normally uses its
+fixed `localhost` callback port, and Codex uses an ephemeral `127.0.0.1` path that can include a
+server-specific callback identifier. Native IP-literal loopback redirects accept the actual
+listening port selected at authorization time; the protocol, host, path, and query remain exact.
+
+The protected-resource document and initial 401 intentionally do not narrow the OAuth request to
+resource scopes. Current desktop clients differ in how they prioritize challenge, resource, and
+authorization-server metadata; narrowing them to `health:read health:write` can complete the
+browser callback but omit `offline_access`, producing no refresh token. Clients now fall back to
+the authorization server's complete six-scope contract. A real write-scope failure still returns
+an explicit `health:write` step-up challenge. Existing public registrations are expanded
+additively, but an already issued one-hour access token does not become refreshable: reauthenticate
+that connector once to receive a rotating refresh credential.
 
 ## Task board
 

@@ -157,7 +157,7 @@ a {
   z-index: 1;
   min-height: 100dvh;
   overflow: hidden;
-  padding: clamp(1.25rem, 3vw, 2.5rem) var(--container-pad);
+  padding: clamp(1.375rem, 3.5vw, 2.75rem) var(--container-pad);
 }
 
 .site-shell::before {
@@ -197,7 +197,7 @@ a {
   min-height: 0;
   padding-block: clamp(0.75rem, 2.5dvh, 1.5rem);
   overflow: hidden;
-  --brand-mark-size: 84px;
+  --brand-mark-size: 90px;
 }
 
 .public-frame,
@@ -211,23 +211,23 @@ a {
 .public-frame {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  max-width: 980px;
+  max-width: 1020px;
   max-height: 100%;
 }
 
 .public-frame-narrow {
-  max-width: 820px;
+  max-width: 850px;
 }
 
 .profile-frame {
-  max-width: 1160px;
+  max-width: 1240px;
 }
 
 .brand-lockup {
   display: inline-flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: clamp(0.9rem, 2.5dvh, 1.75rem);
+  gap: 1.075rem;
+  margin-bottom: clamp(1.1rem, 3dvh, 2rem);
   color: var(--fg);
   animation: reveal-up 700ms var(--ease-brutalist) both;
 }
@@ -247,7 +247,7 @@ a {
 .brand-lockup-copy {
   display: grid;
   gap: 0.2rem;
-  padding-left: 1rem;
+  padding-left: 1.075rem;
   border-left: 1px solid var(--border-medium);
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -267,6 +267,7 @@ a {
 
 .hero-panel,
 .sign-in-panel,
+.consent-panel,
 .surface-panel {
   position: relative;
   border: 1px solid var(--border-strong);
@@ -275,7 +276,8 @@ a {
 }
 
 .public-page .hero-panel,
-.public-page .sign-in-panel {
+.public-page .sign-in-panel,
+.public-page .consent-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 0;
@@ -285,6 +287,7 @@ a {
 
 .hero-panel::before,
 .sign-in-panel::before,
+.consent-panel::before,
 .surface-panel::before {
   position: absolute;
   top: 0;
@@ -312,8 +315,8 @@ a {
 
 .hero-copy {
   max-width: 790px;
-  padding: clamp(1.5rem, 5dvh, 3.25rem) clamp(1.3rem, 6vw, 5.25rem)
-    clamp(1.25rem, 4dvh, 2.5rem);
+  padding: clamp(1.9rem, 6dvh, 4.25rem) clamp(1.3rem, 6vw, 5.25rem)
+    clamp(1.75rem, 4.5dvh, 3.25rem);
 }
 
 .eyebrow,
@@ -346,8 +349,8 @@ a {
 
 .hero-title {
   max-width: 880px;
-  margin-top: clamp(0.65rem, 2dvh, 1rem);
-  font-size: clamp(3.4rem, min(8vw, 13dvh), 6.75rem);
+  margin-top: clamp(0.75rem, 2.2dvh, 1.075rem);
+  font-size: clamp(3.55rem, min(8.5vw, 13dvh), 7.1rem);
   line-height: 0.86;
 }
 
@@ -366,9 +369,9 @@ a {
 
 .hero-description {
   max-width: 610px;
-  margin: clamp(1rem, 2.5dvh, 1.5rem) 0 clamp(0.9rem, 2.25dvh, 1.25rem);
+  margin: clamp(1.2rem, 2.8dvh, 1.7rem) 0 clamp(1.1rem, 2.5dvh, 1.45rem);
   font-size: clamp(1.05rem, 2vw, 1.23rem);
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
 .button {
@@ -463,7 +466,7 @@ a {
 }
 
 .allowlist-note {
-  margin: clamp(0.75rem, 2dvh, 1rem) 0 0;
+  margin: clamp(0.9rem, 2.2dvh, 1.1rem) 0 0;
   color: var(--fg-soft);
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -481,9 +484,9 @@ a {
 
 .signal-strip > div {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.3rem;
   min-width: 0;
-  padding: clamp(0.65rem, 1.8dvh, 0.85rem) clamp(0.75rem, 2vw, 1.35rem);
+  padding: clamp(0.75rem, 2dvh, 0.95rem) clamp(0.85rem, 2.3vw, 1.5rem);
 }
 
 .signal-strip > div + div {
@@ -494,7 +497,7 @@ a {
   overflow: hidden;
   color: var(--fg);
   font-family: var(--font-heading);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -503,12 +506,12 @@ a {
 
 .signal-label {
   color: var(--fg-soft);
-  font-size: 0.58rem;
+  font-size: 0.6rem;
 }
 
 .profile-page {
-  padding-block: clamp(1.25rem, 3dvh, 2rem) clamp(2.5rem, 7vw, 5rem);
-  --brand-mark-size: 84px;
+  padding-block: clamp(1.4rem, 3.5dvh, 2.5rem) clamp(2.75rem, 7.5vw, 5.5rem);
+  --brand-mark-size: 90px;
 }
 
 .profile-header {
@@ -516,7 +519,7 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 2rem;
-  margin-bottom: clamp(1rem, 2.5dvh, 1.75rem);
+  margin-bottom: clamp(1.2rem, 3dvh, 2.1rem);
 }
 
 .profile-header .brand-lockup {
@@ -528,7 +531,7 @@ a {
   align-items: center;
   justify-content: flex-end;
   gap: 1.25rem;
-  padding-top: 0.35rem;
+  padding-top: 0.475rem;
   text-align: right;
 }
 
@@ -539,7 +542,7 @@ a {
 
 .account-label {
   color: var(--fg-soft);
-  font-size: 0.58rem;
+  font-size: 0.61rem;
 }
 
 .account-email {
@@ -547,7 +550,7 @@ a {
   overflow: hidden;
   color: var(--fg);
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 500;
   letter-spacing: 0.02em;
   text-overflow: ellipsis;
@@ -581,11 +584,11 @@ a {
 }
 
 .surface-panel + .surface-panel {
-  margin-top: clamp(1.25rem, 3vw, 2rem);
+  margin-top: clamp(1.375rem, 3.5vw, 2.25rem);
 }
 
 .surface-panel {
-  padding-bottom: clamp(1.15rem, 3dvh, 2rem);
+  padding-bottom: clamp(1.2rem, 3.5dvh, 2.1rem);
 }
 
 .section-heading {
@@ -593,7 +596,7 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 2rem;
-  padding: clamp(1.75rem, 5dvh, 3rem) clamp(1.25rem, 4vw, 2.5rem);
+  padding: clamp(1.875rem, 5.5dvh, 3.25rem) clamp(1.25rem, 4vw, 2.625rem);
 }
 
 .section-heading > div {
@@ -601,16 +604,16 @@ a {
 }
 
 .section-heading-compact {
-  padding-bottom: clamp(1.25rem, 3dvh, 2rem);
+  padding-bottom: clamp(1.375rem, 3.25dvh, 2.125rem);
 }
 
 .mcp-icon-download {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.75rem;
-  width: min(100%, 285px);
-  min-height: 58px;
+  width: min(100%, 300px);
+  min-height: 62px;
   padding: 0.4rem 0.7rem 0.4rem 0.4rem;
   border: 1px solid var(--border-strong);
   background: rgba(253, 253, 251, 0.72);
@@ -633,8 +636,8 @@ a {
 }
 
 .mcp-icon-download-preview {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border: 1px solid var(--border-medium);
   background: #000 url("/shaughv-health-mcp-icon.png") center / cover no-repeat;
 }
@@ -654,14 +657,14 @@ a {
 }
 
 .mcp-icon-download-label {
-  font-size: 0.63rem;
+  font-size: 0.65rem;
   letter-spacing: 0.1em;
   line-height: 1.35;
 }
 
 .mcp-icon-download-meta {
   color: var(--fg-soft);
-  font-size: 0.56rem;
+  font-size: 0.58rem;
   letter-spacing: 0.06em;
   line-height: 1.35;
 }
@@ -673,22 +676,22 @@ a {
 }
 
 .profile-title {
-  margin-top: 0.55rem;
-  font-size: clamp(2.7rem, 7vw, 5.9rem);
+  margin-top: 0.6rem;
+  font-size: clamp(2.8rem, 7vw, 6.1rem);
   line-height: 0.9;
 }
 
 .connector-title {
-  margin-top: 0.6rem;
-  font-size: clamp(2.3rem, 5vw, 4.5rem);
+  margin-top: 0.65rem;
+  font-size: clamp(2.4rem, 5vw, 4.7rem);
   line-height: 0.94;
 }
 
 .section-description {
   max-width: 650px;
-  margin: 1.05rem 0 0;
-  font-size: 1rem;
-  line-height: 1.55;
+  margin: 1.2rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
 }
 
 .status-pill {
@@ -697,12 +700,12 @@ a {
   align-items: center;
   gap: 0.55rem;
   flex: 0 0 auto;
-  min-height: 32px;
+  min-height: 34px;
   padding: 0.35rem 0.7rem;
   border: 1px solid currentColor;
   border-radius: 9999px;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: 0.65rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -735,7 +738,7 @@ a {
 .status-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-inline: clamp(1.25rem, 4vw, 2.5rem);
+  margin-inline: clamp(1.25rem, 4vw, 2.625rem);
   border-top: 1px solid var(--border-medium);
   border-left: 1px solid var(--border-medium);
 }
@@ -744,10 +747,10 @@ a {
   position: relative;
   display: grid;
   align-content: start;
-  gap: 0.5rem;
+  gap: 0.55rem;
   min-width: 0;
-  min-height: 124px;
-  padding: 1rem;
+  min-height: 128px;
+  padding: 1.075rem;
   overflow: hidden;
   border-right: 1px solid var(--border-medium);
   border-bottom: 1px solid var(--border-medium);
@@ -780,14 +783,14 @@ a {
 
 .status-label {
   color: var(--fg-soft);
-  font-size: 0.58rem;
+  font-size: 0.61rem;
 }
 
 .status-value {
   overflow-wrap: anywhere;
   color: var(--fg);
   font-family: var(--font-heading);
-  font-size: clamp(0.95rem, 1.5vw, 1.2rem);
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
   font-weight: 700;
   letter-spacing: 0;
   line-height: 1.15;
@@ -797,7 +800,7 @@ a {
 .status-detail {
   color: var(--fg-soft);
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: 0.65rem;
   letter-spacing: 0.03em;
   line-height: 1.5;
   text-transform: uppercase;
@@ -816,8 +819,8 @@ a {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 62px;
-  margin: clamp(1.15rem, 3dvh, 1.75rem) clamp(1.25rem, 4vw, 2.5rem) 0;
+  min-height: 64px;
+  margin: clamp(1.2rem, 3.5dvh, 1.875rem) clamp(1.25rem, 4vw, 2.625rem) 0;
   padding-inline: clamp(1rem, 3vw, 1.6rem);
 }
 
@@ -849,7 +852,7 @@ a {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  padding: 0 clamp(1.25rem, 4vw, 2.5rem);
+  padding: 0 clamp(1.25rem, 4vw, 2.625rem);
 }
 
 .copy-field {
@@ -877,21 +880,21 @@ a {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  min-height: 72px;
-  padding: 0.9rem;
+  min-height: 75px;
+  padding: 0.95rem;
   border-bottom: 1px solid var(--border-hairline);
 }
 
 .copy-field-label {
   color: var(--fg);
-  font-size: 0.65rem;
+  font-size: 0.68rem;
 }
 
 .copy-field-description {
   margin: 0.3rem 0 0;
   color: var(--fg-soft);
   font-family: var(--font-mono);
-  font-size: 0.59rem;
+  font-size: 0.61rem;
   letter-spacing: 0.03em;
   line-height: 1.45;
   text-transform: uppercase;
@@ -923,14 +926,14 @@ a {
 }
 
 .copy-field-value {
-  min-height: 72px;
+  min-height: 76px;
   margin: 0;
-  padding: 0.9rem;
+  padding: 0.95rem;
   overflow: auto;
   background: var(--bg-sunken);
   color: var(--sv-olive-dark);
   font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1012,20 +1015,38 @@ a {
 }
 
 .consent-panel {
-  min-height: 620px;
+  min-height: min(650px, 100%);
+}
+
+.consent-page .public-frame-narrow {
+  max-width: 1080px;
 }
 
 .consent-copy {
-  max-width: 760px;
-  padding: clamp(2.5rem, 7vw, 5rem) clamp(1.3rem, 6vw, 4.5rem);
+  max-width: none;
+  padding: clamp(1.75rem, 4dvh, 2.5rem) clamp(1.5rem, 4vw, 3.5rem);
+}
+
+.consent-copy .sign-in-title {
+  max-width: 980px;
+  margin-top: 0.7rem;
+  font-size: clamp(3.1rem, 5.5vw, 5.8rem);
+  line-height: 0.88;
+}
+
+.consent-copy .sign-in-description {
+  max-width: 720px;
+  margin: 0.9rem 0 1rem;
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 .consent-client-id {
-  margin: 0 0 1.5rem;
+  margin: 0 0 1rem;
   overflow-wrap: anywhere;
   color: var(--fg-soft);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -1039,7 +1060,7 @@ a {
 
 .consent-capability {
   min-width: 0;
-  padding: 1.15rem;
+  padding: 1rem 1.1rem;
   border-right: 1px solid var(--border-medium);
   border-bottom: 1px solid var(--border-medium);
   background: rgba(253, 253, 251, 0.64);
@@ -1048,33 +1069,34 @@ a {
 .consent-scope {
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 0.58rem;
+  font-size: 0.61rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .consent-capability h2 {
-  margin: 0.85rem 0 0;
+  margin: 0.7rem 0 0;
   color: var(--fg);
   font-family: var(--font-heading);
-  font-size: 1rem;
+  font-size: 1.05rem;
   line-height: 1.15;
   text-transform: uppercase;
 }
 
 .consent-capability p {
-  margin: 0.7rem 0 0;
+  margin: 0.55rem 0 0;
   color: var(--fg-muted);
-  font-size: 0.88rem;
-  line-height: 1.55;
+  font-size: 0.92rem;
+  line-height: 1.6;
 }
 
 .consent-actions {
   display: flex;
+  align-items: flex-start;
   flex-wrap: wrap;
-  gap: 0.9rem;
-  margin-top: 1.5rem;
+  gap: 1rem;
+  margin-top: 1.1rem;
 }
 
 .consent-actions .inline-error {
@@ -1244,6 +1266,20 @@ a {
     grid-template-columns: 1fr;
   }
 
+  .consent-page {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .consent-page .public-frame {
+    max-height: none;
+  }
+
+  .consent-page .consent-panel {
+    min-height: 0;
+  }
+
   .public-page .signal-strip > div {
     padding-inline: 0.45rem;
   }
@@ -1323,6 +1359,51 @@ a {
   }
 }
 
+@media (max-height: 880px) and (min-width: 681px) {
+  .consent-page .consent-panel {
+    min-height: 0;
+  }
+
+  .consent-page .consent-copy {
+    padding-block: 0.8rem;
+  }
+
+  .consent-page .consent-copy .sign-in-title {
+    margin-top: 0.4rem;
+    font-size: clamp(2.2rem, min(5vw, 8dvh), 4.2rem);
+  }
+
+  .consent-page .consent-copy .sign-in-description {
+    margin-block: 0.5rem 0.6rem;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
+  .consent-page .consent-client-id {
+    margin-bottom: 0.6rem;
+    font-size: 0.6rem;
+  }
+
+  .consent-page .consent-capability {
+    padding: 0.65rem 0.8rem;
+  }
+
+  .consent-page .consent-capability h2 {
+    margin-top: 0.4rem;
+    font-size: 0.88rem;
+  }
+
+  .consent-page .consent-capability p {
+    margin-top: 0.35rem;
+    font-size: 0.74rem;
+    line-height: 1.35;
+  }
+
+  .consent-page .consent-actions {
+    margin-top: 0.65rem;
+  }
+}
+
 @media (max-height: 700px) {
   .public-page {
     padding-block: 0.5rem;
@@ -1338,8 +1419,13 @@ a {
   }
 
   .public-page .hero-copy,
-  .public-page .sign-in-copy {
+  .public-page .sign-in-copy,
+  .public-page .consent-copy {
     padding-block: 0.85rem;
+  }
+
+  .public-page .consent-panel {
+    min-height: 0;
   }
 
   .public-page .hero-title {
@@ -1351,6 +1437,41 @@ a {
     margin-block: 0.6rem;
     font-size: 0.92rem;
     line-height: 1.4;
+  }
+
+  .public-page .consent-copy .sign-in-title {
+    margin-top: 0.4rem;
+    font-size: clamp(2rem, min(6vw, 7dvh), 3.8rem);
+  }
+
+  .public-page .consent-copy .sign-in-description {
+    margin-block: 0.55rem 0.65rem;
+    font-size: 0.86rem;
+    line-height: 1.4;
+  }
+
+  .public-page .consent-client-id {
+    margin-bottom: 0.65rem;
+    font-size: 0.59rem;
+  }
+
+  .public-page .consent-capability {
+    padding: 0.65rem;
+  }
+
+  .public-page .consent-capability h2 {
+    margin-top: 0.4rem;
+    font-size: 0.84rem;
+  }
+
+  .public-page .consent-capability p {
+    margin-top: 0.35rem;
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .public-page .consent-actions {
+    margin-top: 0.7rem;
   }
 
   .public-page .button-large {

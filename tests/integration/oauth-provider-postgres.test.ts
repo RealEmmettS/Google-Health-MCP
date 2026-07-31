@@ -83,6 +83,14 @@ describe.skipIf(!enabled)("stable OAuth Provider on PostgreSQL", () => {
       public: true,
       tokenEndpointAuthMethod: "none",
       type: "native",
+      scopes: [
+        "openid",
+        "profile",
+        "email",
+        "offline_access",
+        "health:read",
+        "health:write",
+      ],
     });
 
     const authorizeWithoutPkce = await get(
@@ -90,7 +98,9 @@ describe.skipIf(!enabled)("stable OAuth Provider on PostgreSQL", () => {
         `${baseUrl}/api/auth/oauth2/authorize?` +
           new URLSearchParams({
             client_id: registeredClientId!,
-            redirect_uri: "http://127.0.0.1:43123/callback",
+            // RFC 8252 allows native loopback clients to choose their actual
+            // listening port at authorization time.
+            redirect_uri: "http://127.0.0.1:43876/callback",
             response_type: "code",
             scope: "health:read",
             resource,
@@ -100,7 +110,7 @@ describe.skipIf(!enabled)("stable OAuth Provider on PostgreSQL", () => {
     expect(authorizeWithoutPkce.status).toBe(302);
     const rejection = new URL(authorizeWithoutPkce.headers.get("location")!);
     expect(rejection.origin + rejection.pathname).toBe(
-      "http://127.0.0.1:43123/callback",
+      "http://127.0.0.1:43876/callback",
     );
     expect(rejection.searchParams.get("error")).toBe("invalid_request");
 

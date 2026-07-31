@@ -6,7 +6,12 @@ export function protectedResourceMetadataResponse(): Response {
       resource: MCP_RESOURCE,
       resource_name: "SHAUGHV Health MCP",
       authorization_servers: [MCP_ISSUER],
-      scopes_supported: ["health:read", "health:write"],
+      // Deliberately omit optional resource scope metadata. Several current
+      // desktop clients treat it as the complete authorization request and
+      // consequently omit `offline_access`, leaving an otherwise successful
+      // loopback callback with only a one-hour access token. Those clients
+      // instead fall back to the authorization server's complete scope list.
+      // Resource-specific step-up remains explicit in 403 challenges.
       bearer_methods_supported: ["header"],
     },
     {
