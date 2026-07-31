@@ -36,10 +36,10 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 ## Status
 
 ACTIVE. Makira/Gail Rock variables, preloads, technical selectors, feature isolation, and the
-private consent UI are live. A larger responsive scale now passes local desktop/mobile viewport
-qualification, including a fully framed short-desktop consent card and intentional mobile consent
-scroll instead of clipping. Production confirmation and signed-in accept/deny redirects remain
-coupled to this release and the owner reconnect.
+private consent UI are live. The larger responsive scale passes local and production viewport
+qualification, including a fully framed signed-in first card and short-desktop consent card plus
+intentional mobile consent scroll instead of clipping. The signed-in accept/deny redirect remains
+coupled to the owner reconnect.
 
 ## Activity
 
@@ -78,3 +78,9 @@ coupled to this release and the owner reconnect.
   exact no-scroll/no-overflow public layouts at 1920x911, 390x844, and 390x667; consent fully fits
   1440x900, 1920x855, 1366x768, and 1280x720, while 390px consent uses vertical scroll with no
   horizontal overflow. All consent controls retain at least 46px short-screen targets. (agent: codex)
+- 2026-07-31 01:05 - Production Chrome QA on deployment
+  `dpl_BXX6gM9UXVP7yRsNHMKEdnGzVXAR` proved the signed-in header and complete first card end at
+  788px in a 1920x855 CSS viewport, with the next section beginning below the fold and no horizontal
+  overflow. Live fail-closed consent rendered all three capabilities and 54px controls inside the
+  same viewport with no panel overflow; Makira/Gail Rock computed correctly and both consoles were
+  clean. (agent: codex)

@@ -50,12 +50,12 @@ MCP authorization URLs move from `/api/auth/mcp/*` to `/api/auth/oauth2/*`, requ
 
 ## Status
 
-ACTIVE. Exact stable 1.6.25 and migrations 0004–0007 are applied. The 2026-07-31 compatibility
-replay proved Hermes' loopback callback completed but its health-only registration received no
-refresh token. The resource/challenge metadata patch and additive public-registration expansion
-are locally green and awaiting production code deployment. Signed-in consent, UserInfo/JWT,
-connector refresh, Google reconsent, and soak gates remain open. Google reconsent and destructive
-cleanup require fresh approval.
+ACTIVE. Exact stable 1.6.25, migrations 0004–0007, and the 2026-07-31 desktop refresh-compatibility
+patch are live in production. Protected-resource/401 scope fallback, all-six-scope authorization
+metadata, public DCR, S256, refresh grant, exact resource, and callback-profile gates pass. Existing
+affected clients still need one ordinary reauthentication to mint a refresh credential; signed-in
+consent redirect, UserInfo/JWT, Google reconsent, and soak gates remain open. Google reconsent and
+destructive cleanup require fresh approval.
 
 ## Activity
 
@@ -85,3 +85,8 @@ cleanup require fresh approval.
   exactly two active public registrations; all five now allow the six-scope request, while five
   refresh rows, two consent rows, zero access-token rows, and the one Google credential row were
   untouched. The real provider integration, 149 tests, typecheck, and build pass. (agent: codex)
+- 2026-07-31 01:05 - Commit `b3ff5c0` deployed READY as
+  `dpl_BXX6gM9UXVP7yRsNHMKEdnGzVXAR` with three Node functions in `iad1` and the production alias.
+  Live metadata/401 checks proved no resource-scope narrowing and all six authorization scopes;
+  public native DCR proved S256, refresh grant, no secret, and all scopes. Its one synthetic client
+  row was deleted, leaving five real clients, and Vercel reported no runtime errors. (agent: codex)

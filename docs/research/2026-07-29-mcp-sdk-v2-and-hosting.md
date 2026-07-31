@@ -312,6 +312,15 @@ v2 access/refresh/consent rows and the DPoP key table remain empty. Browser QA p
 connector authorization, UserInfo/JWT use, refresh, Google reconsent, and soak remain explicit
 operator/time gates.
 
+The 2026-07-31 desktop continuity patch is commit `b3ff5c0`, production deployment
+`dpl_BXX6gM9UXVP7yRsNHMKEdnGzVXAR`, READY with three Node functions in `iad1`. Migration `0007`
+expanded exactly two existing active public registrations to the full six-scope request without
+changing consent, refresh/access tokens, Google credentials, or legacy rows. Live metadata and
+initial 401 responses now avoid optional scope narrowing; the authorization server still
+advertises `offline_access`, S256, and refresh grants. A controlled production DCR received all
+six scopes and was removed. Actual refresh issuance remains an owner-driven one-time
+reauthentication gate for each affected desktop client.
+
 Legacy protocol support remains until every active connector produces zero legacy requests for 30 consecutive days. Legacy OAuth tables are different: they may be removed after every connector passes and the seven-day rollback window closes, because the new provider uses distinct physical tables.
 
 ## Pricing
