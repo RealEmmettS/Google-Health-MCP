@@ -14,6 +14,7 @@
 - [ ] **Apply branded MCP consent typography** - use live SHAUGHV CDN Makira/Gail Rock assets on the website and new private OAuth consent flow (ms #mcp2) (owner agent) #font2
   - [x] Rebalance public, signed-in, and consent scale with desktop/mobile viewport proof
   - [x] Raise utility and consent typography while preserving the signed-out and first-card viewport targets
+  - [x] Distinguish signed-in site scale from browser zoom and restore the owner view to 100%
 - [ ] **Qualify and release Google Health MCP 0.3.0** - rehearse migrations, reconnect every active connector, prove Google DPoP refresh, and complete the 24-hour/seven-day soak without closing unrelated physical gates (needs #sdk2, #oap, #font2) (ms #mcp2) (owner agent+emmett) #q2
   - [ ] Reauthenticate affected desktop clients once and prove rotating refresh issuance (owner emmett+agent)
 - [ ] **v1.1 — Google Health webhooks** - authenticated subscriber, signature verification, durable freshness ledger, and encrypted-cache invalidation (needs #fsp) (ms #v11) (owner agent+emmett) #w11

@@ -33,14 +33,16 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 - [x] CDN fonts return 200 with expected CORS and immutable caching
 - [x] MCP icon download serves the supplied PNG under a clean filename without responsive overflow
 - [x] Enlarged utility and consent typography preserves signed-out no-scroll and signed-in first-card framing
+- [x] Owner Chrome renders the signed-in production page at 100% zoom with no horizontal overflow
 
 ## Status
 
 ACTIVE. Makira/Gail Rock variables, preloads, technical selectors, feature isolation, and the
 private consent UI are live. The larger responsive scale passes local and production viewport
 qualification, including a fully framed signed-in first card and short-desktop consent card plus
-intentional mobile consent scroll instead of clipping. The signed-in accept/deny redirect remains
-coupled to the owner reconnect.
+intentional mobile consent scroll instead of clipping. The apparent follow-up scale regression was
+isolated to a persisted 67% Chrome site zoom and corrected to 100%; no compensating production CSS
+change was warranted. The signed-in accept/deny redirect remains coupled to the owner reconnect.
 
 ## Activity
 
@@ -99,3 +101,9 @@ coupled to the owner reconnect.
   Signed-in Chrome has no horizontal overflow and the complete first card ends at 822px in its
   1282px CSS viewport. Production fail-closed consent ends at 778px in 855px, shows all three larger
   capabilities, and keeps both 54px actions in frame. (agent: codex)
+- 2026-07-31 02:25 - Investigated Emmett's follow-up signed-in screenshot and measured Chrome at
+  67% site zoom (`devicePixelRatio=0.6667`, 2880px CSS viewport). Reset the live
+  `health.emmetts.dev` tab to 100%, restoring a 1920px viewport and the intended scale. At 100% the
+  complete first card ends at 800px in a 911px viewport, the next section begins at 836px, horizontal
+  overflow is zero, and the console is clean. Vercel independently reports production deployment
+  `dpl_75KAgLanzmeXu9GUuyRnb1wYCvcE` READY on exact main commit `9055bf1`. (agent: codex)
