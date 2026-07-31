@@ -45,8 +45,9 @@ regression was isolated to a persisted 67% Chrome site zoom and corrected to 100
 production CSS change was warranted. The decorative panel rail is now removed globally. The
 consent surface has been rebuilt as a fixed, no-scroll 100vw × 100dvh sheet whose normal controls
 and fail-closed state pass phone portrait, phone landscape, tablet, and desktop qualification.
-Release verification is in progress; the signed-in accept/deny redirect remains coupled to the
-owner reconnect.
+Deployment `dpl_4B6kSU8LMuJeBvt4Twjb6Cf7KRhv` is READY and live on the canonical domain with
+the same matrix passing against a real ChatGPT registration. The signed-in accept/deny redirect
+remains coupled to the owner reconnect.
 
 ## Activity
 
@@ -122,3 +123,12 @@ owner reconnect.
   main box exactly matched the viewport, every consent child remained visible, no internal content
   overflowed, and controls stayed 49.7-54 px tall. All 149 tests, typecheck, and production build
   pass. Production release proof remains. (agent: codex)
+- 2026-07-31 02:56 - Vercel production deployment `dpl_4B6kSU8LMuJeBvt4Twjb6Cf7KRhv`
+  reached READY in `iad1` on exact implementation commit `6f06e9b`. Signed-in Chrome at the
+  restored 1920x911 viewport shows the first panel fully framed at 800px, the next section beginning
+  at 836px, no horizontal overflow, and the former `.surface-panel::before` rail resolving to
+  `none`. The live consent page loaded the real ChatGPT client with both actions and passed the full
+  14-viewport matrix from 320x568 through 1920x1080 with exact document/main viewport dimensions,
+  no clipped child or internal overflow, and 49.7-54px controls. Production fail-closed checks also
+  passed at 320x568, 568x320, and 1440x900; the deployment emitted no error/fatal runtime logs.
+  (agent: codex)
