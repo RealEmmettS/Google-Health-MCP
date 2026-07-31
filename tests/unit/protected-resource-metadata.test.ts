@@ -9,6 +9,7 @@ describe("MCP protected-resource metadata", () => {
     expect(await response.json()).toEqual({
       resource: MCP_RESOURCE,
       resource_name: "SHAUGHV Health MCP",
+      resource_documentation: MCP_ISSUER,
       authorization_servers: [MCP_ISSUER],
       bearer_methods_supported: ["header"],
     });

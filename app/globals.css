@@ -250,7 +250,7 @@ a {
   padding-left: 1.075rem;
   border-left: 1px solid var(--border-medium);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   line-height: 1.45;
@@ -298,6 +298,12 @@ a {
   background: var(--accent);
 }
 
+.public-page .hero-panel::before,
+.public-page .sign-in-panel::before,
+.public-page .consent-panel::before {
+  content: none;
+}
+
 .index-line {
   display: flex;
   align-items: center;
@@ -307,7 +313,7 @@ a {
   border-bottom: 1px solid var(--border-hairline);
   color: var(--fg-soft);
   font-family: var(--font-mono);
-  font-size: 0.63rem;
+  font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -328,7 +334,7 @@ a {
   margin: 0;
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   line-height: 1.45;
@@ -380,7 +386,7 @@ a {
   border-radius: 0;
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.74rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-decoration: none;
@@ -411,13 +417,17 @@ a {
   border-color: var(--accent-strong);
   background: var(--accent);
   color: var(--sv-cream-100);
-  box-shadow: 4px 4px 0 var(--sv-bamboo-light);
+  box-shadow:
+    0 10px 24px rgba(54, 62, 50, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .button-primary:hover:not(:disabled) {
   border-color: var(--sv-olive-dark);
   background: var(--fg);
-  box-shadow: 6px 6px 0 var(--sv-bamboo-light);
+  box-shadow:
+    0 14px 30px rgba(43, 48, 40, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .button-secondary {
@@ -469,7 +479,7 @@ a {
   margin: clamp(0.9rem, 2.2dvh, 1.1rem) 0 0;
   color: var(--fg-soft);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: 0.06em;
   line-height: 1.55;
@@ -506,7 +516,7 @@ a {
 
 .signal-label {
   color: var(--fg-soft);
-  font-size: 0.6rem;
+  font-size: 0.65rem;
 }
 
 .profile-page {
@@ -542,7 +552,7 @@ a {
 
 .account-label {
   color: var(--fg-soft);
-  font-size: 0.61rem;
+  font-size: 0.66rem;
 }
 
 .account-email {
@@ -550,7 +560,7 @@ a {
   overflow: hidden;
   color: var(--fg);
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   font-weight: 500;
   letter-spacing: 0.02em;
   text-overflow: ellipsis;
@@ -657,14 +667,14 @@ a {
 }
 
 .mcp-icon-download-label {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   letter-spacing: 0.1em;
   line-height: 1.35;
 }
 
 .mcp-icon-download-meta {
   color: var(--fg-soft);
-  font-size: 0.58rem;
+  font-size: 0.63rem;
   letter-spacing: 0.06em;
   line-height: 1.35;
 }
@@ -705,7 +715,7 @@ a {
   border: 1px solid currentColor;
   border-radius: 9999px;
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -783,7 +793,7 @@ a {
 
 .status-label {
   color: var(--fg-soft);
-  font-size: 0.61rem;
+  font-size: 0.66rem;
 }
 
 .status-value {
@@ -800,7 +810,7 @@ a {
 .status-detail {
   color: var(--fg-soft);
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   letter-spacing: 0.03em;
   line-height: 1.5;
   text-transform: uppercase;
@@ -827,7 +837,7 @@ a {
 .connect-button::after {
   content: "/ 01";
   color: currentColor;
-  font-size: 0.62rem;
+  font-size: 0.67rem;
   opacity: 0.72;
 }
 
@@ -845,7 +855,7 @@ a {
 
 .brand-loader-label {
   color: var(--accent-strong);
-  font-size: 0.58rem;
+  font-size: 0.63rem;
 }
 
 .connector-grid {
@@ -887,14 +897,14 @@ a {
 
 .copy-field-label {
   color: var(--fg);
-  font-size: 0.68rem;
+  font-size: 0.73rem;
 }
 
 .copy-field-description {
   margin: 0.3rem 0 0;
   color: var(--fg-soft);
   font-family: var(--font-mono);
-  font-size: 0.61rem;
+  font-size: 0.67rem;
   letter-spacing: 0.03em;
   line-height: 1.45;
   text-transform: uppercase;
@@ -909,7 +919,7 @@ a {
   color: var(--fg);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 0.58rem;
+  font-size: 0.63rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -933,7 +943,7 @@ a {
   background: var(--bg-sunken);
   color: var(--sv-olive-dark);
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: 0.86rem;
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: break-word;
@@ -951,7 +961,7 @@ a {
   padding-top: 1.25rem;
   border-top: 1px solid var(--border-hairline);
   font-family: var(--font-mono);
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   letter-spacing: 0.06em;
   line-height: 1.6;
   text-transform: uppercase;
@@ -962,7 +972,7 @@ a {
   margin: clamp(0.55rem, 1.5dvh, 0.8rem) 0 0;
   color: var(--fg-soft);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -1046,7 +1056,7 @@ a {
   overflow-wrap: anywhere;
   color: var(--fg-soft);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -1069,7 +1079,7 @@ a {
 .consent-scope {
   color: var(--accent);
   font-family: var(--font-mono);
-  font-size: 0.61rem;
+  font-size: 0.67rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1079,7 +1089,7 @@ a {
   margin: 0.7rem 0 0;
   color: var(--fg);
   font-family: var(--font-heading);
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   line-height: 1.15;
   text-transform: uppercase;
 }
@@ -1087,7 +1097,7 @@ a {
 .consent-capability p {
   margin: 0.55rem 0 0;
   color: var(--fg-muted);
-  font-size: 0.92rem;
+  font-size: 0.98rem;
   line-height: 1.6;
 }
 
@@ -1289,7 +1299,7 @@ a {
   }
 
   .public-page .signal-label {
-    font-size: 0.5rem;
+    font-size: 0.55rem;
   }
 
   .section-heading {
@@ -1375,13 +1385,13 @@ a {
 
   .consent-page .consent-copy .sign-in-description {
     margin-block: 0.5rem 0.6rem;
-    font-size: 0.88rem;
+    font-size: 0.94rem;
     line-height: 1.4;
   }
 
   .consent-page .consent-client-id {
     margin-bottom: 0.6rem;
-    font-size: 0.6rem;
+    font-size: 0.66rem;
   }
 
   .consent-page .consent-capability {
@@ -1390,12 +1400,12 @@ a {
 
   .consent-page .consent-capability h2 {
     margin-top: 0.4rem;
-    font-size: 0.88rem;
+    font-size: 0.94rem;
   }
 
   .consent-page .consent-capability p {
     margin-top: 0.35rem;
-    font-size: 0.74rem;
+    font-size: 0.82rem;
     line-height: 1.35;
   }
 
@@ -1446,13 +1456,13 @@ a {
 
   .public-page .consent-copy .sign-in-description {
     margin-block: 0.55rem 0.65rem;
-    font-size: 0.86rem;
+    font-size: 0.9rem;
     line-height: 1.4;
   }
 
   .public-page .consent-client-id {
     margin-bottom: 0.65rem;
-    font-size: 0.59rem;
+    font-size: 0.64rem;
   }
 
   .public-page .consent-capability {
@@ -1461,12 +1471,12 @@ a {
 
   .public-page .consent-capability h2 {
     margin-top: 0.4rem;
-    font-size: 0.84rem;
+    font-size: 0.9rem;
   }
 
   .public-page .consent-capability p {
     margin-top: 0.35rem;
-    font-size: 0.72rem;
+    font-size: 0.78rem;
     line-height: 1.35;
   }
 
@@ -1480,13 +1490,13 @@ a {
 
   .public-page .allowlist-note {
     margin-top: 0.55rem;
-    font-size: 0.58rem;
+    font-size: 0.64rem;
     line-height: 1.35;
   }
 
   .public-page .public-privacy-link {
     margin-top: 0.35rem;
-    font-size: 0.6rem;
+    font-size: 0.65rem;
   }
 
   .public-page .signal-strip > div {

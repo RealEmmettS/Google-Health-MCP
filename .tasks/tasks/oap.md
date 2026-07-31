@@ -42,6 +42,8 @@ MCP authorization URLs move from `/api/auth/mcp/*` to `/api/auth/oauth2/*`, requ
 - [x] Missing/expired/wrong issuer, audience, resource, scope, subject, email, malformed, and passthrough tokens fail
 - [x] JWT access verification performs no Neon token lookup and rechecks the current allowlist locally
 - [x] Production DCR, exact resource, form token boundary, RS256 JWKS, metadata aliases, 401/403, and no-store gates pass
+- [x] MCP server identity/icon and per-tool OAuth metadata pass modern and legacy client conformance
+- [x] ChatGPT's working connector auth is distinguished from its personal-plugin bundle install state
 - [ ] Signed-in consent denial, UserInfo/JWT use, JWKS warm-cache, refresh, and endpoint limit thresholds pass during reconnect
 - [x] Existing users and Google Health connections/tokens remain unchanged in apply/rollback rehearsal
 - [x] DPoP proof, nonce retry, key mismatch, atomic preservation, and forced reconnect/refresh race tests pass
@@ -52,10 +54,12 @@ MCP authorization URLs move from `/api/auth/mcp/*` to `/api/auth/oauth2/*`, requ
 
 ACTIVE. Exact stable 1.6.25, migrations 0004–0007, and the 2026-07-31 desktop refresh-compatibility
 patch are live in production. Protected-resource/401 scope fallback, all-six-scope authorization
-metadata, public DCR, S256, refresh grant, exact resource, and callback-profile gates pass. Existing
-affected clients still need one ordinary reauthentication to mint a refresh credential; signed-in
-consent redirect, UserInfo/JWT, Google reconsent, and soak gates remain open. Google reconsent and
-destructive cleanup require fresh approval.
+metadata, public DCR, S256, refresh grant, exact resource, and callback-profile gates pass. The
+ChatGPT MCP connector has a current registration, consent, refresh credential, and successful tool
+traffic; its separate personal-plugin bundle still displays an install action in ChatGPT-managed UI.
+Existing affected clients still need one ordinary reauthentication to mint a refresh credential;
+signed-in consent redirect, UserInfo/JWT, Google reconsent, and soak gates remain open. Google
+reconsent and destructive cleanup require fresh approval.
 
 ## Activity
 
@@ -90,3 +94,12 @@ destructive cleanup require fresh approval.
   Live metadata/401 checks proved no resource-scope narrowing and all six authorization scopes;
   public native DCR proved S256, refresh grant, no secret, and all scopes. Its one synthetic client
   row was deleted, leaving five real clients, and Vercel reported no runtime errors. (agent: codex)
+- 2026-07-31 01:52 - Audited ChatGPT without mutating connector state. The live provider has one
+  ChatGPT client with the modern callback, all six scopes, one active refresh credential, one
+  consent, and no duplicate/legacy callback; Vercel logs show authenticated list/call traffic with
+  no 5xx. OpenAI's current docs and the live UI distinguish the working MCP connector from the
+  separately installed personal-plugin bundle, explaining why chats work while its bundle detail
+  still says `Install plugin`. Added SDK-native server title/description/site/icon metadata,
+  protected-resource documentation, and per-tool OAuth scope metadata; both protocol eras pass the
+  official v2 client conformance tests. No client, token, consent, or database row changed.
+  (agent: codex)

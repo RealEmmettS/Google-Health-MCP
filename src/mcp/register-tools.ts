@@ -76,6 +76,28 @@ type ToolName =
   | "create_hydration_log"
   | "update_measurement";
 
+const writeToolNames = new Set<ToolName>([
+  "acknowledge_health_updates",
+  "create_nutrition_log",
+  "update_nutrition_log",
+  "delete_nutrition_log",
+  "create_hydration_log",
+  "update_measurement",
+]);
+
+function securitySchemesForTool(name: ToolName): Record<string, unknown> {
+  return {
+    securitySchemes: [
+      {
+        type: "oauth2",
+        scopes: writeToolNames.has(name)
+          ? ["health:read", "health:write"]
+          : ["health:read"],
+      },
+    ],
+  };
+}
+
 const readExternal: ToolAnnotations = {
   readOnlyHint: true,
   destructiveHint: false,
@@ -294,6 +316,9 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
         inputSchema: z.object(config.inputSchema),
         outputSchema: metadata.outputSchema,
         annotations: metadata.annotations,
+        // MCP v2 preserves arbitrary tool metadata here. ChatGPT reads this
+        // back-compat mirror to render the tool's OAuth requirement.
+        _meta: securitySchemesForTool(name),
       },
       callback,
     );

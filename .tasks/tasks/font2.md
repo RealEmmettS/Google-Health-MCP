@@ -32,6 +32,7 @@ Makira and Gail Rock load from manifest-provided URLs without layout shift or ov
 - [ ] Signed-in consent accept/deny redirects pass during the owner-approved connector reconnect
 - [x] CDN fonts return 200 with expected CORS and immutable caching
 - [x] MCP icon download serves the supplied PNG under a clean filename without responsive overflow
+- [ ] Enlarged utility and consent typography preserves signed-out no-scroll and signed-in first-card framing
 
 ## Status
 
@@ -84,3 +85,10 @@ coupled to the owner reconnect.
   overflow. Live fail-closed consent rendered all three capabilities and 54px controls inside the
   same viewport with no panel overflow; Makira/Gail Rock computed correctly and both consoles were
   clean. (agent: codex)
+- 2026-07-31 01:52 - Raised the small Gail Rock utility type across account, status, connector,
+  endpoint, icon, and consent details; removed the public/consent card's decorative green rail; and
+  replaced the gold offset primary-button slab with a neutral diffused shadow. Local Chrome and
+  responsive Playwright proof kept the signed-out page at exact viewport height with no overflow at
+  1920x855, 768x900, 390x844, and 390x667. Fail-closed consent fits 1920x855 and 1280x720, retains
+  54px actions, and intentionally scrolls vertically without horizontal overflow at 390x844.
+  Production signed-in first-card proof remains pending deployment. (agent: codex)

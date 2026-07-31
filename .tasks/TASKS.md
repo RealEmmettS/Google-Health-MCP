@@ -10,8 +10,10 @@
 - [ ] **Upgrade to native MCP SDK v2 and Vercel Fluid** - ship rollback-safe 0.2.1 with 2026 request-scoped transport, stateless legacy compatibility, structured contracts, privacy-safe telemetry, and Node 24 in iad1 (ms #mcp2) (owner agent) #sdk2
 - [ ] **Migrate MCP auth off Better Auth's deprecated legacy plugin** - additive stable OAuth Provider/JWT cutover, hashed rotating refresh tokens, allowlist-safe local bearer verification, Google Health DPoP, and one coordinated connector re-auth (ms #mcp2) (owner agent+emmett) #oap
   - [x] Repair Hermes/Claude Code/Codex offline continuity without weakening callback validation
+  - [x] Publish MCP identity/tool OAuth metadata and audit ChatGPT's connector-versus-plugin install state
 - [ ] **Apply branded MCP consent typography** - use live SHAUGHV CDN Makira/Gail Rock assets on the website and new private OAuth consent flow (ms #mcp2) (owner agent) #font2
   - [x] Rebalance public, signed-in, and consent scale with desktop/mobile viewport proof
+  - [ ] Raise utility and consent typography while preserving the signed-out and first-card viewport targets
 - [ ] **Qualify and release Google Health MCP 0.3.0** - rehearse migrations, reconnect every active connector, prove Google DPoP refresh, and complete the 24-hour/seven-day soak without closing unrelated physical gates (needs #sdk2, #oap, #font2) (ms #mcp2) (owner agent+emmett) #q2
   - [ ] Reauthenticate affected desktop clients once and prove rotating refresh issuance (owner emmett+agent)
 - [ ] **v1.1 — Google Health webhooks** - authenticated subscriber, signature verification, durable freshness ledger, and encrypted-cache invalidation (needs #fsp) (ms #v11) (owner agent+emmett) #w11

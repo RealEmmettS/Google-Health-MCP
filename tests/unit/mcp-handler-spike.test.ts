@@ -61,6 +61,21 @@ async function connectWithFetch(
 }
 
 async function assertSurface(client: Client): Promise<void> {
+  expect(client.getServerVersion()).toMatchObject({
+    name: "shaughv-health-mcp",
+    title: "SHAUGHV Health",
+    description: expect.stringContaining("Private Google Health connector"),
+    version: "0.3.0",
+    websiteUrl: "https://health.emmetts.dev",
+    icons: [
+      {
+        src: "https://health.emmetts.dev/shaughv-health-mcp-icon.png",
+        mimeType: "image/png",
+        sizes: ["1254x1254"],
+      },
+    ],
+  });
+
   const list = await client.listTools();
   expect(list.tools).toHaveLength(18);
   const ping = list.tools.find((tool) => tool.name === "ping");
@@ -86,6 +101,15 @@ async function assertSurface(client: Client): Promise<void> {
       idempotentHint: expect.any(Boolean),
       openWorldHint: expect.any(Boolean),
     });
+    expect(tool._meta?.securitySchemes, `${tool.name} OAuth metadata`).toEqual([
+      {
+        type: "oauth2",
+        scopes:
+          tool.annotations?.readOnlyHint === true
+            ? ["health:read"]
+            : ["health:read", "health:write"],
+      },
+    ]);
   }
 
   const call = await client.callTool({

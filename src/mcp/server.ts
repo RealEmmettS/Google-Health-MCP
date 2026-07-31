@@ -9,6 +9,22 @@ import { registerTools } from "./register-tools";
 
 preloadSchemas();
 
+export const MCP_SERVER_INFO = {
+  name: "shaughv-health-mcp",
+  title: "SHAUGHV Health",
+  description:
+    "Private Google Health connector with read insights and explicit nutrition, hydration, and measurement writes.",
+  version: "0.3.0",
+  websiteUrl: "https://health.emmetts.dev",
+  icons: [
+    {
+      src: "https://health.emmetts.dev/shaughv-health-mcp-icon.png",
+      mimeType: "image/png",
+      sizes: ["1254x1254"],
+    },
+  ],
+};
+
 export const mcpHttpHandler = createMcpHandler(
   ({ authInfo }) => {
     const userId = authInfo?.extra?.userId;
@@ -17,7 +33,7 @@ export const mcpHttpHandler = createMcpHandler(
     }
 
     const server = new McpServer(
-      { name: "shaughv-health-mcp", version: "0.3.0" },
+      MCP_SERVER_INFO,
       {
         cacheHints: {
           "tools/list": { ttlMs: 60 * 60 * 1000, cacheScope: "private" },

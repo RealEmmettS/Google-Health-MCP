@@ -5,6 +5,7 @@ export function protectedResourceMetadataResponse(): Response {
     {
       resource: MCP_RESOURCE,
       resource_name: "SHAUGHV Health MCP",
+      resource_documentation: MCP_ISSUER,
       authorization_servers: [MCP_ISSUER],
       // Deliberately omit optional resource scope metadata. Several current
       // desktop clients treat it as the complete authorization request and
