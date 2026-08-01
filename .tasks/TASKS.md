@@ -7,6 +7,11 @@
 - [ ] **Qualify and release v1.1** - migrations, full test/build gates, real connector reads, real Fitbit webhook, deployment, and rollback evidence (needs #fsp, #prv, #w11, #qry, #upd) (ms #v11) (owner agent+emmett) #q11
 
 ## Active
+- [ ] **Research and classify an optional MCP App health dashboard** - verify the current Apps contract and host support, audit this server, and turn operator choices into an implementation-ready architecture (owner agent+emmett) #apps
+  - [x] Research the current MCP Apps specification and official host/SDK support
+  - [x] Audit the existing v2 server, tool/resource surface, and reusable health services
+  - [ ] Classify dashboard purpose, interaction/write scope, and host targets with Emmett
+  - [ ] Record the chosen architecture, security boundary, and verification plan
 - [ ] **Upgrade to native MCP SDK v2 and Vercel Fluid** - ship rollback-safe 0.2.1 with 2026 request-scoped transport, stateless legacy compatibility, structured contracts, privacy-safe telemetry, and Node 24 in iad1 (ms #mcp2) (owner agent) #sdk2
 - [ ] **Migrate MCP auth off Better Auth's deprecated legacy plugin** - additive stable OAuth Provider/JWT cutover, hashed rotating refresh tokens, allowlist-safe local bearer verification, Google Health DPoP, and one coordinated connector re-auth (ms #mcp2) (owner agent+emmett) #oap
   - [x] Repair Hermes/Claude Code/Codex offline continuity without weakening callback validation
