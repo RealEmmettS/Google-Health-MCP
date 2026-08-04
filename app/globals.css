@@ -676,6 +676,11 @@ a {
   margin-top: 0.65rem;
   font-size: clamp(2.4rem, 5vw, 4.7rem);
   line-height: 0.94;
+  text-wrap: balance;
+}
+
+.connector-title-lock {
+  white-space: nowrap;
 }
 
 .section-description {

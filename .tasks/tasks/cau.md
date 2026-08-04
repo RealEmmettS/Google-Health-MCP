@@ -52,11 +52,12 @@ An apparent immediate-expiry theory was falsified: the database stores Better Au
 
 ACTIVE. The original regression-proven defect is fixed, and fresh native Claude Code and Codex flows prove the deployed 0.1.2 repair was already working. Version 0.1.3 is now live with exact callback/refresh coverage and the refresh-response cache-header fix. Production discovery, DCR, S256 PKCE, loopback callbacks, token exchange/refresh, authenticated MCP initialize/tools-list, and read-only client calls all pass. Emmett still owns the intended work-computer/workspace and Desktop propagation acceptance, so this task remains Active until that succeeds or produces an Anthropic trace.
 
-The 2026-08-03 candidate additionally makes all discovery surfaces advertise the same approved
-six-scope grant. A current hosted callback and direct Claude Code loopback profile both completed
-synthetic consent, token exchange, rotation, UserInfo, initialize, and 18-tool discovery locally.
-This strengthens the server-side compatibility evidence but does not replace the still-open real
-work-workspace, Desktop, mobile, and Claude Code propagation checks.
+Production now makes all discovery surfaces advertise the same approved six-scope grant. The real
+Claude Code plugin connector completed its loopback flow and persisted one active all-scope
+rotating credential; the current-provider hosted and Code profiles also pass synthetic exchange,
+rotation, UserInfo, initialize, and 18-tool discovery. Emmett waived further Claude agent-call
+retries for this rollout. Work-workspace, Desktop, mobile, and account-connector propagation remain
+open.
 
 ## Activity
 
@@ -81,3 +82,9 @@ work-workspace, Desktop, mobile, and Claude Code propagation checks.
   UserInfo, exact-resource refresh rotation, MCP initialize, and 18-tool discovery. Inspector
   independently listed all 18 tools, and cleanup verified zero synthetic rows. This is local
   server evidence only; real account propagation remains open. (agent: codex)
+- 2026-08-04 - The production Claude Code plugin connector completed DCR/PKCE/consent through a
+  dynamic localhost callback and now reports connected. Database evidence shows exactly one active
+  rotating refresh credential with the six approved scopes. A separate print-mode agent call chose
+  the unauthenticated account-level connector rather than the plugin; Emmett explicitly asked not
+  to continue retrying that client-side distinction. Server correctness is covered; hosted,
+  Desktop, mobile, and work-workspace propagation remain open. (agent: codex)

@@ -295,7 +295,9 @@ export default async function Home({
           <div className="section-heading section-heading-compact">
             <div>
               <p className="eyebrow">Your data</p>
-              <h2 className="connector-title">Keep or remove it.</h2>
+              <h2 className="connector-title">
+                Keep or <span className="connector-title-lock">remove it.</span>
+              </h2>
               <p className="section-description">
                 Disconnecting revokes the Google grant when possible and
                 removes connection-derived local data. Full deletion also

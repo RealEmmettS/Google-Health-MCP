@@ -61,11 +61,12 @@ Existing affected clients still need one ordinary reauthentication to mint a ref
 signed-in consent redirect, UserInfo/JWT, Google reconsent, and soak gates remain open. Google
 reconsent and destructive cleanup require fresh approval.
 
-The 2026-08-03 durable-auth candidate is locally complete but not yet deployed. Its refresh-only
-boundary defaults an omitted canonical resource only while exactly one resource is configured,
-advertises the approved six-scope grant consistently, and emits allowlisted privacy-safe token
-telemetry. Synthetic hosted, Claude Code, and Codex profiles rotate successfully; real-client
-recovery, one-hour expiry proof, production monitoring, Google reconsent, and cleanup remain open.
+The durable-auth repair is live from `0852da9` plus the Codex callback compatibility follow-up
+`b4a9d0e`. Production defaults an omitted refresh resource only in the guarded single-resource
+case, advertises the six-scope grant consistently, and emits allowlisted privacy-safe telemetry.
+A fresh Codex loopback login and read pass, and the Claude Code plugin owns one active all-scope
+rotating credential. Remaining client surfaces, the one-hour expiry proof, monitoring, Google
+reconsent, and cleanup remain open.
 
 ## Activity
 
@@ -126,3 +127,11 @@ recovery, one-hour expiry proof, production monitoring, Google reconsent, and cl
   resource refresh logged `defaulted`; exact clients logged `exact`; Inspector listed 18 tools;
   cleanup verified zero synthetic v2 rows. Production and real-client gates remain open.
   (agent: codex)
+- 2026-08-04 - Pushed the durable-auth repair and Codex RFC 9207 callback-relay workaround to
+  `main`. Production deployment `dpl_4KfVgFviFrMgWFH2QYXfhAGC63Pz` is READY at the canonical
+  alias from `b4a9d0e`; live authorization/OpenID metadata expose six scopes and disable strict
+  response-issuer validation while Better Auth continues emitting exact `iss`. Codex 0.146.0
+  completed fresh DCR/PKCE/consent/exchange and a separate CLI read, with one active six-scope
+  rotating credential. Claude Code's plugin connector also completed real OAuth and owns one
+  active six-scope rotating credential. One-hour, remaining-client, soak, DPoP, and cleanup gates
+  remain open. (agent: codex)
