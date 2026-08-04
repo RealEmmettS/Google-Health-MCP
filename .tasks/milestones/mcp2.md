@@ -18,12 +18,12 @@ Includes the stable 1.0.0 product/server identity; native MCP SDK v2 with modern
 
 ## Status
 
-ACTIVE. Stable 1.0.0 is live from exact release commit `7ae1846` as production deployment
-`dpl_GDMnWWd37UB1FwZ6sWoJtiyuTGe5` in `iad1`. Local modern/legacy identity tests, all 149 tests,
-typecheck/build, canonical health/OAuth/MCP boundaries, an existing authenticated MCP ping, exact
-live icon identity, and error/fatal log scans pass. Checkpoint 0.2.1, the DPoP-capable legacy-auth
-recovery artifact, and the production 0.3.0 cutover remain recorded. Owner reconnect/signed-in
-auth, Google DPoP reconsent/refresh, and the timed soak remain open.
+ACTIVE. Stable patch 1.0.1 is live from exact release commit `64913ef` as production deployment
+`dpl_2s1W9kVPJsTvNmrrCQyNFG9j24jb` in `iad1`; the stable 1.0.0 promotion remains recorded. All 154
+tests plus typecheck/build, canonical health/OAuth/OIDC/PRM/JWKS/401 probes, a fresh Codex 0.146.0
+authenticated ping/read, and initial clean runtime-log scans pass. Checkpoint 0.2.1, the
+DPoP-capable legacy-auth recovery artifact, and the production 0.3.0 cutover remain recorded.
+Remaining connector/expiry checks, Google DPoP reconsent/refresh, and the timed soak remain open.
 
 ## Activity
 
@@ -50,3 +50,9 @@ auth, Google DPoP reconsent/refresh, and the timed soak remain open.
   in `iad1` on exact commit `7ae1846` with the canonical alias. Health/OAuth/401 no-store,
   authenticated MCP ping, exact live icon, and error/fatal log checks pass; remaining owner and
   soak gates stay open. (agent: codex)
+- 2026-08-04 - Stable patch 1.0.1 commit `64913ef` reached READY in `iad1` as
+  `dpl_2s1W9kVPJsTvNmrrCQyNFG9j24jb` on the canonical alias. The full local gates, public OAuth/MCP
+  boundary probes, fresh Codex discovery/ping/read, and initial runtime-log scans pass. ChatGPT's
+  Personal development-plugin card retained its separate 1.0.0 catalog snapshot after Refresh;
+  no healthy credential was revoked to change that label. Remaining connector, DPoP, and timed
+  gates stay open. (agent: codex)
