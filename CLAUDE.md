@@ -23,7 +23,7 @@ with freshness metadata. No medical claims.
 - **The `.tasks/` board is the live status.** `docs/PLAN.md` defines the plan; the board
   tracks execution. Before starting work, read `.tasks/TASKS.md` (what's Active / next) and
   the relevant `.tasks/tasks/<id>.md` detail file — the decisions and carry-over notes live
-  there. Current milestone: **`#mcp2`**, the 1.0.0 stable release and remaining qualification.
+  there. Current milestone: **`#mcp2`**, the stable line (currently 1.1.0) and remaining qualification.
   Do not restate volatile phase status in docs that go stale; point at the board.
 - **Accepted ADRs govern their specific scope.** Read
   `docs/adr/0002-single-user-private.md` before changing authentication, the approved
@@ -123,7 +123,7 @@ This repo uses the SHAUGHV `tasks-*` system. The board source of truth is
 `.tasks/TASKS.md`; milestones (dated epics) live in `.tasks/MILESTONES.md` and tasks join
 one with an `(ms #id)` tag; each task's rich handoff lives at `.tasks/tasks/<id>.md` with
 its `## Verification` checklist, `## Status`, and `## Activity` kept current while work is
-in flight. Current milestone: **#mcp2**, with the 1.0.0 release and remaining integrated
+in flight. Current milestone: **#mcp2**, with the current 1.1.0 release and remaining integrated
 qualification/soak owned by `#q2`.
 The completed `#v1` history remains on the board; the separate physical webhook gate remains
 under `#w11`, and the future REST idea remains parked as `#api`. Hosting task `#rlw` is closed.

@@ -17,7 +17,14 @@ import { mcpHttpHandler } from "../../src/mcp/server";
 const authInfo: AuthInfo = {
   token: "test-token-not-logged",
   clientId: "sdk-v2-test",
-  scopes: ["health:read", "health:write"],
+  scopes: [
+    "openid",
+    "profile",
+    "email",
+    "offline_access",
+    "health:read",
+    "health:write",
+  ],
   expiresAt: Math.floor(Date.now() / 1000) + 3600,
   resource: new URL("http://localhost:3000/api/mcp"),
   extra: { userId: "test-user" },
@@ -31,7 +38,17 @@ afterEach(async () => {
 
 const localFetch: FetchLike = async (input, init) => {
   const request = input instanceof Request ? input : new Request(input, init);
-  return mcpHttpHandler.fetch(request, { authInfo });
+  return mcpHttpHandler.fetch(request, {
+    authInfo: {
+      ...authInfo,
+      extra: {
+        ...authInfo.extra,
+        protocolVersion:
+          request.headers.get("mcp-protocol-version") ??
+          (authInfo.extra?.protocolVersion as string | undefined),
+      },
+    },
+  });
 };
 
 async function connect(mode: "legacy" | "modern"): Promise<Client> {
@@ -65,7 +82,7 @@ async function assertSurface(client: Client): Promise<void> {
     name: "shaughv-health-mcp",
     title: "SHAUGHV Health",
     description: expect.stringContaining("Private Google Health connector"),
-    version: "1.0.1",
+    version: "1.1.0",
     websiteUrl: "https://health.emmetts.dev",
     icons: [
       {
@@ -77,7 +94,7 @@ async function assertSurface(client: Client): Promise<void> {
   });
 
   const list = await client.listTools();
-  expect(list.tools).toHaveLength(18);
+  expect(list.tools).toHaveLength(19);
   const ping = list.tools.find((tool) => tool.name === "ping");
   expect(ping, "ping tool must be listed").toBeTruthy();
   expect(ping?.title).toBe("Ping");
@@ -85,6 +102,14 @@ async function assertSurface(client: Client): Promise<void> {
   expect(ping?.inputSchema.properties).toHaveProperty("echo");
   expect(ping?.outputSchema?.type).toBe("object");
   expect(ping?.annotations).toMatchObject({
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  });
+  const connectionInfo = list.tools.find((tool) => tool.name === "get_connection_info");
+  expect(connectionInfo, "connection diagnostic tool must be listed").toBeTruthy();
+  expect(connectionInfo?.annotations).toMatchObject({
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
@@ -119,12 +144,68 @@ async function assertSurface(client: Client): Promise<void> {
   expect(call.structuredContent).toMatchObject({
     pong: true,
     echo: "hello-sdk-v2",
+    serverVersion: "1.1.0",
+    protocolVersion: client.getNegotiatedProtocolVersion(),
+    authType: "oauth2.1",
     authenticatedUserId: "test-user",
   });
   const payload = JSON.parse(
     (call.content[0] as { type: "text"; text: string }).text,
   ) as Record<string, unknown>;
   expect(payload).toMatchObject(call.structuredContent ?? {});
+
+  const diagnostic = await client.callTool({
+    name: "get_connection_info",
+    arguments: { includeUpstreamStatus: false },
+  });
+  expect(diagnostic.isError).not.toBe(true);
+  expect(diagnostic.structuredContent).toMatchObject({
+    server: {
+      name: "shaughv-health-mcp",
+      version: "1.1.0",
+    },
+    connection: {
+      authenticated: true,
+      principal: { userId: "test-user" },
+      client: { oauthClientId: "sdk-v2-test" },
+      grantedScopes: authInfo.scopes,
+    },
+    protocol: {
+      negotiatedVersion: client.getNegotiatedProtocolVersion(),
+      era: client.getProtocolEra(),
+      supportedVersions: {
+        modern: ["2026-07-28"],
+        legacy: expect.arrayContaining(["2025-11-25", "2025-03-26"]),
+      },
+    },
+    transport: {
+      type: "streamable-http",
+      sessionMode: "stateless-request-scoped",
+      sessionIdPresent: false,
+      deprecatedSseEndpoint: false,
+    },
+    authorization: {
+      type: "oauth2.1",
+      protectedResource: {
+        requestResource: "http://localhost:3000/api/mcp",
+        exactAudienceRequired: true,
+      },
+      authorizationCode: { pkceRequired: true, pkceMethods: ["S256"] },
+      accessToken: { format: "JWT", signingAlgorithm: "RS256" },
+      refreshToken: { rotation: "rotating-single-use" },
+    },
+    upstreamGoogleHealth: {
+      separateOAuthGrant: true,
+      status: "not_checked",
+      tokenExposure: "never",
+    },
+    privacy: {
+      credentialValuesReturned: false,
+    },
+  });
+  const diagnosticJson = JSON.stringify(diagnostic.structuredContent);
+  expect(diagnosticJson).not.toContain(authInfo.token);
+  expect(diagnosticJson).not.toContain("person@example.com");
 
   const resources = await client.listResources();
   expect(resources.resources.map((resource) => resource.uri)).toContain(

@@ -1,7 +1,13 @@
 import type {
   CallToolResult,
   McpServer,
+  ServerContext,
   ToolAnnotations,
+} from "@modelcontextprotocol/server";
+import {
+  CLIENT_CAPABILITIES_META_KEY,
+  CLIENT_INFO_META_KEY,
+  PROTOCOL_VERSION_META_KEY,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import type { AppUser } from "../auth/app-user";
@@ -36,6 +42,7 @@ import {
   updateNutritionLog,
 } from "../health-services/writes";
 import { redactError } from "../security/redact";
+import { buildConnectionInfo, MCP_SERVER_INFO } from "./connection-info";
 
 /**
  * The MCP tool/resource surface (docs/PLAN.md §"MCP surface (v1)").
@@ -47,6 +54,11 @@ import { redactError } from "../security/redact";
 export interface ToolContext {
   /** better-auth user id from the verified MCP access token. */
   userId: string;
+  clientId: string;
+  expiresAt: number;
+  protocolVersionHint?: string;
+  resource: string;
+  scopes: string[];
 }
 
 interface ResolvedContext {
@@ -58,6 +70,7 @@ type ToolResult = CallToolResult;
 
 type ToolName =
   | "ping"
+  | "get_connection_info"
   | "get_sync_status"
   | "get_today_steps"
   | "get_exercise_week"
@@ -136,6 +149,126 @@ const updatesOutputSchema = z.object({
   pendingCount: z.number().int().nonnegative(),
   note: z.string(),
 });
+const connectionInfoOutputSchema = z.object({
+  server: z.object({
+    name: z.string(),
+    title: z.string(),
+    description: z.string(),
+    version: z.string(),
+    websiteUrl: z.string(),
+    icons: z.array(
+      z.object({
+        src: z.string(),
+        mimeType: z.string(),
+        sizes: z.array(z.string()),
+      }),
+    ),
+  }),
+  connection: z.object({
+    authenticated: z.literal(true),
+    principal: z.object({ userId: z.string() }),
+    client: z.object({
+      oauthClientId: z.string(),
+      implementation: z
+        .object({ name: z.string(), version: z.string() })
+        .nullable(),
+      declaredCapabilities: z.looseObject({}).nullable(),
+    }),
+    grantedScopes: z.array(z.string()),
+    accessTokenExpiresAt: z.string(),
+  }),
+  protocol: z.object({
+    negotiatedVersion: z.string(),
+    era: z.enum(["modern", "legacy"]),
+    supportedVersions: z.object({
+      modern: z.array(z.string()),
+      legacy: z.array(z.string()),
+    }),
+  }),
+  transport: z.object({
+    type: z.literal("streamable-http"),
+    endpoint: z.string(),
+    responseMode: z.string(),
+    sessionMode: z.string(),
+    sessionIdPresent: z.boolean(),
+    sessionPersistence: z.literal(false),
+    deprecatedSseEndpoint: z.literal(false),
+  }),
+  authorization: z.object({
+    type: z.literal("oauth2.1"),
+    humanLogin: z.string(),
+    authorizationServer: z.object({
+      issuer: z.string(),
+      authorizationEndpoint: z.string(),
+      tokenEndpoint: z.string(),
+      registrationEndpoint: z.string(),
+      jwksUri: z.string(),
+      userInfoEndpoint: z.string(),
+    }),
+    protectedResource: z.object({
+      canonicalResource: z.string(),
+      requestResource: z.string(),
+      metadataUrl: z.string(),
+      exactAudienceRequired: z.literal(true),
+      configuredResourceCount: z.literal(1),
+    }),
+    clientRegistration: z.object({
+      mode: z.literal("dynamic"),
+      publicClient: z.literal(true),
+      tokenEndpointAuthMethod: z.literal("none"),
+    }),
+    authorizationCode: z.object({
+      responseType: z.literal("code"),
+      pkceRequired: z.literal(true),
+      pkceMethods: z.array(z.string()),
+    }),
+    grants: z.array(z.string()),
+    scopes: z.object({
+      approvedInitialGrant: z.array(z.string()),
+      grantedToThisConnection: z.array(z.string()),
+    }),
+    accessToken: z.object({
+      format: z.literal("JWT"),
+      signingAlgorithm: z.literal("RS256"),
+      issuer: z.string(),
+      audience: z.string(),
+      lifetimeSeconds: z.number().int().positive(),
+      valuePersistedByServer: z.literal(false),
+    }),
+    refreshToken: z.object({
+      enabled: z.boolean(),
+      rotation: z.literal("rotating-single-use"),
+      lifetimeSeconds: z.number().int().positive(),
+      storedAs: z.literal("hash"),
+      omittedResourceCompatibility: z.string(),
+    }),
+    enforcement: z.object({
+      privateAllowlist: z.literal(true),
+      allowlistRecheckedOnEveryBearerRequest: z.literal(true),
+      clientSecretsStoredAs: z.literal("hash"),
+    }),
+  }),
+  upstreamGoogleHealth: z.object({
+    separateOAuthGrant: z.literal(true),
+    status: z.string(),
+    connectedAt: z.string().nullable(),
+    grantedScopes: z.array(z.string()),
+    proofOfPossession: z.string(),
+    credentialEncryption: z.string(),
+    tokenExposure: z.literal("never"),
+  }),
+  runtime: z.object({
+    platform: z.string(),
+    nodeVersion: z.string(),
+    environment: z.string().nullable(),
+    region: z.string().nullable(),
+    gitCommitSha: z.string().nullable(),
+  }),
+  privacy: z.object({
+    credentialValuesReturned: z.literal(false),
+    omitted: z.array(z.string()),
+  }),
+});
 
 const toolMetadata: Record<
   ToolName,
@@ -145,10 +278,17 @@ const toolMetadata: Record<
     outputSchema: z.object({
       pong: z.literal(true),
       server: z.literal("shaughv-health-mcp"),
+      serverVersion: z.string(),
+      protocolVersion: z.string(),
+      authType: z.literal("oauth2.1"),
       authenticatedUserId: z.string(),
       echo: z.string().nullable(),
       time: z.string(),
     }),
+    annotations: readLocal,
+  },
+  get_connection_info: {
+    outputSchema: connectionInfoOutputSchema,
     annotations: readLocal,
   },
   get_sync_status: { outputSchema: healthReadOutputSchema, annotations: readExternal },
@@ -306,6 +446,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     },
     callback: (
       args: z.infer<z.ZodObject<Input>>,
+      requestContext: ServerContext,
     ) => ToolResult | Promise<ToolResult>,
   ): void => {
     const metadata = toolMetadata[name];
@@ -324,6 +465,42 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     );
   };
 
+  const requestProtocolVersion = (requestContext: ServerContext): string => {
+    const envelope = requestContext.mcpReq.envelope as
+      | Record<string, unknown>
+      | undefined;
+    const version = envelope?.[PROTOCOL_VERSION_META_KEY];
+    return typeof version === "string"
+      ? version
+      : (ctx.protocolVersionHint ??
+          server.server.getNegotiatedProtocolVersion() ??
+          "unknown");
+  };
+
+  const requestClientImplementation = (requestContext: ServerContext) => {
+    const envelope = requestContext.mcpReq.envelope as
+      | Record<string, unknown>
+      | undefined;
+    const value = envelope?.[CLIENT_INFO_META_KEY] ?? server.server.getClientVersion();
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const implementation = value as Record<string, unknown>;
+    return typeof implementation.name === "string" &&
+      typeof implementation.version === "string"
+      ? { name: implementation.name, version: implementation.version }
+      : null;
+  };
+
+  const requestClientCapabilities = (requestContext: ServerContext) => {
+    const envelope = requestContext.mcpReq.envelope as
+      | Record<string, unknown>
+      | undefined;
+    const value =
+      envelope?.[CLIENT_CAPABILITIES_META_KEY] ?? server.server.getClientCapabilities();
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
+  };
+
   // ── diagnostics ───────────────────────────────────────────────────────────
   registerTool(
     "ping",
@@ -335,13 +512,53 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
         echo: z.string().max(200).optional().describe("Optional string to echo back"),
       },
     },
-    async ({ echo }) =>
+    async ({ echo }, requestContext) =>
       ok({
         pong: true,
         server: "shaughv-health-mcp",
+        serverVersion: MCP_SERVER_INFO.version,
+        protocolVersion: requestProtocolVersion(requestContext),
+        authType: "oauth2.1",
         authenticatedUserId: ctx.userId,
         echo: echo ?? null,
         time: new Date().toISOString(),
+      }),
+  );
+
+  registerTool(
+    "get_connection_info",
+    {
+      title: "Get MCP connection info",
+      description:
+        "Privacy-safe diagnostic for this exact MCP connection: server release, negotiated and supported MCP revisions, client identity/capabilities, Streamable HTTP/session behavior, OAuth/PKCE/JWT/resource/refresh posture, granted scopes, upstream Google Health authorization state, and deployment runtime. Never returns tokens, secrets, authorization headers, codes, redirect payloads, or email.",
+      inputSchema: {
+        includeUpstreamStatus: z
+          .boolean()
+          .optional()
+          .describe(
+            "Read the local Google Health connection record too (defaults to true; no external Google request)",
+          ),
+      },
+    },
+    async ({ includeUpstreamStatus }, requestContext) =>
+      run(async () => {
+        const googleHealthConnectionChecked = includeUpstreamStatus !== false;
+        const googleHealthConnection = googleHealthConnectionChecked
+          ? await getConnection((await getCtx()).user.id)
+          : null;
+        return buildConnectionInfo({
+          clientCapabilities: requestClientCapabilities(requestContext),
+          clientId: ctx.clientId,
+          clientImplementation: requestClientImplementation(requestContext),
+          expiresAt: ctx.expiresAt,
+          googleHealthConnection,
+          googleHealthConnectionChecked,
+          negotiatedProtocolVersion: requestProtocolVersion(requestContext),
+          resource: ctx.resource,
+          scopes: ctx.scopes,
+          sessionIdPresent: typeof requestContext.sessionId === "string",
+          userId: ctx.userId,
+        });
       }),
   );
 

@@ -6,6 +6,29 @@ The `.tasks/` board tracks in-flight work; this file records what shipped.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-08-04
+
+### Added
+
+- Added the authenticated, read-only `get_connection_info` diagnostic tool. It reports the exact
+  server release; negotiated and supported MCP revisions; client identity and declared
+  capabilities; Streamable HTTP and stateless-session behavior; OAuth 2.1, DCR, PKCE, resource,
+  JWT, scope, refresh rotation, and allowlist posture; separate Google Health authorization state;
+  and privacy-safe deployment runtime details.
+- Extended `ping` with the server version, negotiated MCP protocol version, and authorization type
+  so agents can identify the connection without making a separate diagnostic call.
+
+### Security
+
+- Connection diagnostics never return token values, authorization headers, client secrets,
+  authorization codes, redirect payloads, or email. Google Health credentials remain encrypted,
+  MCP refresh/client credentials remain hashed, and access JWT values remain unpersisted.
+
+### Compatibility
+
+- The existing 18 tools keep their names and inputs; `get_connection_info` is additive as tool 19.
+  Both modern 2026 and stateless legacy 2025 Streamable HTTP paths remain supported at `/api/mcp`.
+
 ## [1.0.1] — 2026-08-04
 
 ### Fixed

@@ -124,9 +124,11 @@ app/api/health/status/route.ts             healthcheck (no secrets)
 ## Google Health client (`src/google-health/`)
 Central `GoogleHealthClient` per handoff §18: resolves token, calls `https://health.googleapis.com/v4`, normalizes errors (handoff §21 error shapes: `google_health_not_connected`, `missing_scope`, `reauth_required`, `rate_limited` w/ backoff on 429, empty-data messaging), pagination, and a **data-type registry** (single source of truth): kebab endpoint name ↔ snake filter name ↔ scope ↔ allowed ops (from the data-types table in the docs Emmett pasted). Methods: list, get, reconcile, rollUp, dailyRollUp, create, patch, batchDelete. Time helpers (`src/time/`) with Luxon: today/yesterday/last-night/current-week ranges in user TZ (default America/Chicago), DST-safe, sleep-crossing-midnight logic (query sleep by `civil_end_time >= date`).
 
-## MCP surface (18 tools, 6 resources)
-**Read tools** (all responses include `freshness: {retrievedAt, latestDataTime?, isPossiblyStale, note}` + units + bounded payloads):
-`ping`, `get_today_steps`, `get_sleep_summary`, `get_latest_heart_rate`,
+## MCP surface (19 tools, 6 resources)
+**Local diagnostic tools:** `ping` and `get_connection_info` return privacy-safe
+connection/protocol/auth/runtime metadata without touching Google Health.
+**Health read tools** (all responses include `freshness: {retrievedAt, latestDataTime?, isPossiblyStale, note}` + units + bounded payloads):
+`get_today_steps`, `get_sleep_summary`, `get_latest_heart_rate`,
 `get_exercise_week`, `get_nutrition_log`, `get_health_context`
 (fatigue|heart_rate|general data bundle; no conclusions), `get_health_trends` (bounded 7/30/90-day
 coverage-aware summaries), `get_health_updates` (local durable inbox), `query_health_data`
@@ -175,6 +177,14 @@ behavior, or Health behavior. Historical 0.3.0 cutover and rollback receipts rem
 discovery interoperability, adding privacy-safe lifecycle telemetry, and correcting responsive
 website presentation. Package and MCP implementation identities advance together; the protocol
 SDK pins, tool/resource schemas, endpoint URLs, database schema, and private audience remain fixed.
+
+**Stable 1.1.0 connection diagnostics:** add one authenticated read-only `get_connection_info`
+tool and extend `ping` with release/protocol/auth identifiers. Diagnostics expose the negotiated
+and supported MCP revisions, Streamable HTTP/session posture, OAuth/PKCE/JWT/resource/refresh
+configuration, current client/scopes/expiry, separate Google Health authorization status, and
+runtime release markers. They never expose credential values, authorization headers, codes,
+redirect payloads, or email. The MCP endpoint, private audience, database schema, Health behavior,
+and existing tool inputs remain unchanged.
 
 **Phase 8 = v1.1 (separate, later):** webhooks — GCP service account + Google Health IAM role + project NUMBER, subscriber registration (AUTOMATIC policy for granted-scope data types), endpoint auth secret + two-part verification handshake (200/201 authed, 401/403 unauthed), `GOOGLE-HEALTH-API-SIGNATURE` verification against Google's public keyset (Tink prefix parsing → ECDSA P-256), idempotent event insert (hash), populate `data_freshness`, respond 204 fast. Store event + ledger BEFORE responding; `waitUntil` only for non-critical work.
 

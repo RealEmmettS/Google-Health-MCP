@@ -45,6 +45,7 @@ async function handler(req: Request): Promise<Response> {
         authInfo: jwtPrincipalAuthInfo(
           authenticated.token,
           authenticated.principal,
+          req.headers.get("mcp-protocol-version") ?? undefined,
         ),
         parsedBody: prepared.parsedBody,
       });

@@ -167,13 +167,13 @@ Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and sc
 Milestone **`#v1` is complete and live**; the **`#mcp2` / 1.0.0** stable-release milestone owns
 the remaining rollout qualification and soak. The `.tasks/` board remains the source of truth.
 
-- **1.0.1 is the current stable patch at `health.emmetts.dev`** on Vercel Node 24 + Fluid in
-  `iad1`. The implementation identity reports 1.0.1 while the MCP protocol SDK remains independently
+- **1.1.0 is the current stable release at `health.emmetts.dev`** on Vercel Node 24 + Fluid in
+  `iad1`. The implementation identity reports 1.1.0 while the MCP protocol SDK remains independently
   pinned to 2.0.0. The existing SEP-973 icon metadata references the canonical hosted PNG;
   clients decide whether to render it. The
   DPoP-capable legacy-auth recovery deployment is retained separately so connector reconnect,
   Google reconsent, and soak evidence are not conflated with deployment success.
-- The MCP endpoint exposes 18 tools and 6 resources through request-scoped SDK v2 transport,
+- The MCP endpoint exposes 19 tools and 6 resources through request-scoped SDK v2 transport,
   with a stateless 2025 fallback for older connectors.
 - Google Health consent, encrypted token storage/refresh, identity mapping, reads, writes,
   audit logging, and freshness behavior have been verified against real data.
@@ -356,15 +356,22 @@ so discovery can use `/api/auth/oauth2/*`. The public MCP URL itself does not ch
 ## MCP surface
 
 Defined in `docs/PLAN.md` §"MCP surface (v1)"; input schemas per the handoff spec §11. Every
-read response carries `freshness` + units and is payload-bounded (default pageSize ≤ 100; HR
-series summarized via rollups; truncation notes when capped).
+Health-data read response carries `freshness` + units and is payload-bounded (default pageSize ≤
+100; HR series summarized via rollups; truncation notes when capped).
 
-**Read tools (11, + `ping`):** `get_today_steps`, `get_sleep_summary`, `get_latest_heart_rate`,
+**Read/diagnostic tools (13):** `ping`, `get_connection_info`, `get_today_steps`,
+`get_sleep_summary`, `get_latest_heart_rate`,
 `get_exercise_week`, `get_nutrition_log`, `get_health_context` (bundle: sleep + latest HR +
 resting HR/HRV + recent activity + nutrition — data only, no conclusions),
 `get_health_trends` (bounded 7/30/90-day coverage-aware summaries), `get_health_updates`
 (durable local notification inbox), `query_health_data` (generic list/reconcile,
 registry-allowlisted), `rollup_health_data`, and `get_sync_status`.
+
+`ping` returns the server release, negotiated MCP revision, and auth type. The dedicated
+`get_connection_info` tool provides privacy-safe connection diagnostics: client identity and
+capabilities, all supported protocol revisions, Streamable HTTP/session behavior, OAuth 2.1/DCR/
+PKCE/JWT/resource/refresh posture, current scopes/expiry, separate Google Health authorization
+state, and deployment runtime markers—never credential values, headers, codes, redirects, or email.
 
 Notable behaviors: `query_health_data` auto-builds the right filter per record type — including
 the civil `date` field for `daily-*` aggregates, which carry no physical timestamp (a

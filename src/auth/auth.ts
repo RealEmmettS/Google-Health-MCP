@@ -8,6 +8,22 @@ import { sql } from "drizzle-orm";
 import type { JSONWebKeySet, JWTPayload } from "jose";
 import { db } from "../db/client";
 import { isAllowedEmail } from "./allowlist";
+import {
+  MCP_ACCESS_TOKEN_LIFETIME_SECONDS,
+  MCP_GRANT_TYPES,
+  MCP_ISSUER,
+  MCP_REFRESH_TOKEN_LIFETIME_SECONDS,
+  MCP_RESOURCE,
+  MCP_RESOURCES,
+  MCP_SCOPES,
+} from "./mcp-constants";
+
+export {
+  MCP_ISSUER,
+  MCP_RESOURCE,
+  MCP_RESOURCES,
+  MCP_SCOPES,
+} from "./mcp-constants";
 
 /**
  * Auth layer 4 of docs/PLAN.md. This app is the OAuth 2.1 authorization
@@ -15,26 +31,6 @@ import { isAllowedEmail } from "./allowlist";
  * never accepted as an MCP bearer token. Google Health consent remains the
  * separate layer-3 flow under /api/auth/google-health/*.
  */
-
-const configuredBaseUrl =
-  process.env.BETTER_AUTH_URL ??
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "http://localhost:3000";
-
-export const MCP_ISSUER = new URL(configuredBaseUrl).origin;
-export const MCP_RESOURCE = `${MCP_ISSUER}/api/mcp`;
-// Keep the configured authorization-server resource set explicit. The token
-// boundary may default an omitted refresh resource only while this contains
-// the one canonical MCP endpoint.
-export const MCP_RESOURCES = [MCP_RESOURCE] as const;
-export const MCP_SCOPES = [
-  "openid",
-  "profile",
-  "email",
-  "offline_access",
-  "health:read",
-  "health:write",
-];
 
 const PRIVATE_SERVER_MESSAGE =
   "This is a private server. Your Google account is not on its allowlist.";
@@ -96,23 +92,23 @@ export const auth = betterAuth({
         oauthAuthServerConfig: true,
         openidConfig: true,
       },
-      scopes: MCP_SCOPES,
+      scopes: [...MCP_SCOPES],
       // SECURITY: 1.6.x does not bind RFC 8707 resources to grants. The
       // upstream GHSA-p2fr-6hmx-4528 workaround is a *single* audience plus
       // exact resource-server verification. Do not add another entry here.
       validAudiences: [...MCP_RESOURCES],
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
-      clientRegistrationDefaultScopes: MCP_SCOPES,
-      clientRegistrationAllowedScopes: MCP_SCOPES,
+      clientRegistrationDefaultScopes: [...MCP_SCOPES],
+      clientRegistrationAllowedScopes: [...MCP_SCOPES],
       allowPublicClientPrelogin: true,
-      grantTypes: ["authorization_code", "refresh_token"],
-      accessTokenExpiresIn: 60 * 60,
-      refreshTokenExpiresIn: 60 * 60 * 24 * 60,
+      grantTypes: [...MCP_GRANT_TYPES],
+      accessTokenExpiresIn: MCP_ACCESS_TOKEN_LIFETIME_SECONDS,
+      refreshTokenExpiresIn: MCP_REFRESH_TOKEN_LIFETIME_SECONDS,
       storeTokens: "hashed",
       storeClientSecret: "hashed",
       advertisedMetadata: {
-        scopes_supported: MCP_SCOPES,
+        scopes_supported: [...MCP_SCOPES],
         claims_supported: [
           "sub",
           "iss",

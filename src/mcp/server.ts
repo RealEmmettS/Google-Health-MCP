@@ -5,30 +5,24 @@ import {
   type AuthInfo,
 } from "@modelcontextprotocol/server";
 import type { VerifiedMcpPrincipal } from "../auth/auth";
+import { MCP_SERVER_INFO } from "./connection-info";
 import { registerTools } from "./register-tools";
 
 preloadSchemas();
 
-export const MCP_SERVER_INFO = {
-  name: "shaughv-health-mcp",
-  title: "SHAUGHV Health",
-  description:
-    "Private Google Health connector with read insights and explicit nutrition, hydration, and measurement writes.",
-  version: "1.0.1",
-  websiteUrl: "https://health.emmetts.dev",
-  icons: [
-    {
-      src: "https://health.emmetts.dev/shaughv-health-mcp-icon.png",
-      mimeType: "image/png",
-      sizes: ["1254x1254"],
-    },
-  ],
-};
+export { MCP_SERVER_INFO } from "./connection-info";
 
 export const mcpHttpHandler = createMcpHandler(
   ({ authInfo }) => {
     const userId = authInfo?.extra?.userId;
-    if (typeof userId !== "string" || !userId) {
+    if (
+      typeof userId !== "string" ||
+      !userId ||
+      typeof authInfo?.clientId !== "string" ||
+      !authInfo.clientId ||
+      typeof authInfo.expiresAt !== "number" ||
+      !(authInfo.resource instanceof URL)
+    ) {
       throw new Error("Authenticated MCP principal is missing");
     }
 
@@ -46,7 +40,17 @@ export const mcpHttpHandler = createMcpHandler(
         },
       },
     );
-    registerTools(server, { userId });
+    registerTools(server, {
+      clientId: authInfo.clientId,
+      expiresAt: authInfo.expiresAt,
+      resource: authInfo.resource.toString(),
+      scopes: authInfo.scopes,
+      protocolVersionHint:
+        typeof authInfo.extra?.protocolVersion === "string"
+          ? authInfo.extra.protocolVersion
+          : undefined,
+      userId,
+    });
     return server;
   },
   {
@@ -62,6 +66,7 @@ export const mcpHttpHandler = createMcpHandler(
 export function jwtPrincipalAuthInfo(
   token: string,
   principal: VerifiedMcpPrincipal,
+  protocolVersion?: string,
 ): AuthInfo {
   return {
     token,
@@ -69,6 +74,10 @@ export function jwtPrincipalAuthInfo(
     scopes: principal.scopes,
     expiresAt: principal.expiresAt,
     resource: new URL(principal.payload.aud as string),
-    extra: { userId: principal.userId, email: principal.email },
+    extra: {
+      userId: principal.userId,
+      email: principal.email,
+      ...(protocolVersion ? { protocolVersion } : {}),
+    },
   };
 }
