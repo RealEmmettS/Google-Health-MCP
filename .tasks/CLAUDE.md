@@ -39,7 +39,7 @@
 
 | Project | Status | Notes |
 |---|---|---|
-| shaughv-health-mcp (this repo) | 1.0.1 stable patch live; qualification active | Source of truth: `docs/PLAN.md`; audience = ADR-0002; hosting/runtime = ADR-0003; remaining qualification/soak = `#mcp2`/`#q2`. The 1.0.0 promotion and 0.3.0 cutover receipts remain historical; the webhook physical gate remains separate under `#w11` |
+| shaughv-health-mcp (this repo) | 1.1.0 diagnostics release live; qualification active | Source of truth: `docs/PLAN.md`; audience = ADR-0002; hosting/runtime = ADR-0003; remaining qualification/soak = `#mcp2`/`#q2`. The 1.0.0 promotion, 1.0.1 auth patch, and 0.3.0 cutover receipts remain historical; the webhook physical gate remains separate under `#w11` |
 | shaughv-health-db | Connected | Provisioned and connected from the Vercel dashboard through its Storage/Marketplace integration, ID `divine-cloud-92550441`; Vercel injects the pooled runtime and unpooled migration URLs (Preview+Production, 2026-07-09). Neon Auth is disabled |
 | Vercel project | Live | `google-health-mcp` (prj_hZe49opI8FWMx8fWnGDbNI34zUzo, team realemmetts). Domains: **health.emmetts.dev** (canonical) + google-health-mcp-realemmetts.vercel.app. Deployment Protection = preview-only (prod must stay open; app brings its own auth) |
 

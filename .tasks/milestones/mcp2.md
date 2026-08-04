@@ -18,12 +18,15 @@ Includes the stable 1.0.0 product/server identity; native MCP SDK v2 with modern
 
 ## Status
 
-ACTIVE. Stable patch 1.0.1 is live from exact release commit `64913ef` as production deployment
-`dpl_2s1W9kVPJsTvNmrrCQyNFG9j24jb` in `iad1`; the stable 1.0.0 promotion remains recorded. All 154
-tests plus typecheck/build, canonical health/OAuth/OIDC/PRM/JWKS/401 probes, a fresh Codex 0.146.0
-authenticated ping/read, and initial clean runtime-log scans pass. Checkpoint 0.2.1, the
-DPoP-capable legacy-auth recovery artifact, and the production 0.3.0 cutover remain recorded.
-Remaining connector/expiry checks, Google DPoP reconsent/refresh, and the timed soak remain open.
+ACTIVE. Release 1.1.0 is live from exact release commit `483304b` as production deployment
+`dpl_6mNuHU1LuWQMahAVPDvMd1epACpP` in `iad1`; the stable 1.0.0 promotion and 1.0.1 auth patch remain
+recorded. All 154 tests plus typecheck/build, focused 7/7 modern/legacy transport tests, canonical
+health/OAuth/OIDC/PRM/JWKS/401 probes, a fresh direct Codex 0.146.0 authenticated
+ping/diagnostic/read, ChatGPT's 19-tool developer refresh, and initial clean runtime-log scans pass.
+The diagnostic reports Codex's actual `2025-06-18` legacy negotiation and privacy-safe connection
+posture. Checkpoint 0.2.1, the DPoP-capable legacy-auth recovery artifact, and the production 0.3.0
+cutover remain recorded. Remaining connector/expiry checks, Google DPoP reconsent/refresh, and the
+timed soak remain open.
 
 ## Activity
 
@@ -56,3 +59,10 @@ Remaining connector/expiry checks, Google DPoP reconsent/refresh, and the timed 
   Personal development-plugin card retained its separate 1.0.0 catalog snapshot after Refresh;
   no healthy credential was revoked to change that label. Remaining connector, DPoP, and timed
   gates stay open. (agent: codex)
+- 2026-08-04 - Release 1.1.0 commit `483304b` reached READY in `iad1` as
+  `dpl_6mNuHU1LuWQMahAVPDvMd1epACpP` on the canonical alias. Full local gates, modern/legacy
+  transport tests, public auth probes, fresh direct Codex ping/diagnostic/read, and initial runtime
+  logs pass. The diagnostic reports Codex 0.146.0 as `2025-06-18` legacy with OAuth 2.1 and exact
+  audience; ChatGPT's developer Refresh sees 19 tools including `get_connection_info`, while its
+  separate catalog card snapshot remains 1.0.0. Independent connector, DPoP, and timed gates stay
+  open. (agent: codex)
