@@ -1,4 +1,4 @@
-import { MCP_ISSUER, MCP_RESOURCE } from "./auth";
+import { MCP_ISSUER, MCP_RESOURCE, MCP_SCOPES } from "./auth";
 
 export function protectedResourceMetadataResponse(): Response {
   return Response.json(
@@ -7,12 +7,11 @@ export function protectedResourceMetadataResponse(): Response {
       resource_name: "SHAUGHV Health MCP",
       resource_documentation: MCP_ISSUER,
       authorization_servers: [MCP_ISSUER],
-      // Deliberately omit optional resource scope metadata. Several current
-      // desktop clients treat it as the complete authorization request and
-      // consequently omit `offline_access`, leaving an otherwise successful
-      // loopback callback with only a one-hour access token. Those clients
-      // instead fall back to the authorization server's complete scope list.
-      // Resource-specific step-up remains explicit in 403 challenges.
+      // Interoperability exception: current clients differ in which discovery
+      // surface they treat as authoritative. Advertise the complete approved
+      // initial grant here, including offline continuity. Operation-specific
+      // 403 challenges remain narrow.
+      scopes_supported: MCP_SCOPES,
       bearer_methods_supported: ["header"],
     },
     {

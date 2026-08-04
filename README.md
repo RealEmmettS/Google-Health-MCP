@@ -417,8 +417,11 @@ bug); the service layer is kept for re-enablement.
 - Production stays open (no Vercel SSO wall) on purpose — the application's own auth is the
   perimeter.
 - Stable OAuth Provider 1.6.25 has three tracked residuals: its resource-indicator advisory is
-  contained by one configured audience plus exact resource/audience boundaries, and refresh
-  rotation uses predecessor compare-and-set followed by successor insertion rather than one
+  contained by one configured audience plus exact resource/audience boundaries. A refresh-only
+  compatibility boundary inserts the canonical resource when a client omits it, but only while
+  that canonical endpoint is the complete configured resource set; supplied invalid values still
+  fail closed. Refresh rotation uses predecessor compare-and-set followed by successor insertion
+  rather than one
   provider transaction. Local/preview auth storage also shares the Vercel-linked Neon database;
   preview is Vercel-protected and only the allowlisted owner can grant. Re-evaluate all three when
   a stable provider fix or environment-isolated auth store is adopted.
@@ -433,7 +436,7 @@ bug); the service layer is kept for re-enablement.
 | **`reauth_required` on the dashboard or in tool errors** | The health refresh token failed or expired (often the 7-day Testing cap). Re-run the Google Health consent flow (Connect/Reconnect). |
 | **Data looks stale / a workout is missing** | The device path is not live: Fitbit Air → Fitbit app → Google Health has real sync latency. `freshness.isPossiblyStale` + `latestDataTime` flag this; missing data ≠ zero activity. |
 | **MCP endpoint returns 401** | No/invalid OAuth token. The `WWW-Authenticate` header points at the protected-resource metadata; the client should walk the OAuth flow. |
-| **Hermes, Claude Code, or Codex reconnects every hour** | The loopback callback may have succeeded while an older registration requested only the two health scopes, which cannot receive a refresh token. Re-authenticate the one affected connector once on 0.3.0 or newer; do not disconnect Google Health or rotate shared secrets. |
+| **Hermes, Claude Code, or Codex reconnects every hour** | Update the client, then re-authenticate only the affected connector once. The server advertises the complete six-scope grant and accepts a refresh request that omits `resource` only in its guarded single-resource configuration; it still rejects wrong, blank, or duplicate values. Do not disconnect Google Health or rotate shared secrets. |
 | **New env var isn't taking effect** | Production env changes apply on the **next deploy**. Redeploy. |
 | **Build fails on TypeScript** | Keep `typescript` pinned to `^5`. Next 16's build-time type checker cannot load the TS 7 native compiler. |
 | **No deploy after `git push`** | The auto-deploy webhook has occasionally not fired; deploy manually via the Vercel CLI. |
@@ -538,14 +541,14 @@ fixed `localhost` callback port, and Codex uses an ephemeral `127.0.0.1` path th
 server-specific callback identifier. Native IP-literal loopback redirects accept the actual
 listening port selected at authorization time; the protocol, host, path, and query remain exact.
 
-The protected-resource document and initial 401 intentionally do not narrow the OAuth request to
-resource scopes. Current desktop clients differ in how they prioritize challenge, resource, and
-authorization-server metadata; narrowing them to `health:read health:write` can complete the
-browser callback but omit `offline_access`, producing no refresh token. Clients now fall back to
-the authorization server's complete six-scope contract. A real write-scope failure still returns
-an explicit `health:write` step-up challenge. Existing public registrations are expanded
-additively, but an already issued one-hour access token does not become refreshable: reauthenticate
-that connector once to receive a rotating refresh credential.
+The protected-resource document and initial 401 advertise the complete approved initial grant:
+`openid profile email offline_access health:read health:write`. Current clients differ in whether
+they treat the challenge, protected-resource document, or authorization-server metadata as the
+authoritative scope set, so all three now agree. This intentionally includes `offline_access` in
+resource metadata for uninterrupted private-client refresh interoperability. A real write-scope
+failure still returns only the explicit `health:write` step-up challenge. Existing public
+registrations are expanded additively, but an already issued one-hour access token does not become
+refreshable: reauthenticate that connector once to receive a rotating refresh credential.
 
 ## Task board
 

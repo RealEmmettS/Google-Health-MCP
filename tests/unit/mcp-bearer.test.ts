@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   MCP_RESOURCE,
+  MCP_SCOPES,
   MissingMcpScopeError,
   validateMcpAccessTokenPayload,
 } from "../../src/auth/auth";
@@ -44,14 +45,14 @@ describe("MCP bearer boundary", () => {
     ).toBeUndefined();
   });
 
-  it("lets clients discover the full authorization-server scope set", async () => {
+  it("advertises the complete approved initial grant to challenge-first clients", async () => {
     const result = await authenticateMcpRequest(new Request(MCP_RESOURCE));
     expect("response" in result).toBe(true);
     if ("response" in result) {
       expect(result.response.status).toBe(401);
       const challenge = result.response.headers.get("www-authenticate");
       expect(challenge).toContain("resource_metadata=");
-      expect(challenge).not.toContain("scope=");
+      expect(challenge).toContain(`scope="${MCP_SCOPES.join(" ")}"`);
     }
   });
 
@@ -106,6 +107,7 @@ describe("MCP bearer boundary", () => {
     const response = insufficientWriteScopeResponse();
     expect(response.status).toBe(403);
     expect(response.headers.get("www-authenticate")).toContain('scope="health:write"');
+    expect(response.headers.get("www-authenticate")).not.toContain("offline_access");
     expect(response.headers.get("cache-control")).toContain("no-store");
   });
 });

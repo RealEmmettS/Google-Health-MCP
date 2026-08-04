@@ -6,6 +6,8 @@ import {
   normalizeRegistrationResponse,
   prepareOAuthRegistrationRequest,
   prepareOAuthTokenRequest,
+  recordOAuthTokenTelemetry,
+  resolveOAuthTokenResource,
   validateAuthorizeResource,
   withOAuthNoStore,
 } from "../../src/auth/oauth-provider-boundary";
@@ -66,9 +68,110 @@ describe("stable OAuth provider HTTP boundary", () => {
       new Request(`${MCP_ISSUER}/api/auth/oauth2/authorize`),
     );
     expect(missing?.status).toBe(400);
+
+    for (const query of [
+      "resource=",
+      `resource=${encodeURIComponent(MCP_RESOURCE)}&resource=${encodeURIComponent(MCP_RESOURCE)}`,
+    ]) {
+      const invalid = validateAuthorizeResource(
+        new Request(`${MCP_ISSUER}/api/auth/oauth2/authorize?${query}`),
+      );
+      expect(invalid?.status).toBe(400);
+    }
   });
 
-  it("requires form token requests, an exact resource, and supported grants", async () => {
+  it("defaults only a missing refresh resource and forwards the canonical resource", async () => {
+    const prepared = await prepareOAuthTokenRequest(
+      tokenRequest({
+        grant_type: "refresh_token",
+        refresh_token: "never-log-this-refresh-token",
+        client_id: "codex-public-client",
+      }),
+    );
+    expect("request" in prepared).toBe(true);
+    if (!("request" in prepared)) return;
+
+    const forwarded = new URLSearchParams(await prepared.request.text());
+    expect(forwarded.getAll("resource")).toEqual([MCP_RESOURCE]);
+    expect(forwarded.get("refresh_token")).toBe("never-log-this-refresh-token");
+    expect(prepared.telemetry).toMatchObject({
+      grantType: "refresh_token",
+      resourceDisposition: "defaulted",
+    });
+    expect(prepared.telemetry.clientIdHash).toMatch(/^[a-f0-9]{12}$/);
+    expect(prepared.telemetry.clientIdHash).not.toContain("codex-public-client");
+  });
+
+  it("keeps explicit refresh resources exact and rejects wrong, blank, or duplicate values", async () => {
+    const valid = await prepareOAuthTokenRequest(
+      tokenRequest({ grant_type: "refresh_token", resource: MCP_RESOURCE }),
+    );
+    expect("request" in valid).toBe(true);
+    if ("request" in valid) {
+      expect(new URLSearchParams(await valid.request.text()).getAll("resource")).toEqual([
+        MCP_RESOURCE,
+      ]);
+      expect(valid.telemetry.resourceDisposition).toBe("exact");
+    }
+
+    for (const resource of [
+      "https://other.test/api",
+      "",
+      [MCP_RESOURCE, MCP_RESOURCE],
+    ]) {
+      const prepared = await prepareOAuthTokenRequest(
+        tokenRequest({ grant_type: "refresh_token", resource }),
+      );
+      expect("response" in prepared && prepared.response.status).toBe(400);
+      expect(prepared.telemetry.resourceDisposition).toBe("invalid");
+      if ("response" in prepared) {
+        expect(await prepared.response.json()).toMatchObject({ error: "invalid_target" });
+      }
+    }
+  });
+
+  it("keeps authorization-code exchange strict and disables defaulting for multiple configured resources", async () => {
+    const missing = await prepareOAuthTokenRequest(
+      tokenRequest({ grant_type: "authorization_code", code: "never-log-this-code" }),
+    );
+    expect("response" in missing && missing.response.status).toBe(400);
+    expect(missing.telemetry.resourceDisposition).toBe("invalid");
+
+    const exact = await prepareOAuthTokenRequest(
+      tokenRequest({
+        grant_type: "authorization_code",
+        code: "never-log-this-code",
+        resource: MCP_RESOURCE,
+      }),
+    );
+    expect("request" in exact).toBe(true);
+    expect(exact.telemetry.resourceDisposition).toBe("exact");
+
+    for (const resource of [
+      "https://other.test/api",
+      "",
+      [MCP_RESOURCE, MCP_RESOURCE],
+    ]) {
+      const prepared = await prepareOAuthTokenRequest(
+        tokenRequest({
+          grant_type: "authorization_code",
+          code: "never-log-this-code",
+          resource,
+        }),
+      );
+      expect("response" in prepared && prepared.response.status).toBe(400);
+      expect(prepared.telemetry.resourceDisposition).toBe("invalid");
+    }
+
+    expect(
+      resolveOAuthTokenResource("refresh_token", [], [
+        MCP_RESOURCE,
+        "https://other.test/api/mcp",
+      ]),
+    ).toEqual({ disposition: "invalid" });
+  });
+
+  it("requires form token requests and supported grants", async () => {
     const json = await prepareOAuthTokenRequest(
       new Request(`${MCP_ISSUER}/api/auth/oauth2/token`, {
         method: "POST",
@@ -78,29 +181,65 @@ describe("stable OAuth provider HTTP boundary", () => {
     );
     expect("response" in json && json.response.status).toBe(415);
 
-    const missing = await prepareOAuthTokenRequest(tokenRequest({ grant_type: "refresh_token" }));
-    expect("response" in missing && missing.response.status).toBe(400);
-
-    const duplicate = await prepareOAuthTokenRequest(
-      tokenRequest({
-        grant_type: "refresh_token",
-        resource: [MCP_RESOURCE, MCP_RESOURCE],
-      }),
-    );
-    expect("response" in duplicate && duplicate.response.status).toBe(400);
-
     const unsupported = await prepareOAuthTokenRequest(
       tokenRequest({ grant_type: "client_credentials", resource: MCP_RESOURCE }),
     );
     expect("response" in unsupported && unsupported.response.status).toBe(400);
+  });
 
-    const valid = await prepareOAuthTokenRequest(
-      tokenRequest({ grant_type: "refresh_token", resource: MCP_RESOURCE }),
+  it("emits only privacy-safe token telemetry fields", async () => {
+    const logger = vi.fn();
+    await recordOAuthTokenTelemetry(
+      {
+        clientIdHash: "0123456789ab",
+        grantType: "refresh_token",
+        resourceDisposition: "defaulted",
+      },
+      Response.json(
+        {
+          error: "invalid_grant",
+          error_description:
+            "refresh_token=secret-token code=secret-code owner@example.test Authorization: Bearer secret",
+        },
+        { status: 400 },
+      ),
+      logger,
     );
-    expect("request" in valid).toBe(true);
-    if ("request" in valid) {
-      expect(await valid.request.text()).toContain(`resource=${encodeURIComponent(MCP_RESOURCE)}`);
+
+    expect(logger).toHaveBeenCalledWith("oauth_token", {
+      clientIdHash: "0123456789ab",
+      grantType: "refresh_token",
+      resourceDisposition: "defaulted",
+      status: 400,
+      errorClass: "invalid_grant",
+    });
+    const output = JSON.stringify(logger.mock.calls);
+    for (const sensitive of [
+      "secret-token",
+      "secret-code",
+      "owner@example.test",
+      "Authorization",
+      "Bearer secret",
+      "error_description",
+    ]) {
+      expect(output).not.toContain(sensitive);
     }
+
+    const untrustedLogger = vi.fn();
+    await recordOAuthTokenTelemetry(
+      {
+        clientIdHash: null,
+        grantType: "unknown",
+        resourceDisposition: "invalid",
+      },
+      Response.json({ error: "secret_token_value" }, { status: 400 }),
+      untrustedLogger,
+    );
+    expect(untrustedLogger).toHaveBeenCalledWith(
+      "oauth_token",
+      expect.objectContaining({ errorClass: "http_400" }),
+    );
+    expect(JSON.stringify(untrustedLogger.mock.calls)).not.toContain("secret_token_value");
   });
 
   it("rejects oversized token requests before parsing", async () => {

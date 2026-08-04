@@ -61,6 +61,12 @@ Existing affected clients still need one ordinary reauthentication to mint a ref
 signed-in consent redirect, UserInfo/JWT, Google reconsent, and soak gates remain open. Google
 reconsent and destructive cleanup require fresh approval.
 
+The 2026-08-03 durable-auth candidate is locally complete but not yet deployed. Its refresh-only
+boundary defaults an omitted canonical resource only while exactly one resource is configured,
+advertises the approved six-scope grant consistently, and emits allowlisted privacy-safe token
+telemetry. Synthetic hosted, Claude Code, and Codex profiles rotate successfully; real-client
+recovery, one-hour expiry proof, production monitoring, Google reconsent, and cleanup remain open.
+
 ## Activity
 
 - 2026-07-13 — Created from the 0.1.2 OAuth incident review so the compatibility bridge remains explicitly time-boxed and the broader auth migration is not lost. (agent: codex)
@@ -110,4 +116,13 @@ reconsent and destructive cleanup require fresh approval.
   ChatGPT personal-plugin detail still showed `Install plugin`, confirming that ChatGPT did not
   derive or update that separate bundle-install flag from the healthy MCP connector deployment.
   No install, disconnect, registration, token, consent, or database mutation was attempted.
+  (agent: codex)
+- 2026-08-03 - Implemented and locally qualified the durable-auth candidate. Authorization and
+  code exchange remain exact; refresh alone may insert the canonical resource in the guarded
+  single-resource case, while blank/wrong/duplicate values fail. Protected-resource metadata and
+  the initial 401 now advertise all six approved scopes; 403 remains operation-specific. The full
+  suite passed 153 with 7 skipped, typecheck/build passed, and the corrected v2 E2E passed hosted,
+  Claude Code, and Codex public DCR/PKCE/consent/JWT/UserInfo/MCP/rotation. Codex-shaped omitted-
+  resource refresh logged `defaulted`; exact clients logged `exact`; Inspector listed 18 tools;
+  cleanup verified zero synthetic v2 rows. Production and real-client gates remain open.
   (agent: codex)

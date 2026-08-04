@@ -23,6 +23,10 @@ const configuredBaseUrl =
 
 export const MCP_ISSUER = new URL(configuredBaseUrl).origin;
 export const MCP_RESOURCE = `${MCP_ISSUER}/api/mcp`;
+// Keep the configured authorization-server resource set explicit. The token
+// boundary may default an omitted refresh resource only while this contains
+// the one canonical MCP endpoint.
+export const MCP_RESOURCES = [MCP_RESOURCE] as const;
 export const MCP_SCOPES = [
   "openid",
   "profile",
@@ -96,7 +100,7 @@ export const auth = betterAuth({
       // SECURITY: 1.6.x does not bind RFC 8707 resources to grants. The
       // upstream GHSA-p2fr-6hmx-4528 workaround is a *single* audience plus
       // exact resource-server verification. Do not add another entry here.
-      validAudiences: [MCP_RESOURCE],
+      validAudiences: [...MCP_RESOURCES],
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,
       clientRegistrationDefaultScopes: MCP_SCOPES,

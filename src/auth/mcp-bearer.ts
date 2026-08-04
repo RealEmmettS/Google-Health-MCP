@@ -1,5 +1,6 @@
 import {
   MCP_ISSUER,
+  MCP_SCOPES,
   MissingMcpScopeError,
   verifyMcpAccessToken,
   type VerifiedMcpPrincipal,
@@ -56,11 +57,9 @@ export async function authenticateMcpRequest(
   const token = extractBearerToken(request);
   if (!token) {
     return {
-      // Omitting the optional scope parameter lets current desktop clients
-      // use authorization-server metadata, which includes `offline_access`.
-      // Supplying only resource scopes here can strand otherwise successful
-      // loopback callbacks with a one-hour access token and no refresh token.
-      response: bearerResponse(401, "invalid_token"),
+      // Match protected-resource metadata so challenge-first clients request
+      // identity, read/write access, and offline continuity in one consent.
+      response: bearerResponse(401, "invalid_token", MCP_SCOPES.join(" ")),
     };
   }
   try {

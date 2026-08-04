@@ -1,4 +1,5 @@
-import { MCP_RESOURCE } from "./auth";
+import { createHash } from "node:crypto";
+import { MCP_RESOURCE, MCP_RESOURCES } from "./auth";
 import { decodeJwt, type JWTPayload } from "jose";
 
 const MAX_OAUTH_BODY_BYTES = 64 * 1024;
@@ -25,6 +26,117 @@ function exactResource(values: string[]): Response | undefined {
     );
   }
   return undefined;
+}
+
+export type OAuthGrantType =
+  | "authorization_code"
+  | "refresh_token"
+  | "other"
+  | "unknown";
+export type OAuthResourceDisposition = "exact" | "defaulted" | "invalid";
+
+export interface OAuthTokenTelemetry {
+  clientIdHash: string | null;
+  grantType: OAuthGrantType;
+  resourceDisposition: OAuthResourceDisposition;
+}
+
+type PreparedOAuthTokenRequest =
+  | { request: Request; telemetry: OAuthTokenTelemetry }
+  | { response: Response; telemetry: OAuthTokenTelemetry };
+
+type OAuthTokenTelemetryRecord = OAuthTokenTelemetry & {
+  errorClass: string;
+  status: number;
+};
+
+const SAFE_OAUTH_ERROR_CLASSES = new Set([
+  "access_denied",
+  "invalid_client",
+  "invalid_grant",
+  "invalid_request",
+  "invalid_scope",
+  "invalid_target",
+  "server_error",
+  "temporarily_unavailable",
+  "unauthorized_client",
+  "unsupported_grant_type",
+]);
+
+function normalizedGrantType(value: string | null): OAuthGrantType {
+  if (value === "authorization_code" || value === "refresh_token") return value;
+  return value === null ? "unknown" : "other";
+}
+
+function shortClientIdHash(value: string | null): string | null {
+  if (!value) return null;
+  return createHash("sha256").update(value, "utf8").digest("hex").slice(0, 12);
+}
+
+function tokenTelemetry(
+  params?: URLSearchParams,
+  resourceDisposition: OAuthResourceDisposition = "invalid",
+): OAuthTokenTelemetry {
+  return {
+    clientIdHash: shortClientIdHash(params?.get("client_id") ?? null),
+    grantType: normalizedGrantType(params?.get("grant_type") ?? null),
+    resourceDisposition,
+  };
+}
+
+export function resolveOAuthTokenResource(
+  grantType: string | null,
+  values: string[],
+  configuredResources: readonly string[] = MCP_RESOURCES,
+):
+  | { disposition: "exact" | "defaulted"; resource: string }
+  | { disposition: "invalid" } {
+  if (values.length === 1 && values[0] === MCP_RESOURCE) {
+    return { disposition: "exact", resource: MCP_RESOURCE };
+  }
+  if (
+    grantType === "refresh_token" &&
+    values.length === 0 &&
+    configuredResources.length === 1 &&
+    configuredResources[0] === MCP_RESOURCE
+  ) {
+    return { disposition: "defaulted", resource: MCP_RESOURCE };
+  }
+  return { disposition: "invalid" };
+}
+
+function safeOAuthErrorClass(response: Response): Promise<string> {
+  if (response.ok) return Promise.resolve("none");
+  return response
+    .clone()
+    .json()
+    .then((body: unknown) => {
+      const error =
+        body && typeof body === "object" && !Array.isArray(body)
+          ? (body as Record<string, unknown>).error
+          : undefined;
+      return typeof error === "string" && SAFE_OAUTH_ERROR_CLASSES.has(error)
+        ? error
+        : `http_${response.status}`;
+    })
+    .catch(() => `http_${response.status}`);
+}
+
+export async function recordOAuthTokenTelemetry(
+  telemetry: OAuthTokenTelemetry,
+  response: Response,
+  logger: (event: string, record: OAuthTokenTelemetryRecord) => void = (event, record) =>
+    console.info(event, record),
+): Promise<void> {
+  try {
+    logger("oauth_token", {
+      ...telemetry,
+      status: response.status,
+      errorClass: await safeOAuthErrorClass(response),
+    });
+  } catch {
+    // Observability must never alter an OAuth response.
+  }
 }
 
 async function readBoundedBody(request: Request): Promise<Uint8Array | Response> {
@@ -80,7 +192,7 @@ export function validateAuthorizeResource(request: Request): Response | undefine
 
 export async function prepareOAuthTokenRequest(
   request: Request,
-): Promise<{ request: Request } | { response: Response }> {
+): Promise<PreparedOAuthTokenRequest> {
   const contentType = request.headers.get("content-type")?.split(";", 1)[0].trim();
   if (contentType !== "application/x-www-form-urlencoded") {
     return {
@@ -89,22 +201,37 @@ export async function prepareOAuthTokenRequest(
         "invalid_request",
         "The token endpoint requires a form-encoded request.",
       ),
+      telemetry: tokenTelemetry(),
     };
   }
 
   const body = await readBoundedBody(request);
-  if (body instanceof Response) return { response: body };
+  if (body instanceof Response) {
+    return { response: body, telemetry: tokenTelemetry() };
+  }
   let params: URLSearchParams;
   try {
     params = new URLSearchParams(new TextDecoder("utf-8", { fatal: true }).decode(body));
   } catch {
-    return { response: oauthError(400, "invalid_request", "Malformed token request.") };
+    return {
+      response: oauthError(400, "invalid_request", "Malformed token request."),
+      telemetry: tokenTelemetry(),
+    };
   }
 
-  const invalidResource = exactResource(params.getAll("resource"));
-  if (invalidResource) return { response: invalidResource };
-
   const grantType = params.get("grant_type");
+  const resource = resolveOAuthTokenResource(grantType, params.getAll("resource"));
+  if (resource.disposition === "invalid") {
+    return {
+      response: oauthError(
+        400,
+        "invalid_target",
+        "The resource must exactly match the protected MCP endpoint.",
+      ),
+      telemetry: tokenTelemetry(params),
+    };
+  }
+
   if (grantType !== "authorization_code" && grantType !== "refresh_token") {
     return {
       response: oauthError(
@@ -112,11 +239,19 @@ export async function prepareOAuthTokenRequest(
         "unsupported_grant_type",
         "Only authorization_code and refresh_token grants are supported.",
       ),
+      telemetry: tokenTelemetry(params, resource.disposition),
     };
   }
 
+  let forwardedBody = body;
+  if (resource.disposition === "defaulted") {
+    params.append("resource", resource.resource);
+    forwardedBody = new TextEncoder().encode(params.toString());
+  }
+
   return {
-    request: rebuiltRequest(request, body, new Headers(request.headers)),
+    request: rebuiltRequest(request, forwardedBody, new Headers(request.headers)),
+    telemetry: tokenTelemetry(params, resource.disposition),
   };
 }
 

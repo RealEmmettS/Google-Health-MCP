@@ -5,6 +5,7 @@ import {
   normalizeOAuthTokenResponse,
   prepareOAuthRegistrationRequest,
   prepareOAuthTokenRequest,
+  recordOAuthTokenTelemetry,
   validateAuthorizeResource,
   withOAuthNoStore,
 } from "@/src/auth/oauth-provider-boundary";
@@ -34,14 +35,19 @@ export async function POST(request: Request): Promise<Response> {
 
   if (pathname === "/api/auth/oauth2/token") {
     const prepared = await prepareOAuthTokenRequest(request);
-    if ("response" in prepared) return prepared.response;
-    return normalizeOAuthTokenResponse(
+    if ("response" in prepared) {
+      await recordOAuthTokenTelemetry(prepared.telemetry, prepared.response);
+      return prepared.response;
+    }
+    const response = await normalizeOAuthTokenResponse(
       await handlers.POST(prepared.request),
       async (payload) => {
         const result = await auth.api.signJWT({ body: { payload } });
         return result.token;
       },
     );
+    await recordOAuthTokenTelemetry(prepared.telemetry, response);
+    return response;
   }
 
   if (pathname === "/api/auth/oauth2/register") {

@@ -189,7 +189,7 @@ behavior, or Health behavior. Historical 0.3.0 cutover and rollback receipts rem
 5. **Negative checks:** MCP endpoint returns 401 without a valid token; non-allowlisted Google account cannot complete sign-in; no plaintext tokens in DB (inspect rows) or logs; 429/expired-token paths degrade with the specified error shapes.
 
 ## Watchouts (Opus: read before coding)
-- **Better Auth OAuth Provider 1.6.25 has a known resource-indicator advisory** — retain one configured audience, exact resource checks at authorize/token/refresh, and exact single-string audience verification at `/api/mcp`. Re-evaluate when a stable fixed release exists; do not jump to a beta silently.
+- **Better Auth OAuth Provider 1.6.25 has a known resource-indicator advisory** — retain one configured audience, exact resource checks at authorize and authorization-code exchange, and exact single-string audience verification at `/api/mcp`. A refresh request may omit `resource` only while that one canonical resource is the complete configured set; the boundary inserts it before provider handling. Any supplied blank, wrong, or multiple value is rejected, and adding a second configured resource disables omission compatibility until explicit binding exists. Re-evaluate when a stable fixed release exists; do not jump to a beta silently.
 - **Stable refresh rotation is not one provider transaction:** 1.6.25 compare-and-set revokes the
   predecessor and rejects sequential replay, then inserts the successor separately. Concurrent
   replay rejects the loser but may leave the winner live; a post-revocation insertion failure can

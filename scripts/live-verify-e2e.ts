@@ -5,14 +5,14 @@
  *
  * Real client paths (what claude.ai / ChatGPT / Claude Code actually do):
  *   1. read /.well-known/oauth-authorization-server
- *   2. DCR register a hosted confidential client plus the public loopback
- *      callback shapes used by Claude Code and Codex
+ *   2. DCR register hosted and loopback public clients with the callback
+ *      shapes used by Claude, Claude Code, and Codex
  *   3. PKCE /authorize  (Google login is the only un-automatable step; we
  *      satisfy it by minting a better-auth session row + signing its cookie
  *      exactly as the server would — same HMAC scheme and cookie naming)
  *   4. form-encoded /token exchange and refresh → fresh access_token pairs
  *   5. POST /api/mcp with every initial/refreshed Bearer token → initialize + tools/list
- *   6. run representative tools through the refreshed confidential-client token
+ *   6. run representative tools through a refreshed hosted-client token
  *
  * The script intentionally has no direct-token fallback: an OAuth failure must
  * remain visible. Every session, verification code, DCR client, consent, and
@@ -22,6 +22,7 @@
  *        [--allow-production-mutations]
  */
 import { createHmac, randomBytes, createHash, randomUUID } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { config } from "dotenv";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { redactError } from "../src/security/redact";
@@ -29,9 +30,13 @@ import { redactError } from "../src/security/redact";
 config({ path: ".env.development.local", quiet: true });
 
 const MUTATION_OPT_IN = "--allow-production-mutations";
+const INSPECTOR_OPT_IN = "--run-inspector";
 const cliArgs = process.argv.slice(2);
 const allowProductionMutations = cliArgs.includes(MUTATION_OPT_IN);
-const positionalArgs = cliArgs.filter((arg) => arg !== MUTATION_OPT_IN);
+const runInspector = cliArgs.includes(INSPECTOR_OPT_IN);
+const positionalArgs = cliArgs.filter(
+  (arg) => arg !== MUTATION_OPT_IN && arg !== INSPECTOR_OPT_IN,
+);
 const BASE = (positionalArgs[0] ?? "http://localhost:3000").replace(/\/+$/, "");
 const EMAIL = positionalArgs[1] ?? "eshaughv@gmail.com";
 const RESOURCE = `${BASE}/api/mcp`;
@@ -39,11 +44,11 @@ const CLAUDE_HOSTED_REDIRECT_URI = "https://claude.ai/api/mcp/auth_callback";
 const CLAUDE_CODE_REDIRECT_URI = "http://localhost:9876/callback";
 const CODEX_REDIRECT_URI = "http://127.0.0.1:9877/callback/e2e-health-mcp";
 const SECRET = process.env.BETTER_AUTH_SECRET ?? "";
-const REQUESTED_SCOPE = "openid profile email offline_access";
+const REQUESTED_SCOPE =
+  "openid profile email offline_access health:read health:write";
 const DCR_OPTIONAL_FIELDS = [
   "client_uri",
   "logo_uri",
-  "scope",
   "contacts",
   "tos_uri",
   "policy_uri",
@@ -58,22 +63,20 @@ const DCR_OPTIONAL_FIELDS = [
 ] as const;
 
 type JsonObject = Record<string, unknown>;
-type AuthMethod = "client_secret_post" | "none";
-
 interface OAuthScenario {
   label: string;
   clientName: string;
-  authMethod: AuthMethod;
+  applicationType: "native" | "web";
   redirectUri: string;
+  omitResourceOnRefresh?: boolean;
 }
 
 interface OAuthResult {
   accessToken: string;
   refreshToken: string;
   clientId: string;
-  clientSecret: string;
-  authMethod: AuthMethod;
   label: string;
+  omitResourceOnRefresh: boolean;
 }
 
 let failures = 0;
@@ -106,6 +109,33 @@ function checkNoStoreHeaders(label: string, response: Response): void {
     /\bno-store\b/i.test(cacheControl) && /\bno-cache\b/i.test(pragma),
     `cache-control=${cacheControl || "missing"} pragma=${pragma || "missing"}`,
   );
+}
+
+async function responseRedirectUrl(response: Response): Promise<URL | null> {
+  const location = response.headers.get("location");
+  if (location) return new URL(location, BASE);
+  const body = (await response.clone().json().catch(() => ({}))) as JsonObject;
+  const destination =
+    typeof body.url === "string"
+      ? body.url
+      : typeof body.redirect_uri === "string"
+        ? body.redirect_uri
+        : "";
+  return destination ? new URL(destination, BASE) : null;
+}
+
+function inspectorToolCount(stdout: string): number {
+  for (const line of stdout.trim().split(/\r?\n/).reverse()) {
+    try {
+      const body = JSON.parse(line) as JsonObject;
+      const result = body.result as JsonObject | undefined;
+      const tools = result?.tools ?? body.tools;
+      if (Array.isArray(tools)) return tools.length;
+    } catch {
+      // Ignore non-JSON CLI notices without reflecting their contents.
+    }
+  }
+  return 0;
 }
 
 // --- better-call signed-cookie scheme (verified from source) -----------------
@@ -200,7 +230,7 @@ async function main() {
     for (const clientName of clientNames) {
       try {
         const result = await db.execute(
-          sql`select "client_id" from "oauth_application" where "name" = ${clientName}`,
+          sql`select "client_id" from "mcp_oauth_client_v2" where "name" = ${clientName}`,
         );
         for (const row of result.rows ?? []) {
           const clientId = (row as { client_id?: string }).client_id;
@@ -222,18 +252,21 @@ async function main() {
         db.execute(sql`delete from "verification" where "value" like ${verificationPattern}`),
       );
       await safely("client access tokens", () =>
-        db.execute(sql`delete from "oauth_access_token" where "client_id" = ${clientId}`),
+        db.execute(sql`delete from "mcp_oauth_access_token_v2" where "client_id" = ${clientId}`),
+      );
+      await safely("client refresh tokens", () =>
+        db.execute(sql`delete from "mcp_oauth_refresh_token_v2" where "client_id" = ${clientId}`),
       );
       await safely("client consents", () =>
-        db.execute(sql`delete from "oauth_consent" where "client_id" = ${clientId}`),
+        db.execute(sql`delete from "mcp_oauth_consent_v2" where "client_id" = ${clientId}`),
       );
       await safely("DCR client id", () =>
-        db.execute(sql`delete from "oauth_application" where "client_id" = ${clientId}`),
+        db.execute(sql`delete from "mcp_oauth_client_v2" where "client_id" = ${clientId}`),
       );
     }
     for (const clientName of clientNames) {
       await safely("DCR client name", () =>
-        db.execute(sql`delete from "oauth_application" where "name" = ${clientName}`),
+        db.execute(sql`delete from "mcp_oauth_client_v2" where "name" = ${clientName}`),
       );
     }
     await safely("forged session", () =>
@@ -245,7 +278,7 @@ async function main() {
       try {
         remaining += countRows(
           await db.execute(
-            sql`select count(*)::int as "count" from "oauth_application" where "name" = ${clientName}`,
+            sql`select count(*)::int as "count" from "mcp_oauth_client_v2" where "name" = ${clientName}`,
           ),
         );
       } catch {
@@ -257,12 +290,17 @@ async function main() {
       try {
         remaining += countRows(
           await db.execute(
-            sql`select count(*)::int as "count" from "oauth_access_token" where "client_id" = ${clientId}`,
+            sql`select count(*)::int as "count" from "mcp_oauth_access_token_v2" where "client_id" = ${clientId}`,
           ),
         );
         remaining += countRows(
           await db.execute(
-            sql`select count(*)::int as "count" from "oauth_consent" where "client_id" = ${clientId}`,
+            sql`select count(*)::int as "count" from "mcp_oauth_refresh_token_v2" where "client_id" = ${clientId}`,
+          ),
+        );
+        remaining += countRows(
+          await db.execute(
+            sql`select count(*)::int as "count" from "mcp_oauth_consent_v2" where "client_id" = ${clientId}`,
           ),
         );
         remaining += countRows(
@@ -399,30 +437,30 @@ async function main() {
     const runOAuthScenario = async (scenario: OAuthScenario): Promise<OAuthResult | null> => {
       clientNames.add(scenario.clientName);
 
-      // DCR: client_secret_post mirrors the hosted connector; none mirrors a
-      // public Claude Code client and must never receive a client secret.
+      // Unauthenticated DCR is public for every connector profile and must
+      // never receive a client secret.
       const registrationRes = await fetch(registrationEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           client_name: scenario.clientName,
+          application_type: scenario.applicationType,
           redirect_uris: [scenario.redirectUri],
           grant_types: ["authorization_code", "refresh_token"],
           response_types: ["code"],
-          token_endpoint_auth_method: scenario.authMethod,
+          token_endpoint_auth_method: "none",
         }),
       });
       checkNoStoreHeaders(`${scenario.label}: DCR`, registrationRes);
       const registration = (await registrationRes.json().catch(() => ({}))) as JsonObject;
       const clientId = typeof registration.client_id === "string" ? registration.client_id : "";
-      const clientSecret =
-        typeof registration.client_secret === "string" ? registration.client_secret : "";
       if (clientId) clientIds.add(clientId);
       check(
         `${scenario.label}: DCR returns the requested client type`,
         registrationRes.status === 201 &&
           !!clientId &&
-          registration.token_endpoint_auth_method === scenario.authMethod,
+          registration.token_endpoint_auth_method === "none" &&
+          registration.application_type === scenario.applicationType,
         `status=${registrationRes.status} client_id=${clientId ? "yes" : "no"}`,
       );
 
@@ -430,22 +468,19 @@ async function main() {
         Object.prototype.hasOwnProperty.call(registration, field),
       );
       check(
-        `${scenario.label}: unrequested RFC DCR fields are omitted, not null`,
+        `${scenario.label}: unrequested optional DCR fields are omitted, not null`,
         unexpectedOptionalFields.length === 0,
         `unexpected=${unexpectedOptionalFields.join(",") || "none"}`,
       );
-      if (scenario.authMethod === "none") {
-        check(
-          `${scenario.label}: public DCR response omits client-secret fields`,
-          !Object.prototype.hasOwnProperty.call(registration, "client_secret") &&
-            !Object.prototype.hasOwnProperty.call(registration, "client_secret_expires_at"),
-        );
-      } else {
-        check(
-          `${scenario.label}: confidential DCR response includes a non-expiring client secret`,
-          !!clientSecret && registration.client_secret_expires_at === 0,
-        );
-      }
+      check(
+        `${scenario.label}: DCR records the complete six-scope contract`,
+        registration.scope === REQUESTED_SCOPE,
+      );
+      check(
+        `${scenario.label}: public DCR response omits client-secret fields`,
+        !Object.prototype.hasOwnProperty.call(registration, "client_secret") &&
+          !Object.prototype.hasOwnProperty.call(registration, "client_secret_expires_at"),
+      );
       if (!clientId) return null;
 
       const codeVerifier = b64url(randomBytes(32));
@@ -468,13 +503,13 @@ async function main() {
       // Exercise the browser's signed-out branch and verify the sign-in page
       // receives every value required to reconstruct the authorize URL.
       const signedOutRes = await fetch(authorizeUrl, { redirect: "manual" });
-      const signInLocation = signedOutRes.headers.get("location") ?? "";
-      const signInUrl = signInLocation ? new URL(signInLocation, BASE) : null;
+      const signInUrl = await responseRedirectUrl(signedOutRes);
       const mismatchedAuthorizeParams = Array.from(authorizeParams.entries())
+        .filter(([key]) => key !== "resource")
         .filter(([key, value]) => signInUrl?.searchParams.get(key) !== value)
         .map(([key]) => key);
       check(
-        `${scenario.label}: signed-out authorize redirects to /sign-in with the exact query`,
+        `${scenario.label}: signed-out authorize redirects to /sign-in with the signed provider query`,
         !!signInUrl &&
           signInUrl.origin === new URL(BASE).origin &&
           signInUrl.pathname === "/sign-in" &&
@@ -482,8 +517,8 @@ async function main() {
         `status=${signedOutRes.status} mismatched=${mismatchedAuthorizeParams.join(",") || "none"}`,
       );
       check(
-        `${scenario.label}: signed-out authorize stores its resumable prompt cookie`,
-        (signedOutRes.headers.get("set-cookie") ?? "").includes("oidc_login_prompt="),
+        `${scenario.label}: signed-out authorize signs its resumable request`,
+        !!signInUrl?.searchParams.get("sig") && !!signInUrl.searchParams.get("exp"),
       );
 
       // Exercise the same authorize request with the forged signed session.
@@ -491,8 +526,31 @@ async function main() {
         headers: { cookie: cookieHeader },
         redirect: "manual",
       });
-      const callbackLocation = authorizationRes.headers.get("location") ?? "";
-      const callbackUrl = callbackLocation ? new URL(callbackLocation, BASE) : null;
+      const consentUrl = await responseRedirectUrl(authorizationRes);
+      check(
+        `${scenario.label}: signed-in authorize requests all-six-scope consent`,
+        consentUrl?.origin === new URL(BASE).origin &&
+          consentUrl.pathname === "/consent" &&
+          REQUESTED_SCOPE.split(" ").every((scope) =>
+            (consentUrl.searchParams.get("scope") ?? "").split(" ").includes(scope),
+          ),
+      );
+      if (!consentUrl || consentUrl.pathname !== "/consent") return null;
+
+      const consentRes = await fetch(`${BASE}/api/auth/oauth2/consent`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Origin: BASE,
+          cookie: cookieHeader,
+        },
+        body: JSON.stringify({
+          accept: true,
+          oauth_query: consentUrl.search.replace(/^\?/, ""),
+        }),
+      });
+      const callbackUrl = await responseRedirectUrl(consentRes);
       const code = callbackUrl?.searchParams.get("code") ?? "";
       if (code) verificationCodes.add(code);
       const gotCode =
@@ -505,7 +563,7 @@ async function main() {
         gotCode,
         gotCode
           ? "code issued"
-          : `status=${authorizationRes.status} location=${callbackLocation ? "unexpected" : "missing"}`,
+          : `authorize_status=${authorizationRes.status} consent_status=${consentRes.status}`,
       );
       if (!gotCode) return null;
 
@@ -518,7 +576,6 @@ async function main() {
         redirect_uri: scenario.redirectUri,
         client_id: clientId,
         resource: RESOURCE,
-        ...(scenario.authMethod === "client_secret_post" ? { client_secret: clientSecret } : {}),
       });
 
       const missingPkceRes = await fetch(tokenEndpoint, {
@@ -554,8 +611,7 @@ async function main() {
         `status=${wrongResourceRes.status} error=${String(wrongResourceError.error ?? "missing")}`,
       );
 
-      // Public clients send client_id + PKCE only; confidential clients also
-      // prove their client secret in the request body.
+      // Public clients send client_id + PKCE only.
       const tokenForm = new URLSearchParams(tokenRequestBase);
       tokenForm.set("code_verifier", codeVerifier);
       const tokenRes = await fetch(tokenEndpoint, {
@@ -645,7 +701,7 @@ async function main() {
           issuedAt <= nowSeconds + 60 &&
           expiresAt > nowSeconds &&
           expiresAt > issuedAt &&
-          expiresAt <= nowSeconds + 7200 &&
+          expiresAt <= nowSeconds + 43200 &&
           authTimeIsValid,
         `iat=${Number.isInteger(issuedAt) ? "integer" : "invalid"} exp=${Number.isInteger(expiresAt) ? "integer" : "invalid"} auth_time=${hasAuthTime ? (Number.isInteger(authTime) ? "integer" : "invalid") : "omitted"}`,
       );
@@ -655,9 +711,8 @@ async function main() {
             accessToken,
             refreshToken,
             clientId,
-            clientSecret,
-            authMethod: scenario.authMethod,
             label: scenario.label,
+            omitResourceOnRefresh: scenario.omitResourceOnRefresh === true,
           }
         : null;
     };
@@ -667,32 +722,8 @@ async function main() {
         grant_type: "refresh_token",
         refresh_token: result.refreshToken,
         client_id: result.clientId,
-        resource: RESOURCE,
-        ...(result.authMethod === "client_secret_post"
-          ? { client_secret: result.clientSecret }
-          : {}),
+        ...(result.omitResourceOnRefresh ? {} : { resource: RESOURCE }),
       });
-      if (result.authMethod === "client_secret_post") {
-        const unauthenticatedForm = new URLSearchParams(refreshForm);
-        unauthenticatedForm.delete("client_secret");
-        const unauthenticatedResponse = await fetch(tokenEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Accept: "application/json",
-          },
-          body: unauthenticatedForm.toString(),
-        });
-        const unauthenticatedBody = (await unauthenticatedResponse
-          .json()
-          .catch(() => ({}))) as JsonObject;
-        check(
-          `${result.label}: confidential refresh without its secret returns invalid_client`,
-          unauthenticatedResponse.status === 401 &&
-            unauthenticatedBody.error === "invalid_client",
-          `status=${unauthenticatedResponse.status} error=${String(unauthenticatedBody.error ?? "missing")}`,
-        );
-      }
 
       const invalidRefreshForm = new URLSearchParams(refreshForm);
       invalidRefreshForm.set("refresh_token", `invalid-${randomUUID()}`);
@@ -729,7 +760,7 @@ async function main() {
       // stored credential. The legacy provider does not atomically invalidate
       // the predecessor; that security-model migration remains tracked in #oap.
       check(
-        `${result.label}: form-encoded refresh returns a fresh Bearer token pair`,
+        `${result.label}: form-encoded ${result.omitResourceOnRefresh ? "missing-resource " : ""}refresh returns a fresh Bearer token pair`,
         response.ok &&
           accessToken.length > 0 &&
           refreshToken.length > 0 &&
@@ -809,20 +840,20 @@ async function main() {
       return { ready: initOk && listOk, mcpSession };
     };
 
-    const assertPersistedExpiry = async (result: OAuthResult) => {
+    const assertPersistedRefreshState = async (result: OAuthResult) => {
       const row = (
         await db.execute(sql`
-          select "access_token_expires_at" > now() as "is_future"
-          from "oauth_access_token"
+          select
+            count(*) filter (where "revoked" is null and "expires_at" > now())::int as "active",
+            count(*)::int as "total"
+          from "mcp_oauth_refresh_token_v2"
           where "client_id" = ${result.clientId}
-          order by "created_at" desc
-          limit 1
         `)
-      ).rows?.[0] as { is_future?: boolean } | undefined;
+      ).rows?.[0] as { active?: number; total?: number } | undefined;
       check(
-        `${result.label}: persisted access-token expiry is still in the future`,
-        row?.is_future === true,
-        `is_future=${String(row?.is_future ?? "missing")}`,
+        `${result.label}: exactly one active rotating refresh credential is persisted`,
+        Number(row?.active) === 1 && Number(row?.total) >= 1,
+        `active=${String(row?.active ?? "missing")} total=${String(row?.total ?? "missing")}`,
       );
     };
 
@@ -839,7 +870,38 @@ async function main() {
       );
     };
 
-    const exerciseConfidentialTools = async (
+    const exerciseInspector = (result: OAuthResult) => {
+      const command =
+        "& npx -y @modelcontextprotocol/inspector --cli --server-url $env:MCP_INSPECTOR_SERVER_URL --transport http --method tools/list --header $env:MCP_INSPECTOR_TEST_HEADER --format json --connect-timeout 15000";
+      const inspected = spawnSync(
+        "powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-Command", command],
+        {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          MCP_INSPECTOR_SERVER_URL: RESOURCE,
+          MCP_INSPECTOR_TEST_HEADER: `Authorization: Bearer ${result.accessToken}`,
+          npm_config_loglevel: "silent",
+        },
+        timeout: 45_000,
+        windowsHide: true,
+        },
+      );
+      const toolCount = inspectorToolCount(inspected.stdout ?? "");
+      const failureDetail = redactError(
+        new Error(inspected.stderr || inspected.error?.message || "unknown Inspector failure"),
+      ).message
+        .replace(/\s+/g, " ")
+        .slice(0, 240);
+      check(
+        "MCP Inspector: refreshed Bearer discovers the full tool surface",
+        inspected.status === 0 && toolCount >= 15,
+        `status=${String(inspected.status ?? "missing")} tools=${toolCount}${inspected.status === 0 ? "" : ` error=${failureDetail}`}`,
+      );
+    };
+
+    const exerciseRepresentativeTools = async (
       result: OAuthResult,
       mcpSession: string | undefined,
     ) => {
@@ -855,7 +917,7 @@ async function main() {
       );
       const pingPayload = JSON.parse(ping.json?.result?.content?.[0]?.text ?? "{}");
       check(
-        "confidential client: ping authenticates as the token's user",
+        "hosted client: ping authenticates as the token's user",
         pingPayload.pong === true && pingPayload.authenticatedUserId === betterAuthUserId,
         `authedUserId=${pingPayload.authenticatedUserId ?? "missing"}`,
       );
@@ -872,7 +934,7 @@ async function main() {
       );
       const statusPayload = JSON.parse(status.json?.result?.content?.[0]?.text ?? "{}");
       check(
-        "confidential client: get_sync_status reports granted scopes",
+        "hosted client: get_sync_status reports granted scopes",
         status.json?.result?.isError !== true &&
           JSON.stringify(statusPayload).toLowerCase().includes("scope"),
         `keys=${Object.keys(statusPayload).join(",")}`,
@@ -890,7 +952,7 @@ async function main() {
       );
       const stepsPayload = JSON.parse(steps.json?.result?.content?.[0]?.text ?? "{}");
       check(
-        "confidential client: get_today_steps returns freshness metadata",
+        "hosted client: get_today_steps returns freshness metadata",
         steps.json?.result?.isError !== true && !!stepsPayload.freshness,
         `steps=${stepsPayload.steps ?? stepsPayload.totalSteps ?? "?"} retrievedAt=${stepsPayload.freshness?.retrievedAt ?? "?"}`,
       );
@@ -898,22 +960,23 @@ async function main() {
 
     const scenarios: OAuthScenario[] = [
       {
-        label: "hosted confidential client",
-        clientName: `e2e-confidential-${runId}`,
-        authMethod: "client_secret_post",
+        label: "hosted public client",
+        clientName: `e2e-hosted-public-${runId}`,
+        applicationType: "web",
         redirectUri: CLAUDE_HOSTED_REDIRECT_URI,
       },
       {
         label: "Claude Code public client",
         clientName: `e2e-claude-code-public-${runId}`,
-        authMethod: "none",
+        applicationType: "native",
         redirectUri: CLAUDE_CODE_REDIRECT_URI,
       },
       {
         label: "Codex public client",
         clientName: `e2e-codex-public-${runId}`,
-        authMethod: "none",
+        applicationType: "native",
         redirectUri: CODEX_REDIRECT_URI,
+        omitResourceOnRefresh: true,
       },
     ];
 
@@ -925,20 +988,21 @@ async function main() {
         // This is deliberately the first request after token parsing: it
         // catches tokens that are issued successfully but rejected on use.
         const mcp = await exerciseMcp(result);
-        await assertPersistedExpiry(result);
+        await assertPersistedRefreshState(result);
         await exerciseUserInfo(result);
         const refreshed = await exerciseRefresh(result);
         if (!refreshed) continue;
 
         const refreshedMcp = await exerciseMcp(refreshed);
-        await assertPersistedExpiry(refreshed);
+        await assertPersistedRefreshState(refreshed);
         await exerciseUserInfo(refreshed);
         if (
-          scenario.authMethod === "client_secret_post" &&
+          scenario.applicationType === "web" &&
           mcp.ready &&
           refreshedMcp.ready
         ) {
-          await exerciseConfidentialTools(refreshed, refreshedMcp.mcpSession);
+          await exerciseRepresentativeTools(refreshed, refreshedMcp.mcpSession);
+          if (runInspector) exerciseInspector(refreshed);
         }
       } catch (error) {
         const message = redactError(error).message;
