@@ -113,6 +113,7 @@ describe.skipIf(!enabled)("stable OAuth Provider on PostgreSQL", () => {
       "http://127.0.0.1:43876/callback",
     );
     expect(rejection.searchParams.get("error")).toBe("invalid_request");
+    expect(rejection.searchParams.get("iss")).toBe(baseUrl);
 
     const accessRows = await db.select().from(mcpOauthAccessTokenV2);
     expect(accessRows).toHaveLength(0);

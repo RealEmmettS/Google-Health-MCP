@@ -501,6 +501,29 @@ export async function normalizeRegistrationResponse(
   }
 }
 
+/**
+ * Codex 0.146.0 receives the RFC 9207 `iss` authorization-response parameter,
+ * but drops it before asking rmcp to validate the callback. Advertising RFC
+ * 9207 support therefore makes an otherwise valid callback fail locally. Keep
+ * emitting `iss` through Better Auth, while temporarily telling clients not to
+ * require it until Codex preserves the parameter end to end.
+ *
+ * Tracking: https://github.com/openai/codex/issues/34684
+ */
+export async function normalizeAuthorizationServerMetadata(
+  response: Response,
+): Promise<Response> {
+  if (!response.ok) return response;
+  const headers = new Headers(response.headers);
+  const body = (await response.json()) as JsonObject;
+  body.authorization_response_iss_parameter_supported = false;
+  return Response.json(body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export function withOAuthNoStore(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("Cache-Control", "private, no-store");

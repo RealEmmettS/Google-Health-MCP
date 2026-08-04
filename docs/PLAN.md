@@ -190,6 +190,7 @@ behavior, or Health behavior. Historical 0.3.0 cutover and rollback receipts rem
 
 ## Watchouts (Opus: read before coding)
 - **Better Auth OAuth Provider 1.6.25 has a known resource-indicator advisory** — retain one configured audience, exact resource checks at authorize and authorization-code exchange, and exact single-string audience verification at `/api/mcp`. A refresh request may omit `resource` only while that one canonical resource is the complete configured set; the boundary inserts it before provider handling. Any supplied blank, wrong, or multiple value is rejected, and adding a second configured resource disables omission compatibility until explicit binding exists. Re-evaluate when a stable fixed release exists; do not jump to a beta silently.
+- **Codex 0.146.0 drops the RFC 9207 `iss` callback parameter before validating it** — Better Auth continues emitting the exact issuer on successful and error redirects, but authorization and OpenID metadata temporarily advertise `authorization_response_iss_parameter_supported: false` so Codex does not require the value it discards. Remove this compatibility override only after the [Codex callback relay defect](https://github.com/openai/codex/issues/34684) is fixed and qualified locally.
 - **Stable refresh rotation is not one provider transaction:** 1.6.25 compare-and-set revokes the
   predecessor and rejects sequential replay, then inserts the successor separately. Concurrent
   replay rejects the loser but may leave the winner live; a post-revocation insertion failure can

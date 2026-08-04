@@ -2,6 +2,7 @@ import { SignJWT } from "jose";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MCP_ISSUER, MCP_RESOURCE } from "../../src/auth/auth";
 import {
+  normalizeAuthorizationServerMetadata,
   normalizeOAuthTokenResponse,
   normalizeRegistrationResponse,
   prepareOAuthRegistrationRequest,
@@ -50,6 +51,24 @@ describe("stable OAuth provider HTTP boundary", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(response.headers.get("pragma")).toBe("no-cache");
     expect(await response.json()).toMatchObject({ sub: "user-1" });
+  });
+
+  it("disables strict response-issuer validation for the Codex callback relay defect", async () => {
+    const response = await normalizeAuthorizationServerMetadata(
+      Response.json(
+        {
+          issuer: MCP_ISSUER,
+          authorization_response_iss_parameter_supported: true,
+        },
+        { headers: { "cache-control": "public, max-age=300" } },
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("public, max-age=300");
+    expect(await response.json()).toEqual({
+      issuer: MCP_ISSUER,
+      authorization_response_iss_parameter_supported: false,
+    });
   });
 
   it("accepts only the one canonical authorization resource", async () => {
