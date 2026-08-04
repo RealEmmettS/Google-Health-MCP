@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main className="site-shell public-page">
+    <main className="site-shell public-page privacy-page">
       <div className="public-frame">
         <BrandLockup label="Health / Privacy" />
         <article className="surface-panel privacy-copy">
