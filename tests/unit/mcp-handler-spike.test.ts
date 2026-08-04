@@ -65,7 +65,7 @@ async function assertSurface(client: Client): Promise<void> {
     name: "shaughv-health-mcp",
     title: "SHAUGHV Health",
     description: expect.stringContaining("Private Google Health connector"),
-    version: "1.0.0",
+    version: "1.0.1",
     websiteUrl: "https://health.emmetts.dev",
     icons: [
       {

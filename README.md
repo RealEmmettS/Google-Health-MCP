@@ -167,8 +167,8 @@ Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and sc
 Milestone **`#v1` is complete and live**; the **`#mcp2` / 1.0.0** stable-release milestone owns
 the remaining rollout qualification and soak. The `.tasks/` board remains the source of truth.
 
-- **1.0.0 is the stable release at `health.emmetts.dev`** on Vercel Node 24 + Fluid in `iad1`.
-  The implementation identity reports 1.0.0 while the MCP protocol SDK remains independently
+- **1.0.1 is the current stable patch at `health.emmetts.dev`** on Vercel Node 24 + Fluid in
+  `iad1`. The implementation identity reports 1.0.1 while the MCP protocol SDK remains independently
   pinned to 2.0.0. The existing SEP-973 icon metadata references the canonical hosted PNG;
   clients decide whether to render it. The
   DPoP-capable legacy-auth recovery deployment is retained separately so connector reconnect,

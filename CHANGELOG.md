@@ -6,6 +6,34 @@ The `.tasks/` board tracks in-flight work; this file records what shipped.
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-08-04
+
+### Fixed
+
+- Restored durable Codex refreshes by defaulting an omitted OAuth resource only for refresh-token
+  grants while exactly one canonical resource is configured. Authorization and code exchange
+  remain strict, and supplied blank, wrong, or duplicate resources still fail closed.
+- Made the complete six-scope initial grant discoverable to clients and added privacy-safe OAuth
+  lifecycle telemetry without weakening exact audience, allowlist, rotation, or revocation checks.
+- Added a temporary metadata compatibility flag for Codex's authorization-response issuer relay
+  defect while preserving the exact `iss` parameter on successful and error callbacks.
+- Corrected public-page hero clipping, tablet command-card wrapping, small copy targets, the
+  privacy heading orphan, and the standalone Privacy page's unreachable overflow-hidden content.
+
+### Verified
+
+- Fresh production Codex DCR/PKCE/consent, callback, token exchange, MCP discovery, and a
+  non-mutating Health read succeeded; the Claude Code plugin connector also owns one active
+  six-scope rotating refresh credential.
+- The 2026 and stateless 2025 Streamable HTTP paths, Inspector discovery, the complete automated
+  suite, typecheck, production build, canonical metadata/challenges, and 320–1920px responsive
+  checks pass. The bounded post-expiry and 24-hour monitoring gates remain open on the board.
+
+### Unchanged
+
+- MCP endpoints, tool/resource names and schemas, Google Health credentials, database schema,
+  legacy-table retention, and the private allowlist-only audience are unchanged.
+
 ## [1.0.0] — 2026-07-31
 
 ### Changed

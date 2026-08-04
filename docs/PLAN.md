@@ -171,6 +171,11 @@ approval before connector revocation/reconnect, Google DPoP reconsent, or legacy
 line to 1.0.0 without changing the protocol SDK pin, tools, resources, schemas, endpoints, auth
 behavior, or Health behavior. Historical 0.3.0 cutover and rollback receipts remain authoritative.
 
+**Stable 1.0.1 patch:** preserves that public surface while repairing OAuth refresh and scope
+discovery interoperability, adding privacy-safe lifecycle telemetry, and correcting responsive
+website presentation. Package and MCP implementation identities advance together; the protocol
+SDK pins, tool/resource schemas, endpoint URLs, database schema, and private audience remain fixed.
+
 **Phase 8 = v1.1 (separate, later):** webhooks — GCP service account + Google Health IAM role + project NUMBER, subscriber registration (AUTOMATIC policy for granted-scope data types), endpoint auth secret + two-part verification handshake (200/201 authed, 401/403 unauthed), `GOOGLE-HEALTH-API-SIGNATURE` verification against Google's public keyset (Tink prefix parsing → ECDSA P-256), idempotent event insert (hash), populate `data_freshness`, respond 204 fast. Store event + ledger BEFORE responding; `waitUntil` only for non-critical work.
 
 ---
