@@ -63,7 +63,7 @@ Existing affected clients still need one ordinary reauthentication to mint a ref
 signed-in consent redirect, UserInfo/JWT, Google reconsent, and soak gates remain open. Google
 reconsent and destructive cleanup require fresh approval.
 
-The durable-auth repair is live in final production deployment
+The durable-auth repair remains live; its 24-hour watched production artifact was
 `dpl_4KvquU7U2KRnGVPm1prnhyeHGkf7` from `e7f7c1a`. Production defaults an omitted refresh resource
 only in the guarded single-resource case, advertises the six-scope grant consistently, and emits
 allowlisted privacy-safe telemetry. Codex silently rotated after expiry with
