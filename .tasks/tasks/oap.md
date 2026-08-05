@@ -44,6 +44,8 @@ MCP authorization URLs move from `/api/auth/mcp/*` to `/api/auth/oauth2/*`, requ
 - [x] Production DCR, exact resource, form token boundary, RS256 JWKS, metadata aliases, 401/403, and no-store gates pass
 - [x] MCP server identity/icon and per-tool OAuth metadata pass modern and legacy client conformance
 - [x] ChatGPT's working connector auth is distinguished from its personal-plugin bundle install state
+- [x] Codex silently rotates after access-token expiry with the guarded default resource, then pings and performs a non-mutating read without manual sign-in
+- [x] The 24-hour auth rollout watch passes with canonical six-scope discovery/challenge, modern and legacy traffic, and no server regression
 - [ ] Signed-in consent denial, UserInfo/JWT use, JWKS warm-cache, refresh, and endpoint limit thresholds pass during reconnect
 - [x] Existing users and Google Health connections/tokens remain unchanged in apply/rollback rehearsal
 - [x] DPoP proof, nonce retry, key mismatch, atomic preservation, and forced reconnect/refresh race tests pass
@@ -61,12 +63,13 @@ Existing affected clients still need one ordinary reauthentication to mint a ref
 signed-in consent redirect, UserInfo/JWT, Google reconsent, and soak gates remain open. Google
 reconsent and destructive cleanup require fresh approval.
 
-The durable-auth repair is live from `0852da9` plus the Codex callback compatibility follow-up
-`b4a9d0e`. Production defaults an omitted refresh resource only in the guarded single-resource
-case, advertises the six-scope grant consistently, and emits allowlisted privacy-safe telemetry.
-A fresh Codex loopback login and read pass, and the Claude Code plugin owns one active all-scope
-rotating credential. Remaining client surfaces, the one-hour expiry proof, monitoring, Google
-reconsent, and cleanup remain open.
+The durable-auth repair is live in final production deployment
+`dpl_4KvquU7U2KRnGVPm1prnhyeHGkf7` from `e7f7c1a`. Production defaults an omitted refresh resource
+only in the guarded single-resource case, advertises the six-scope grant consistently, and emits
+allowlisted privacy-safe telemetry. Codex silently rotated after expiry with
+`resourceDisposition=defaulted`, then passed ping and a non-mutating read without manual sign-in;
+modern traffic also rotated with `resourceDisposition=exact`. The 24-hour watch passed. Remaining
+client surfaces, Google reconsent/DPoP, the seven-day watch, and cleanup remain open.
 
 ## Activity
 
@@ -135,3 +138,12 @@ reconsent, and cleanup remain open.
   rotating credential. Claude Code's plugin connector also completed real OAuth and owns one
   active six-scope rotating credential. One-hour, remaining-client, soak, DPoP, and cleanup gates
   remain open. (agent: codex)
+- 2026-08-05 - Accepted the 24-hour durable-auth watch. Final production deployment
+  `dpl_4KvquU7U2KRnGVPm1prnhyeHGkf7` remained READY at the canonical alias; hourly health,
+  OAuth/OIDC/protected-resource/JWKS and six-scope 401 checks passed. Post-expiry Codex refresh
+  telemetry was `refresh_token`/`defaulted`/200/none and required no sign-in; ping and a
+  non-mutating read passed. Compliant modern traffic showed `exact` refresh and successful
+  read-only calls. There were no `invalid_target`, error, fatal, 5xx, or token-loop regressions.
+  One isolated `invalid_grant` from an obsolete client registration did not match any current v2
+  client and never retried. No client credential or health value was changed or recorded.
+  (agent: codex)

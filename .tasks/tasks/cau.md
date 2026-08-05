@@ -57,7 +57,8 @@ Claude Code plugin connector completed its loopback flow and persisted one activ
 rotating credential; the current-provider hosted and Code profiles also pass synthetic exchange,
 rotation, UserInfo, initialize, and 18-tool discovery. Emmett waived further Claude agent-call
 retries for this rollout. Work-workspace, Desktop, mobile, and account-connector propagation remain
-open.
+open. The completed 24-hour production watch found no callback, OIDC, refresh, or transport
+regression; this does not substitute for those owner-operated Claude surface checks.
 
 ## Activity
 
@@ -88,3 +89,8 @@ open.
   the unauthenticated account-level connector rather than the plugin; Emmett explicitly asked not
   to continue retrying that client-side distinction. Server correctness is covered; hosted,
   Desktop, mobile, and work-workspace propagation remain open. (agent: codex)
+- 2026-08-05 - The 24-hour durable-auth production watch passed canonical OAuth/OIDC/resource/JWKS
+  and six-scope challenge checks without callback, refresh, transport, or 5xx regression. Real
+  post-expiry Codex rotation and both modern/legacy MCP traffic stayed healthy. Claude credentials
+  were preserved and no further Claude retries were attempted, so hosted, Desktop, mobile, and
+  work-workspace propagation remain open as Emmett requested. (agent: codex)
