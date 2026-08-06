@@ -186,6 +186,13 @@ runtime release markers. They never expose credential values, authorization head
 redirect payloads, or email. The MCP endpoint, private audience, database schema, Health behavior,
 and existing tool inputs remain unchanged.
 
+**Stable 1.1.1 authorization-continuation repair:** retain exact RFC 8707 resource binding while
+repairing Better Auth 1.6.25's signed post-login continuation, whose authorize schema omits the
+already-validated `resource`. The boundary restores the sole canonical resource only after
+verifying the provider HMAC, signed parameter set, issuance time, and expiry. Fresh unsigned
+authorize requests, authorization-code exchange, supplied blank/wrong/duplicate resources, a
+second configured resource, and JWT audience validation remain fail-closed.
+
 **Phase 8 = v1.1 (separate, later):** webhooks — GCP service account + Google Health IAM role + project NUMBER, subscriber registration (AUTOMATIC policy for granted-scope data types), endpoint auth secret + two-part verification handshake (200/201 authed, 401/403 unauthed), `GOOGLE-HEALTH-API-SIGNATURE` verification against Google's public keyset (Tink prefix parsing → ECDSA P-256), idempotent event insert (hash), populate `data_freshness`, respond 204 fast. Store event + ledger BEFORE responding; `waitUntil` only for non-critical work.
 
 ---
@@ -204,7 +211,7 @@ and existing tool inputs remain unchanged.
 5. **Negative checks:** MCP endpoint returns 401 without a valid token; non-allowlisted Google account cannot complete sign-in; no plaintext tokens in DB (inspect rows) or logs; 429/expired-token paths degrade with the specified error shapes.
 
 ## Watchouts (Opus: read before coding)
-- **Better Auth OAuth Provider 1.6.25 has a known resource-indicator advisory** — retain one configured audience, exact resource checks at authorize and authorization-code exchange, and exact single-string audience verification at `/api/mcp`. A refresh request may omit `resource` only while that one canonical resource is the complete configured set; the boundary inserts it before provider handling. Any supplied blank, wrong, or multiple value is rejected, and adding a second configured resource disables omission compatibility until explicit binding exists. Re-evaluate when a stable fixed release exists; do not jump to a beta silently.
+- **Better Auth OAuth Provider 1.6.25 has a known resource-indicator advisory** — retain one configured audience, exact resource checks on fresh external authorize requests and authorization-code exchange, and exact single-string audience verification at `/api/mcp`. Its authorize schema strips the already-validated RFC 8707 resource before signing a post-login continuation; the boundary may restore the sole canonical resource only after verifying that provider signature, signed parameter set, issuance time, and expiry. A refresh request may also omit `resource` only while that one canonical resource is the complete configured set. Any supplied blank, wrong, or multiple value is rejected, and adding a second configured resource disables both omission-compatibility paths until explicit binding exists. Re-evaluate when a stable fixed release exists; do not jump to a beta silently.
 - **Codex 0.146.0 drops the RFC 9207 `iss` callback parameter before validating it** — Better Auth continues emitting the exact issuer on successful and error redirects, but authorization and OpenID metadata temporarily advertise `authorization_response_iss_parameter_supported: false` so Codex does not require the value it discards. Remove this compatibility override only after the [Codex callback relay defect](https://github.com/openai/codex/issues/34684) is fixed and qualified locally.
 - **Stable refresh rotation is not one provider transaction:** 1.6.25 compare-and-set revokes the
   predecessor and rejects sequential replay, then inserts the successor separately. Concurrent

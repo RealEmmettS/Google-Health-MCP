@@ -167,8 +167,8 @@ Layers 3 and 4 use the **same** Google OAuth client ID but separate flows and sc
 Milestone **`#v1` is complete and live**; the **`#mcp2` / 1.0.0** stable-release milestone owns
 the remaining rollout qualification and soak. The `.tasks/` board remains the source of truth.
 
-- **1.1.0 is the current stable release at `health.emmetts.dev`** on Vercel Node 24 + Fluid in
-  `iad1`. The implementation identity reports 1.1.0 while the MCP protocol SDK remains independently
+- **1.1.1 is the current stable release at `health.emmetts.dev`** on Vercel Node 24 + Fluid in
+  `iad1`. The implementation identity reports 1.1.1 while the MCP protocol SDK remains independently
   pinned to 2.0.0. The existing SEP-973 icon metadata references the canonical hosted PNG;
   clients decide whether to render it. The
   DPoP-capable legacy-auth recovery deployment is retained separately so connector reconnect,
@@ -444,6 +444,7 @@ bug); the service layer is kept for re-enablement.
 | **Data looks stale / a workout is missing** | The device path is not live: Fitbit Air → Fitbit app → Google Health has real sync latency. `freshness.isPossiblyStale` + `latestDataTime` flag this; missing data ≠ zero activity. |
 | **MCP endpoint returns 401** | No/invalid OAuth token. The `WWW-Authenticate` header points at the protected-resource metadata; the client should walk the OAuth flow. |
 | **Hermes, Claude Code, or Codex reconnects every hour** | Update the client, then re-authenticate only the affected connector once. The server advertises the complete six-scope grant and accepts a refresh request that omits `resource` only in its guarded single-resource configuration; it still rejects wrong, blank, or duplicate values. Do not disconnect Google Health or rotate shared secrets. |
+| **Claude shows `invalid_target` immediately after Google sign-in** | Better Auth 1.6.25 can omit the already-validated RFC 8707 resource from its signed post-login continuation. Release 1.1.1 verifies that continuation's HMAC, signed fields, issuance time, and expiry before restoring the sole canonical `/api/mcp` resource. Fresh unsigned omissions and every supplied wrong, blank, or duplicate resource still fail closed. |
 | **Codex reports a missing authorization-response issuer after consent** | Codex 0.146.0 currently drops the RFC 9207 `iss` parameter while relaying its local callback. The server still emits the exact issuer but advertises `authorization_response_iss_parameter_supported: false` as a narrow compatibility override; see the [upstream Codex defect](https://github.com/openai/codex/issues/34684). Update Codex and remove the override only after a real loopback login passes. |
 | **New env var isn't taking effect** | Production env changes apply on the **next deploy**. Redeploy. |
 | **Build fails on TypeScript** | Keep `typescript` pinned to `^5`. Next 16's build-time type checker cannot load the TS 7 native compiler. |

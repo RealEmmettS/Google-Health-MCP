@@ -3,10 +3,11 @@ import { auth } from "@/src/auth/auth";
 import {
   normalizeRegistrationResponse,
   normalizeOAuthTokenResponse,
+  prepareOAuthAuthorizeRequest,
   prepareOAuthRegistrationRequest,
   prepareOAuthTokenRequest,
+  recordOAuthAuthorizeTelemetry,
   recordOAuthTokenTelemetry,
-  validateAuthorizeResource,
   withOAuthNoStore,
 } from "@/src/auth/oauth-provider-boundary";
 
@@ -21,8 +22,14 @@ const handlers = toNextJsHandler(auth);
 export async function GET(request: Request): Promise<Response> {
   const pathname = new URL(request.url).pathname;
   if (pathname === "/api/auth/oauth2/authorize") {
-    const invalidResource = validateAuthorizeResource(request);
-    if (invalidResource) return invalidResource;
+    const prepared = await prepareOAuthAuthorizeRequest(request);
+    if ("response" in prepared) {
+      await recordOAuthAuthorizeTelemetry(prepared.telemetry, prepared.response);
+      return prepared.response;
+    }
+    const response = withOAuthNoStore(await handlers.GET(prepared.request));
+    await recordOAuthAuthorizeTelemetry(prepared.telemetry, response);
+    return response;
   }
   const response = await handlers.GET(request);
   return pathname.startsWith("/api/auth/oauth2/")

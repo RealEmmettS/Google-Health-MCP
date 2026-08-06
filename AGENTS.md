@@ -31,7 +31,7 @@ freshness metadata. No medical claims. Stack: Next.js 16 (App Router, Node runti
   TypeScript 5.9, official `@modelcontextprotocol/server` v2, stable Better Auth OAuth Provider
   (OAuth 2.1, DCR, S256 PKCE, exact-audience JWTs), Drizzle ORM on Neon Postgres, Luxon, Zod, Vitest.
 
-Current milestone: **`#mcp2`**, the Google Health MCP stable line (currently 1.1.0) and remaining
+Current milestone: **`#mcp2`**, the Google Health MCP stable line (currently 1.1.1) and remaining
 qualification. Phase status is on the board — read it there; don't trust any prose snapshot
 that may have gone stale.
 

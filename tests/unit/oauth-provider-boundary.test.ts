@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { SignJWT } from "jose";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MCP_ISSUER, MCP_RESOURCE } from "../../src/auth/auth";
@@ -5,13 +6,53 @@ import {
   normalizeAuthorizationServerMetadata,
   normalizeOAuthTokenResponse,
   normalizeRegistrationResponse,
+  prepareOAuthAuthorizeRequest,
   prepareOAuthRegistrationRequest,
   prepareOAuthTokenRequest,
+  recordOAuthAuthorizeTelemetry,
   recordOAuthTokenTelemetry,
   resolveOAuthTokenResource,
   validateAuthorizeResource,
   withOAuthNoStore,
 } from "../../src/auth/oauth-provider-boundary";
+
+const TEST_SIGNING_SECRET = "test-only-better-auth-continuation-secret";
+
+function providerSignedAuthorizeContinuation({
+  expiresAt = Date.now() + 10 * 60_000,
+  issuedAt = Date.now(),
+}: {
+  expiresAt?: number;
+  issuedAt?: number;
+} = {}): Request {
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: "claude-public-client",
+    redirect_uri: "https://claude.ai/api/mcp/auth_callback",
+    scope: "openid profile email offline_access health:read health:write",
+    state: "test-state",
+    code_challenge: "test-code-challenge",
+    code_challenge_method: "S256",
+    exp: String(Math.floor(expiresAt / 1000)),
+    ba_iat: String(issuedAt),
+  });
+  const signedNames = [...new Set([...params.keys(), "ba_param"])].sort();
+  for (const name of signedNames) params.append("ba_param", name);
+  const canonical = new URLSearchParams(
+    [...params.entries()].sort(([keyA, valueA], [keyB, valueB]) => {
+      if (keyA < keyB) return -1;
+      if (keyA > keyB) return 1;
+      if (valueA < valueB) return -1;
+      if (valueA > valueB) return 1;
+      return 0;
+    }),
+  ).toString();
+  params.set(
+    "sig",
+    createHmac("sha256", TEST_SIGNING_SECRET).update(canonical).digest("base64"),
+  );
+  return new Request(`${MCP_ISSUER}/api/auth/oauth2/authorize?${params}`);
+}
 
 function tokenRequest(params: Record<string, string | string[]>): Request {
   const body = new URLSearchParams();
@@ -72,11 +113,17 @@ describe("stable OAuth provider HTTP boundary", () => {
   });
 
   it("accepts only the one canonical authorization resource", async () => {
-    expect(
-      validateAuthorizeResource(
-        new Request(`${MCP_ISSUER}/api/auth/oauth2/authorize?resource=${encodeURIComponent(MCP_RESOURCE)}`),
-      ),
-    ).toBeUndefined();
+    const exactRequest = new Request(
+      `${MCP_ISSUER}/api/auth/oauth2/authorize?resource=${encodeURIComponent(MCP_RESOURCE)}`,
+    );
+    expect(validateAuthorizeResource(exactRequest)).toBeUndefined();
+    const preparedExact = await prepareOAuthAuthorizeRequest(
+      exactRequest,
+      [MCP_RESOURCE],
+      TEST_SIGNING_SECRET,
+    );
+    expect("request" in preparedExact).toBe(true);
+    expect(preparedExact.telemetry.resourceDisposition).toBe("exact");
     const wrong = validateAuthorizeResource(
       new Request(`${MCP_ISSUER}/api/auth/oauth2/authorize?resource=https://other.test/api`),
     );
@@ -97,6 +144,83 @@ describe("stable OAuth provider HTTP boundary", () => {
       );
       expect(invalid?.status).toBe(400);
     }
+  });
+
+  it("restores the canonical resource only for a valid signed post-login continuation", async () => {
+    const prepared = await prepareOAuthAuthorizeRequest(
+      providerSignedAuthorizeContinuation(),
+      [MCP_RESOURCE],
+      TEST_SIGNING_SECRET,
+    );
+    expect("request" in prepared).toBe(true);
+    if (!("request" in prepared)) return;
+
+    expect(new URL(prepared.request.url).searchParams.getAll("resource")).toEqual([
+      MCP_RESOURCE,
+    ]);
+    expect(prepared.telemetry).toMatchObject({
+      grantType: "authorization_code",
+      resourceDisposition: "defaulted",
+    });
+    expect(prepared.telemetry.clientIdHash).toMatch(/^[a-f0-9]{12}$/);
+    expect(JSON.stringify(prepared.telemetry)).not.toContain("claude-public-client");
+  });
+
+  it("keeps missing, forged, expired, wrong, duplicate, and multi-resource authorize requests closed", async () => {
+    const unsignedMissing = await prepareOAuthAuthorizeRequest(
+      new Request(
+        `${MCP_ISSUER}/api/auth/oauth2/authorize?response_type=code&client_id=client`,
+      ),
+      [MCP_RESOURCE],
+      TEST_SIGNING_SECRET,
+    );
+    expect("response" in unsignedMissing && unsignedMissing.response.status).toBe(400);
+
+    const forgedRequest = providerSignedAuthorizeContinuation();
+    const forgedUrl = new URL(forgedRequest.url);
+    forgedUrl.searchParams.set("client_id", "tampered-client");
+    const forged = await prepareOAuthAuthorizeRequest(
+      new Request(forgedUrl),
+      [MCP_RESOURCE],
+      TEST_SIGNING_SECRET,
+    );
+    expect("response" in forged && forged.response.status).toBe(400);
+
+    const expired = await prepareOAuthAuthorizeRequest(
+      providerSignedAuthorizeContinuation({
+        issuedAt: Date.now() - 11 * 60_000,
+        expiresAt: Date.now() - 60_000,
+      }),
+      [MCP_RESOURCE],
+      TEST_SIGNING_SECRET,
+    );
+    expect("response" in expired && expired.response.status).toBe(400);
+
+    for (const resource of [
+      "https://other.test/api/mcp",
+      "",
+      [MCP_RESOURCE, MCP_RESOURCE],
+    ]) {
+      const request = providerSignedAuthorizeContinuation();
+      const url = new URL(request.url);
+      url.searchParams.delete("resource");
+      for (const value of Array.isArray(resource) ? resource : [resource]) {
+        url.searchParams.append("resource", value);
+      }
+      const prepared = await prepareOAuthAuthorizeRequest(
+        new Request(url),
+        [MCP_RESOURCE],
+        TEST_SIGNING_SECRET,
+      );
+      expect("response" in prepared && prepared.response.status).toBe(400);
+    }
+
+    const secondResource = await prepareOAuthAuthorizeRequest(
+      providerSignedAuthorizeContinuation(),
+      [MCP_RESOURCE, "https://other.test/api/mcp"],
+      TEST_SIGNING_SECRET,
+    );
+    expect("response" in secondResource && secondResource.response.status).toBe(400);
   });
 
   it("defaults only a missing refresh resource and forwards the canonical resource", async () => {
@@ -259,6 +383,44 @@ describe("stable OAuth provider HTTP boundary", () => {
       expect.objectContaining({ errorClass: "http_400" }),
     );
     expect(JSON.stringify(untrustedLogger.mock.calls)).not.toContain("secret_token_value");
+  });
+
+  it("emits only privacy-safe authorize telemetry fields", async () => {
+    const logger = vi.fn();
+    await recordOAuthAuthorizeTelemetry(
+      {
+        clientIdHash: "0123456789ab",
+        grantType: "authorization_code",
+        resourceDisposition: "defaulted",
+      },
+      Response.json(
+        {
+          error: "invalid_target",
+          error_description:
+            "code=secret-code owner@example.test Authorization: Bearer secret",
+        },
+        { status: 400 },
+      ),
+      logger,
+    );
+
+    expect(logger).toHaveBeenCalledWith("oauth_authorize", {
+      clientIdHash: "0123456789ab",
+      grantType: "authorization_code",
+      resourceDisposition: "defaulted",
+      status: 400,
+      errorClass: "invalid_target",
+    });
+    const output = JSON.stringify(logger.mock.calls);
+    for (const sensitive of [
+      "secret-code",
+      "owner@example.test",
+      "Authorization",
+      "Bearer secret",
+      "error_description",
+    ]) {
+      expect(output).not.toContain(sensitive);
+    }
   });
 
   it("rejects oversized token requests before parsing", async () => {

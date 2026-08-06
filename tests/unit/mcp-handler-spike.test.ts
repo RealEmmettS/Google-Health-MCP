@@ -82,7 +82,7 @@ async function assertSurface(client: Client): Promise<void> {
     name: "shaughv-health-mcp",
     title: "SHAUGHV Health",
     description: expect.stringContaining("Private Google Health connector"),
-    version: "1.1.0",
+    version: "1.1.1",
     websiteUrl: "https://health.emmetts.dev",
     icons: [
       {
@@ -144,7 +144,7 @@ async function assertSurface(client: Client): Promise<void> {
   expect(call.structuredContent).toMatchObject({
     pong: true,
     echo: "hello-sdk-v2",
-    serverVersion: "1.1.0",
+    serverVersion: "1.1.1",
     protocolVersion: client.getNegotiatedProtocolVersion(),
     authType: "oauth2.1",
     authenticatedUserId: "test-user",
@@ -162,7 +162,7 @@ async function assertSurface(client: Client): Promise<void> {
   expect(diagnostic.structuredContent).toMatchObject({
     server: {
       name: "shaughv-health-mcp",
-      version: "1.1.0",
+      version: "1.1.1",
     },
     connection: {
       authenticated: true,

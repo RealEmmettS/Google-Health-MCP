@@ -1,4 +1,5 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { makeSignature } from "better-auth/crypto";
 import { MCP_RESOURCE, MCP_RESOURCES } from "./auth";
 import { decodeJwt, type JWTPayload } from "jose";
 
@@ -45,6 +46,10 @@ type PreparedOAuthTokenRequest =
   | { request: Request; telemetry: OAuthTokenTelemetry }
   | { response: Response; telemetry: OAuthTokenTelemetry };
 
+type PreparedOAuthAuthorizeRequest =
+  | { request: Request; telemetry: OAuthTokenTelemetry }
+  | { response: Response; telemetry: OAuthTokenTelemetry };
+
 type OAuthTokenTelemetryRecord = OAuthTokenTelemetry & {
   errorClass: string;
   status: number;
@@ -80,6 +85,18 @@ function tokenTelemetry(
   return {
     clientIdHash: shortClientIdHash(params?.get("client_id") ?? null),
     grantType: normalizedGrantType(params?.get("grant_type") ?? null),
+    resourceDisposition,
+  };
+}
+
+function authorizeTelemetry(
+  params: URLSearchParams,
+  resourceDisposition: OAuthResourceDisposition,
+): OAuthTokenTelemetry {
+  return {
+    clientIdHash: shortClientIdHash(params.get("client_id")),
+    grantType:
+      params.get("response_type") === "code" ? "authorization_code" : "unknown",
     resourceDisposition,
   };
 }
@@ -128,8 +145,26 @@ export async function recordOAuthTokenTelemetry(
   logger: (event: string, record: OAuthTokenTelemetryRecord) => void = (event, record) =>
     console.info(event, record),
 ): Promise<void> {
+  return recordOAuthTelemetry("oauth_token", telemetry, response, logger);
+}
+
+export async function recordOAuthAuthorizeTelemetry(
+  telemetry: OAuthTokenTelemetry,
+  response: Response,
+  logger: (event: string, record: OAuthTokenTelemetryRecord) => void = (event, record) =>
+    console.info(event, record),
+): Promise<void> {
+  return recordOAuthTelemetry("oauth_authorize", telemetry, response, logger);
+}
+
+async function recordOAuthTelemetry(
+  event: "oauth_authorize" | "oauth_token",
+  telemetry: OAuthTokenTelemetry,
+  response: Response,
+  logger: (event: string, record: OAuthTokenTelemetryRecord) => void,
+): Promise<void> {
   try {
-    logger("oauth_token", {
+    logger(event, {
       ...telemetry,
       status: response.status,
       errorClass: await safeOAuthErrorClass(response),
@@ -188,6 +223,131 @@ function rebuiltRequest(request: Request, body: Uint8Array, headers: Headers): R
 export function validateAuthorizeResource(request: Request): Response | undefined {
   const url = new URL(request.url);
   return exactResource(url.searchParams.getAll("resource"));
+}
+
+function canonicalizeOAuthQueryParams(params: URLSearchParams): string {
+  const canonical = new URLSearchParams();
+  const entries = [...params.entries()].sort(([keyA, valueA], [keyB, valueB]) => {
+    if (keyA < keyB) return -1;
+    if (keyA > keyB) return 1;
+    if (valueA < valueB) return -1;
+    if (valueA > valueB) return 1;
+    return 0;
+  });
+  for (const [key, value] of entries) canonical.append(key, value);
+  return canonical.toString();
+}
+
+function constantTimeStringEqual(left: string, right: string): boolean {
+  const leftBytes = Buffer.from(left, "utf8");
+  const rightBytes = Buffer.from(right, "utf8");
+  return (
+    leftBytes.byteLength === rightBytes.byteLength &&
+    timingSafeEqual(leftBytes, rightBytes)
+  );
+}
+
+async function isProviderSignedAuthorizeContinuation(
+  params: URLSearchParams,
+  signingSecret: string | undefined,
+  now = Date.now(),
+): Promise<boolean> {
+  if (!signingSecret) return false;
+
+  const signatures = params.getAll("sig");
+  const expirations = params.getAll("exp");
+  const issuedAtValues = params.getAll("ba_iat");
+  const signedParameterNames = params.getAll("ba_param");
+  if (
+    signatures.length !== 1 ||
+    expirations.length !== 1 ||
+    issuedAtValues.length !== 1 ||
+    signedParameterNames.length === 0
+  ) {
+    return false;
+  }
+
+  const expirationSeconds = Number(expirations[0]);
+  const issuedAt = Number(issuedAtValues[0]);
+  if (
+    !Number.isFinite(expirationSeconds) ||
+    !Number.isFinite(issuedAt) ||
+    issuedAt <= 0 ||
+    issuedAt > now + 60_000 ||
+    expirationSeconds * 1000 < now ||
+    expirationSeconds * 1000 < issuedAt ||
+    expirationSeconds * 1000 - issuedAt > 11 * 60_000
+  ) {
+    return false;
+  }
+
+  const signedNames = new Set(signedParameterNames);
+  const actualNames = new Set(
+    [...params.keys()].filter((name) => name !== "sig"),
+  );
+  if (
+    signedNames.size !== actualNames.size ||
+    [...actualNames].some((name) => !signedNames.has(name))
+  ) {
+    return false;
+  }
+
+  const unsigned = new URLSearchParams(params);
+  unsigned.delete("sig");
+  try {
+    const expected = await makeSignature(
+      canonicalizeOAuthQueryParams(unsigned),
+      signingSecret,
+    );
+    return constantTimeStringEqual(signatures[0], expected);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Better Auth 1.6.25 validates our initial authorize request, then its Zod
+ * schema omits RFC 8707 `resource` before signing the post-login continuation.
+ * Restore the sole canonical resource only for that authentic, unexpired
+ * provider continuation. Fresh external authorize requests remain exact-only.
+ */
+export async function prepareOAuthAuthorizeRequest(
+  request: Request,
+  configuredResources: readonly string[] = MCP_RESOURCES,
+  signingSecret: string | undefined = process.env.BETTER_AUTH_SECRET,
+): Promise<PreparedOAuthAuthorizeRequest> {
+  const url = new URL(request.url);
+  const params = url.searchParams;
+  const resources = params.getAll("resource");
+
+  if (resources.length === 1 && resources[0] === MCP_RESOURCE) {
+    return {
+      request,
+      telemetry: authorizeTelemetry(params, "exact"),
+    };
+  }
+
+  const canRestoreSignedContinuation =
+    resources.length === 0 &&
+    configuredResources.length === 1 &&
+    configuredResources[0] === MCP_RESOURCE &&
+    (await isProviderSignedAuthorizeContinuation(params, signingSecret));
+  if (!canRestoreSignedContinuation) {
+    return {
+      response: oauthError(
+        400,
+        "invalid_target",
+        "The resource must exactly match the protected MCP endpoint.",
+      ),
+      telemetry: authorizeTelemetry(params, "invalid"),
+    };
+  }
+
+  params.set("resource", MCP_RESOURCE);
+  return {
+    request: new Request(url, request),
+    telemetry: authorizeTelemetry(params, "defaulted"),
+  };
 }
 
 export async function prepareOAuthTokenRequest(
