@@ -71,6 +71,11 @@ allowlisted privacy-safe telemetry. Codex silently rotated after expiry with
 modern traffic also rotated with `resourceDisposition=exact`. The 24-hour watch passed. Remaining
 client surfaces, Google reconsent/DPoP, the seven-day watch, and cleanup remain open.
 
+Stable 1.1.1 now repairs the provider-signed post-login continuation without accepting a fresh
+missing-resource authorize request. The boundary verifies Better Auth's HMAC, signed parameter
+set, issuance time, and expiry before restoring the sole canonical resource; code exchange and JWT
+audience remain exact. Production replay and tamper probes pass and leave zero synthetic rows.
+
 ## Activity
 
 - 2026-07-13 — Created from the 0.1.2 OAuth incident review so the compatibility bridge remains explicitly time-boxed and the broader auth migration is not lost. (agent: codex)
@@ -147,3 +152,9 @@ client surfaces, Google reconsent/DPoP, the seven-day watch, and cleanup remain 
   One isolated `invalid_grant` from an obsolete client registration did not match any current v2
   client and never retried. No client credential or health value was changed or recorded.
   (agent: codex)
+- 2026-08-06 - Released 1.1.1 from `8475f65` as production
+  `dpl_FjX4t8XqRPp4Jcec2e4i93bevTEM` after proving Better Auth 1.6.25 strips RFC 8707 `resource`
+  from its signed post-login authorize continuation. The repair restores only an authentic,
+  unexpired continuation in the one-resource configuration. Live telemetry showed exact/200 then
+  defaulted/200; a tampered continuation failed invalid/400. The synthetic client was deleted,
+  Codex ping/read passed on 1.1.1, and no error/5xx/invalid-grant regression appeared. (agent: codex)

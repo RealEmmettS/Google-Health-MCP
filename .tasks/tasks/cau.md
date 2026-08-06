@@ -30,7 +30,7 @@ An apparent immediate-expiry theory was falsified: the database stores Better Au
 
 ## Verification
 
-- [x] Signed-out authorize redirects to `/sign-in` with response type, client id, redirect URI, scope, state, PKCE challenge/method, and resource unchanged
+- [x] Signed-out authorize requires the exact resource; 1.1.1 verifies Better Auth's signed post-login continuation before restoring the sole canonical resource omitted by its 1.6.25 schema
 - [x] Confidential-client DCR → authorize → form-token → immediate Bearer initialize/tools-list passes
 - [x] Public-client DCR (`none`) → authorize → form-token without secret → immediate Bearer initialize/tools-list passes
 - [x] Exact hosted Claude callback, Claude Code `localhost`, and Codex `127.0.0.1` callback-with-path profiles pass
@@ -59,6 +59,12 @@ rotation, UserInfo, initialize, and 18-tool discovery. Emmett waived further Cla
 retries for this rollout. Work-workspace, Desktop, mobile, and account-connector propagation remain
 open. The completed 24-hour production watch found no callback, OIDC, refresh, or transport
 regression; this does not substitute for those owner-operated Claude surface checks.
+
+The 2026-08-06 hosted failure was a separate, reproduced 1.6.25 continuation defect: the original
+Claude request included the exact resource, then the provider's signed post-Google authorize URL
+omitted it. Stable 1.1.1 verifies that signed continuation and restores only the canonical resource.
+The user's retry completed and persisted one consent plus one active rotating refresh credential;
+the specific intended work-workspace read and Desktop/Code propagation checks remain open.
 
 ## Activity
 
@@ -94,3 +100,10 @@ regression; this does not substitute for those owner-operated Claude surface che
   post-expiry Codex rotation and both modern/legacy MCP traffic stayed healthy. Claude credentials
   were preserved and no further Claude retries were attempted, so hosted, Desktop, mobile, and
   work-workspace propagation remain open as Emmett requested. (agent: codex)
+- 2026-08-06 - Captured the failed hosted-Claude sequence without exposing state/code values. The
+  initial request had all six scopes, S256 PKCE, the hosted callback, and exact resource; after
+  Google sign-in, Better Auth's signed continuation omitted resource and hit `invalid_target`.
+  Emmett's Back/retry workaround completed one consent and active rotating refresh credential.
+  Stable 1.1.1 (`8475f65`, production `dpl_FjX4t8XqRPp4Jcec2e4i93bevTEM`) now verifies the provider
+  signature/expiry and restores the sole canonical resource; live replay passed defaulted/200,
+  tamper failed invalid/400, and cleanup left zero synthetic clients. (agent: codex)
