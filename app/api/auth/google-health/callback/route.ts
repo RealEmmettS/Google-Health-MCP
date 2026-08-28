@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { getAllowedSession } from "@/src/auth/allowed-session";
 import { getOrCreateAppUser } from "@/src/auth/app-user";
-import { auth } from "@/src/auth/auth";
 import {
   appBaseUrl,
   exchangeCodeForTokens,
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     return redirectHome({ health_error: "missing_params" });
   }
 
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getAllowedSession(request.headers);
   if (!session) {
     return NextResponse.redirect(new URL("/sign-in", appBaseUrl()));
   }

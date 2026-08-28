@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { headers } from "next/headers";
+import { getAllowedSession } from "@/src/auth/allowed-session";
 import { getAppUserByEmail } from "@/src/auth/app-user";
-import { auth } from "@/src/auth/auth";
 import { getConnection } from "@/src/auth/token-store";
 import { BrandLoader, BrandLockup } from "./components/brand-elements";
 import { CopyField } from "./components/copy-field";
@@ -94,7 +94,7 @@ export default async function Home({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getAllowedSession(await headers());
   const params = await searchParams;
 
   if (!session) return <PublicHome />;

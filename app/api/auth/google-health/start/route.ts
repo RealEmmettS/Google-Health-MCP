@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
+import { getAllowedSession } from "@/src/auth/allowed-session";
 import { getOrCreateAppUser } from "@/src/auth/app-user";
-import { auth } from "@/src/auth/auth";
 import { appBaseUrl, buildHealthAuthorizeUrl } from "@/src/auth/google-health-oauth";
 import { createOAuthState } from "@/src/auth/state";
 
@@ -12,7 +12,7 @@ export const runtime = "nodejs";
  * world-startable.
  */
 export async function GET(request: Request) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getAllowedSession(request.headers);
   if (!session) {
     return NextResponse.redirect(new URL("/sign-in", appBaseUrl()));
   }

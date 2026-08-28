@@ -56,7 +56,7 @@ describe("privacy control routes", () => {
     expect(mockedDisconnect).toHaveBeenCalledWith("app-user-a");
   });
 
-  it("does not touch any user when the same-origin session check fails", async () => {
+  it("does not touch any user when origin or current-allowlist checks fail", async () => {
     mockedSession.mockResolvedValue(null);
     const response = await disconnect(request("/api/privacy/disconnect"));
 

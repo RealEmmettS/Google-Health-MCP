@@ -1,5 +1,6 @@
 import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/src/auth/auth";
+import { rejectDisallowedAuthSession } from "@/src/auth/auth-route-guard";
 import {
   normalizeRegistrationResponse,
   normalizeOAuthTokenResponse,
@@ -20,6 +21,9 @@ export const preferredRegion = "iad1";
 const handlers = toNextJsHandler(auth);
 
 export async function GET(request: Request): Promise<Response> {
+  const rejected = await rejectDisallowedAuthSession(request);
+  if (rejected) return rejected;
+
   const pathname = new URL(request.url).pathname;
   if (pathname === "/api/auth/oauth2/authorize") {
     const prepared = await prepareOAuthAuthorizeRequest(request);
@@ -38,6 +42,9 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const rejected = await rejectDisallowedAuthSession(request);
+  if (rejected) return rejected;
+
   const pathname = new URL(request.url).pathname;
 
   if (pathname === "/api/auth/oauth2/token") {

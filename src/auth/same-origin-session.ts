@@ -1,4 +1,4 @@
-import { auth } from "./auth";
+import { getAllowedSession } from "./allowed-session";
 
 export async function requireSameOriginSession(request: Request) {
   const appUrl =
@@ -8,5 +8,5 @@ export async function requireSameOriginSession(request: Request) {
   const expectedOrigin = new URL(appUrl).origin;
   const origin = request.headers.get("origin");
   if (!origin || origin !== expectedOrigin) return null;
-  return auth.api.getSession({ headers: request.headers });
+  return getAllowedSession(request.headers);
 }

@@ -35,6 +35,14 @@ export {
 const PRIVATE_SERVER_MESSAGE =
   "This is a private server. Your Google account is not on its allowlist.";
 
+export function assertAllowedIdentityEmail(
+  email: string | null | undefined,
+): asserts email is string {
+  if (!email || !isAllowedEmail(email)) {
+    throw new APIError("FORBIDDEN", { message: PRIVATE_SERVER_MESSAGE });
+  }
+}
+
 const jwksModelName =
   process.env.VERCEL_ENV === "production"
     ? "mcpOauthJwksProduction"
@@ -130,18 +138,19 @@ export const auth = betterAuth({
             message: "The token resource must exactly match the MCP endpoint.",
           });
         }
-        if (!user?.email || !isAllowedEmail(user.email)) {
-          throw new APIError("FORBIDDEN", { message: PRIVATE_SERVER_MESSAGE });
-        }
+        assertAllowedIdentityEmail(user?.email);
         return {
           email: user.email,
           email_verified: user.emailVerified === true,
         };
       },
-      customUserInfoClaims: async ({ user }) => ({
-        email: user.email,
-        email_verified: user.emailVerified === true,
-      }),
+      customUserInfoClaims: async ({ user }) => {
+        assertAllowedIdentityEmail(user?.email);
+        return {
+          email: user.email,
+          email_verified: user.emailVerified === true,
+        };
+      },
       schema: {
         oauthClient: { modelName: "mcpOauthClientV2" },
         oauthAccessToken: { modelName: "mcpOauthAccessTokenV2" },
@@ -163,9 +172,7 @@ export const auth = betterAuth({
     user: {
       create: {
         before: async (user) => {
-          if (!isAllowedEmail(user.email)) {
-            throw new APIError("FORBIDDEN", { message: PRIVATE_SERVER_MESSAGE });
-          }
+          assertAllowedIdentityEmail(user.email);
         },
       },
     },
