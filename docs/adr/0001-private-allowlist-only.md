@@ -60,7 +60,7 @@ The deployed MCP remains private. Only these people and Google identities are ap
 |---|---|---|
 | Emmett Shaughnessy | `eshaughv@gmail.com` | Google/Fitbit account |
 | Emmett Shaughnessy | `google@emmetts.dev` | Native alias of the same approved account |
-| Christian Adleta | `[redacted]` | Christian's approved Google account |
+| Christian Adleta | *(email redacted)* | Access removed; see ADR-0002 |
 
 No public signup, first-100-user beta, arbitrary Google-account access, or self-service
 onboarding will be offered. Editing an environment variable is not sufficient authority to

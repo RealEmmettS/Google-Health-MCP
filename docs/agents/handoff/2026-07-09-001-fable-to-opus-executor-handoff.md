@@ -15,7 +15,7 @@ Key mid-flight evolutions (all recorded on the board):
 - MCP auth went from bearer-token thinking to **full OAuth 2.1 + DCR with Google-federated login** (Emmett: all of Claude Code/Desktop, claude.ai web+mobile, ChatGPT must connect; claude.ai/ChatGPT don't support static bearer).
 - **Webhooks deferred to v1.1** after a value analysis (payloads carry pointers, not values; on-demand fetch suffices for Q&A). Tables exist, dormant.
 - Infra was pulled forward from Phase 7: Vercel project, Neon connect, Google client (6 redirect URIs), app **published to production** (kills 7-day refresh-token expiry), custom domain **health.emmetts.dev** (canonical). Recorded as `#inf`.
-- Emmett rejected FastMCP (stack stays mcp-handler; reopens only under `#rlw` Railway migration), parked a REST-API idea (`#api`, Opus-analyzed FEASIBLE), added Christian (`[redacted]`) to the allowlist, and queued a design task (`#7le`, gated on `#p7d`).
+- Emmett rejected FastMCP (stack stays mcp-handler; reopens only under `#rlw` Railway migration), parked a REST-API idea (`#api`, Opus-analyzed FEASIBLE), added Christian (email since redacted) to the allowlist, and queued a design task (`#7le`, gated on `#p7d`).
 - Live verification milestones: Emmett's Google sign-in on prod (closed `#p2a`), then health-scopes consent + reconnect (closed `#p3c`), and a **live smoke test returning his real steps (32, 2026-07-09)** through the full encrypted-token pipeline.
 
 Dead ends / incidents (don't repeat):
@@ -45,7 +45,7 @@ Plan: `docs/PLAN.md` (source of truth; overrides the ChatGPT handoff spec in `C:
 
 Live system at **https://health.emmetts.dev** (Vercel project `google-health-mcp`, team `realemmetts`; also serves `google-health-mcp-realemmetts.vercel.app`):
 - OAuth 2.1 authorization server (better-auth built-in `mcp` plugin): DCR at `/api/auth/mcp/register`, authorize/token/jwks/userinfo under `/api/auth/mcp/*`, RFC 8414 + 9728 metadata at `/.well-known/*` — all verified on prod, including a real DCR registration and authorize→login redirect.
-- Google sign-in locked to `ALLOWED_GOOGLE_EMAILS` (eshaughv@gmail.com, google@emmetts.dev, [redacted]), enforced at user-create AND session-create, fail-closed.
+- Google sign-in locked to `ALLOWED_GOOGLE_EMAILS` (Emmett's two aliases and one since-removed private identity, now redacted), enforced at user-create AND session-create, fail-closed.
 - Google Health consent flow with single-use hashed state, encrypted token storage (upsert, never duplicate), identity mapping (healthUserId `455803974908071566`, legacy `C8QFBG`), refresh with claimable single-flight lock.
 - Dashboard (`/`) with live connection status + Connect/Reconnect; sign-in page that resumes interrupted MCP authorize flows.
 - `GoogleHealthClient` (`src/google-health/client.ts`): registry-driven scope prechecks, list/reconcile/get/rollUp/dailyRollUp/create/patch/batchDelete, 401→forced-refresh retry, 429 backoff, pageSize cap 100. Registry: `src/google-health/registry.ts` (41 data types). Time utils: `src/time/ranges.ts` (DST-safe, civil-vs-physical).
